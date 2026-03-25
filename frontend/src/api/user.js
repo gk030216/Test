@@ -1,0 +1,128 @@
+import request from '@/utils/request';
+
+// 用户登录
+export function login(data) {
+  return request({
+    url: '/user/login',
+    method: 'post',
+    data
+  });
+}
+
+// 用户注册
+export function register(data) {
+  return request({
+    url: '/user/register',
+    method: 'post',
+    data
+  });
+}
+
+// 重置密码
+export function resetPassword(data) {
+  return request({
+    url: '/user/reset-password',
+    method: 'post',
+    data
+  });
+}
+
+// 检查用户名是否存在
+export function checkUsername(username) {
+  return request({
+    url: '/user/check-username',
+    method: 'get',
+    params: { username }
+  });
+}
+
+// 检查邮箱是否存在
+export function checkEmail(email) {
+  return request({
+    url: '/user/check-email',
+    method: 'get',
+    params: { email }
+  });
+}
+
+// 发送注册验证码
+export function sendRegisterCode(email) {
+  return request({
+    url: '/code/register',
+    method: 'post',
+    params: { email }
+  });
+}
+
+// 发送找回密码验证码
+export function sendForgetCode(email) {
+  return request({
+    url: '/code/forget',
+    method: 'post',
+    params: { email }
+  });
+}
+
+// ============= 管理员接口 =============
+
+// 获取用户列表
+export function getUserList(params) {
+  return request({
+    url: '/admin/user/list',
+    method: 'get',
+    params
+  });
+}
+
+// 添加用户
+export function addUser(data) {
+  return request({
+    url: '/admin/user/add',
+    method: 'post',
+    data
+  });
+}
+
+// 更新用户
+export function updateUser(data) {
+  return request({
+    url: '/admin/user/update',
+    method: 'put',
+    data
+  });
+}
+
+// 更新用户状态
+export function updateUserStatus(id, status) {
+  return request({
+    url: '/admin/user/status',
+    method: 'put',
+    params: { id, status }
+  });
+}
+
+// 批量更新用户状态
+export function batchUpdateUserStatus(ids, status) {
+  return request({
+    url: '/admin/user/batch-status',
+    method: 'put',
+    params: { ids, status }
+  });
+}
+
+// 删除用户
+export function deleteUser(id) {
+  return request({
+    url: `/admin/user/delete/${id}`,
+    method: 'delete'
+  });
+}
+
+// 批量删除用户
+export function batchDeleteUsers(ids) {
+  return request({
+    url: '/admin/user/batch-delete',
+    method: 'delete',
+    params: { ids }
+  });
+}

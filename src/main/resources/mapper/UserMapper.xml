@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.UserMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.User">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="email" property="email"/>
+        <result column="phone" property="phone"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="role" property="role"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="last_login_time" property="lastLoginTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, username, password, email, phone, nickname, avatar, role, status,
+        create_time, update_time, last_login_time
+    </sql>
+
+    <select id="findByUsername" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE username = #{username}
+    </select>
+
+    <select id="findByEmail" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE email = #{email}
+    </select>
+
+    <select id="findByUsernameOrEmail" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE username = #{account} OR email = #{account}
+    </select>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE id = #{id}
+    </select>
+
+    <!-- 按 id 升序排列 -->
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        ORDER BY id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM user
+    </select>
+
+    <!-- 按 id 升序排列 -->
+    <select id="searchUsers" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="role != null">
+                AND role = #{role}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countSearch" resultType="int">
+        SELECT COUNT(*)
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="role != null">
+                AND role = #{role}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="com.pet.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (username, password, email, phone, nickname, avatar, role, status)
+        VALUES (#{username}, #{password}, #{email}, #{phone}, #{nickname}, #{avatar}, #{role}, #{status})
+    </insert>
+
+    <update id="update" parameterType="com.pet.entity.User">
+        UPDATE user
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateLastLoginTime">
+        UPDATE user SET last_login_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE user SET password = #{password} WHERE email = #{email}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE user SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateRole">
+        UPDATE user SET role = #{role} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user WHERE id = #{id}
+    </delete>
+
+    <!-- 批量插入 -->
+    <insert id="batchInsert" parameterType="list">
+        INSERT INTO user (username, password, email, phone, nickname, role, status)
+        VALUES
+        <foreach collection="list" item="user" separator=",">
+            (#{user.username}, #{user.password}, #{user.email}, #{user.phone}, #{user.nickname}, #{user.role}, #{user.status})
+        </foreach>
+    </insert>
+
+    <!-- 批量更新状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE user SET status = #{status} WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 批量更新角色 -->
+    <update id="batchUpdateRole">
+        UPDATE user SET role = #{role} WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 批量删除 -->
+    <delete id="batchDelete">
+        DELETE FROM user WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

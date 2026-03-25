@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.OrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.Order">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="user_phone" property="userPhone"/>
+        <result column="user_address" property="userAddress"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="pay_amount" property="payAmount"/>
+        <result column="pay_type" property="payType"/>
+        <result column="pay_status" property="payStatus"/>
+        <result column="order_status" property="orderStatus"/>
+        <result column="trade_no" property="tradeNo"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="pay_time" property="payTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_no, user_id, user_name, user_phone, user_address, total_amount, pay_amount,
+        pay_type, pay_status, order_status, trade_no, remark, create_time, pay_time, update_time
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (order_no, user_id, user_name, user_phone, user_address,
+                            total_amount, pay_amount, pay_status, order_status, remark)
+        VALUES (#{orderNo}, #{userId}, #{userName}, #{userPhone}, #{userAddress},
+                #{totalAmount}, #{payAmount}, #{payStatus}, #{orderStatus}, #{remark})
+    </insert>
+
+    <select id="getByOrderNo" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM orders WHERE order_no = #{orderNo}
+    </select>
+
+    <select id="getOrderList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM orders
+        WHERE user_id = #{userId}
+        <if test="status != null">
+            AND order_status = #{status}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countOrder" resultType="int">
+        SELECT COUNT(*) FROM orders
+        WHERE user_id = #{userId}
+        <if test="status != null">
+            AND order_status = #{status}
+        </if>
+    </select>
+
+    <update id="updatePayStatus">
+        UPDATE orders SET pay_status = #{payStatus}, order_status = #{orderStatus},
+                          trade_no = #{tradeNo}, pay_time = NOW()
+        WHERE order_no = #{orderNo}
+    </update>
+
+    <update id="updateOrderStatus">
+        UPDATE orders SET order_status = #{orderStatus} WHERE order_no = #{orderNo}
+    </update>
+
+</mapper>

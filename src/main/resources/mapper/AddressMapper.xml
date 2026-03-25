@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.AddressMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.Address">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="receiver_name" property="receiverName"/>
+        <result column="receiver_phone" property="receiverPhone"/>
+        <result column="province" property="province"/>
+        <result column="city" property="city"/>
+        <result column="district" property="district"/>
+        <result column="detail_address" property="detailAddress"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, receiver_name, receiver_phone, province, city, district, detail_address, is_default, create_time, update_time
+    </sql>
+
+    <select id="getAddressList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM address WHERE user_id = #{userId}
+        ORDER BY is_default DESC, create_time DESC
+    </select>
+
+    <select id="getDefaultAddress" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM address WHERE user_id = #{userId} AND is_default = 1
+        LIMIT 1
+    </select>
+
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM address WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO address (user_id, receiver_name, receiver_phone, province, city, district, detail_address, is_default)
+        VALUES (#{userId}, #{receiverName}, #{receiverPhone}, #{province}, #{city}, #{district}, #{detailAddress}, #{isDefault})
+    </insert>
+
+    <update id="update">
+        UPDATE address
+        <set>
+            <if test="receiverName != null">receiver_name = #{receiverName},</if>
+            <if test="receiverPhone != null">receiver_phone = #{receiverPhone},</if>
+            <if test="province != null">province = #{province},</if>
+            <if test="city != null">city = #{city},</if>
+            <if test="district != null">district = #{district},</if>
+            <if test="detailAddress != null">detail_address = #{detailAddress},</if>
+            <if test="isDefault != null">is_default = #{isDefault},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="clearDefault">
+        UPDATE address SET is_default = 0 WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateDefault">
+        UPDATE address SET is_default = 1 WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM address WHERE id = #{id}
+    </delete>
+
+</mapper>
