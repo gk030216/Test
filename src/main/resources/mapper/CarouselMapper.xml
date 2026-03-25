@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.CarouselMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.Carousel">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="image" property="image"/>
+        <result column="link_url" property="linkUrl"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, title, image, link_url, sort_order, status, create_time, update_time
+    </sql>
+
+    <!-- 获取所有启用的轮播图 -->
+    <select id="getEnabledCarousels" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM carousel
+        WHERE status = 1
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 获取轮播图列表 -->
+    <select id="getCarouselList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM carousel
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY sort_order ASC, id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取总数 -->
+    <select id="countCarousel" resultType="int">
+        SELECT COUNT(*)
+        FROM carousel
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据ID获取 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM carousel WHERE id = #{id}
+    </select>
+
+    <!-- 添加 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO carousel (title, image, link_url, sort_order, status)
+        VALUES (#{title}, #{image}, #{linkUrl}, #{sortOrder}, #{status})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE carousel
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="image != null">image = #{image},</if>
+            <if test="linkUrl != null">link_url = #{linkUrl},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新状态 -->
+    <update id="updateStatus">
+        UPDATE carousel SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 批量更新状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE carousel SET status = #{status} WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteById">
+        DELETE FROM carousel WHERE id = #{id}
+    </delete>
+
+    <!-- 批量删除 -->
+    <delete id="batchDelete">
+        DELETE FROM carousel WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -1,0 +1,175 @@
+package com.pet.util;
+
+import com.pet.config.EmailConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import javax.mail.*;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import java.util.Properties;
+
+@Component
+public class EmailUtil {
+
+    @Autowired
+    private EmailConfig emailConfig;
+
+    /**
+     * 发送验证码邮件
+     */
+    public boolean sendVerificationCode(String toEmail, String code, String type) {
+        // 设置邮件服务器属性
+        Properties props = new Properties();
+        props.setProperty("mail.smtp.host", emailConfig.getHost());
+        props.setProperty("mail.smtp.port", emailConfig.getPort());
+        props.setProperty("mail.smtp.auth", emailConfig.getAuth());
+        props.setProperty("mail.smtp.ssl.enable", emailConfig.getSslEnable());
+        props.setProperty("mail.smtp.ssl.protocols", emailConfig.getSslProtocols());
+        props.setProperty("mail.smtp.ssl.trust", emailConfig.getSslTrust());
+        props.setProperty("mail.smtp.connectiontimeout", emailConfig.getConnectionTimeout());
+        props.setProperty("mail.smtp.timeout", emailConfig.getTimeout());
+        props.setProperty("mail.smtp.writetimeout", emailConfig.getWriteTimeout());
+
+        // 创建验证器
+        Authenticator auth = new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(emailConfig.getSenderEmail(), emailConfig.getSenderPassword());
+            }
+        };
+
+        // 创建会话
+        Session session = Session.getInstance(props, auth);
+
+        try {
+            // 创建邮件消息
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(emailConfig.getSenderEmail(), "宠物服务系统"));
+            message.setRecipient(MimeMessage.RecipientType.TO, new InternetAddress(toEmail));
+
+            // 设置邮件主题
+            String subject = "";
+            String content = "";
+
+            if ("register".equals(type)) {
+                subject = "🐾 欢迎注册宠物服务系统 - 验证码";
+                content = getRegisterEmailContent(code);
+            } else if ("forget".equals(type)) {
+                subject = "🔐 找回密码 - 宠物服务系统验证码";
+                content = getForgetPasswordEmailContent(code);
+            }
+
+            message.setSubject(subject);
+            message.setContent(content, "text/html;charset=utf-8");
+
+            // 发送邮件
+            Transport.send(message);
+            System.out.println("✅ 邮件发送成功 to: " + toEmail + ", type: " + type);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("❌ 邮件发送失败 to: " + toEmail + ", type: " + type);
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 注册验证码邮件模板
+     */
+    private String getRegisterEmailContent(String code) {
+        return "<!DOCTYPE html>" +
+                "<html lang='zh-CN'>" +
+                "<head>" +
+                "<meta charset='UTF-8'>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<title>注册验证码</title>" +
+                "</head>" +
+                "<body style='margin:0; padding:0; font-family: \"Microsoft YaHei\", sans-serif; background-color:#f4f7fc;'>" +
+                "<div style='max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.1);'>" +
+
+                // 头部
+                "<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:30px 20px; text-align:center;'>" +
+                "<h1 style='color:#ffffff; margin:0; font-size:28px; letter-spacing:1px;'>🐾 宠物服务系统</h1>" +
+                "<p style='color:#e0e0ff; margin:10px 0 0; font-size:16px;'>你的贴心宠物生活助手</p>" +
+                "</div>" +
+
+                // 内容区域
+                "<div style='padding:40px 30px;'>" +
+                "<h2 style='color:#333333; margin:0 0 20px; font-size:22px; font-weight:400;'>亲爱的用户，你好！</h2>" +
+                "<p style='color:#666666; line-height:1.8; margin:0 0 25px; font-size:16px;'>感谢你注册宠物服务系统，你的验证码是：</p>" +
+
+                // 验证码卡片
+                "<div style='background: linear-gradient(145deg, #f6f9fc 0%, #eef2f7 100%); border-radius:12px; padding:20px; text-align:center; margin:25px 0; border:1px dashed #667eea;'>" +
+                "<span style='font-size:48px; font-weight:700; letter-spacing:8px; color:#667eea; font-family: \"Courier New\", monospace;'>" + code + "</span>" +
+                "</div>" +
+
+                "<p style='color:#666666; line-height:1.8; margin:0 0 15px; font-size:15px;'>⏰ 验证码有效期为 <strong style='color:#ff6b6b;'>5分钟</strong>，请勿泄露给他人。</p>" +
+                "<p style='color:#999999; line-height:1.6; margin:0; font-size:14px; background-color:#f8f8f8; padding:15px; border-radius:8px; border-left:4px solid #ffb347;'>" +
+                "📌 如果不是你本人操作，请忽略此邮件，你的账号依然是安全的。</p>" +
+                "</div>" +
+
+                // 底部
+                "<div style='background-color:#f8f9fa; padding:20px 30px; border-top:1px solid #e9ecef; text-align:center;'>" +
+                "<p style='color:#868e96; margin:0 0 10px; font-size:14px;'>这是系统自动发送的邮件，请勿回复</p>" +
+                "<p style='color:#adb5bd; margin:0; font-size:13px;'>© 2026 宠物服务系统 · 用心服务每一个宠物家庭</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
+    }
+
+    /**
+     * 找回密码验证码邮件模板
+     */
+    private String getForgetPasswordEmailContent(String code) {
+        return "<!DOCTYPE html>" +
+                "<html lang='zh-CN'>" +
+                "<head>" +
+                "<meta charset='UTF-8'>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<title>找回密码验证码</title>" +
+                "</head>" +
+                "<body style='margin:0; padding:0; font-family: \"Microsoft YaHei\", sans-serif; background-color:#f4f7fc;'>" +
+                "<div style='max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.1);'>" +
+
+                // 头部
+                "<div style='background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); padding:30px 20px; text-align:center;'>" +
+                "<h1 style='color:#ffffff; margin:0; font-size:28px; letter-spacing:1px;'>🐾 宠物服务系统</h1>" +
+                "<p style='color:#fff0f0; margin:10px 0 0; font-size:16px;'>安全中心 · 找回密码</p>" +
+                "</div>" +
+
+                // 内容区域
+                "<div style='padding:40px 30px;'>" +
+                "<h2 style='color:#333333; margin:0 0 20px; font-size:22px; font-weight:400;'>尊敬的宠物家长，你好！</h2>" +
+                "<p style='color:#666666; line-height:1.8; margin:0 0 15px; font-size:16px;'>你正在进行找回密码操作，验证码是：</p>" +
+
+                // 验证码卡片
+                "<div style='background: linear-gradient(145deg, #fff5f5 0%, #ffe9e9 100%); border-radius:12px; padding:20px; text-align:center; margin:25px 0; border:1px dashed #ff6b6b;'>" +
+                "<span style='font-size:48px; font-weight:700; letter-spacing:8px; color:#ff6b6b; font-family: \"Courier New\", monospace;'>" + code + "</span>" +
+                "</div>" +
+
+                "<div style='background-color:#fff9f0; padding:20px; border-radius:8px; margin:25px 0;'>" +
+                "<p style='color:#666666; line-height:1.8; margin:0 0 12px; font-size:15px;'>🔔 <strong>安全提示：</strong></p>" +
+                "<ul style='color:#666666; line-height:1.8; margin:0; padding-left:20px; font-size:14px;'>" +
+                "<li>验证码有效期为 <strong style='color:#ff6b6b;'>5分钟</strong></li>" +
+                "<li>请勿将验证码告知他人</li>" +
+                "<li>如果不是你本人操作，请立即修改密码</li>" +
+                "</ul>" +
+                "</div>" +
+
+                "<p style='color:#999999; line-height:1.6; margin:0; font-size:14px; background-color:#f8f8f8; padding:15px; border-radius:8px;'>" +
+                "📧 如有任何疑问，请联系客服 support@petservice.com</p>" +
+                "</div>" +
+
+                // 底部
+                "<div style='background-color:#f8f9fa; padding:20px 30px; border-top:1px solid #e9ecef; text-align:center;'>" +
+                "<p style='color:#868e96; margin:0 0 10px; font-size:14px;'>此为系统自动发送邮件，请勿直接回复</p>" +
+                "<p style='color:#adb5bd; margin:0; font-size:13px;'>© 2026 宠物服务系统 · 守护你和宠物的美好时光</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
+    }
+}

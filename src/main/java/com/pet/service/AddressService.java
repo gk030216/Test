@@ -1,0 +1,16 @@
+// AddressService.java
+package com.pet.service;
+
+import com.pet.entity.Address;
+import java.util.List;
+
+public interface AddressService {
+    List<Address> getAddressList(Integer userId);
+    Address getDefaultAddress(Integer userId);
+    Address getById(Integer id);
+    boolean addAddress(Address address, Integer userId);
+    boolean updateAddress(Address address);
+    boolean deleteAddress(Integer id, Integer userId);
+    boolean setDefaultAddress(Integer id, Integer userId);
+}
+
