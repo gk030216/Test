@@ -21,23 +21,12 @@ import AdminDashboard from '@/views/admin/Dashboard.vue';
 import UserList from '@/views/admin/UserList.vue';
 import StaffList from '@/views/admin/StaffList.vue';
 import CarouselManage from '@/views/admin/CarouselManage.vue';
-// 以下路由等待创建组件后再启用
-// import ServiceList from '@/views/admin/ServiceList.vue';
-// import AppointmentList from '@/views/admin/AppointmentList.vue';
-// import PetList from '@/views/admin/PetList.vue';
-// import ProductList from '@/views/admin/ProductList.vue';
-// import OrderList from '@/views/admin/OrderList.vue';
-// import PostList from '@/views/admin/PostList.vue';
-// import Statistics from '@/views/admin/Statistics.vue';
-// import Settings from '@/views/admin/Settings.vue';
+import ProductList from '@/views/admin/ProductList.vue';
+import OrderList from '@/views/admin/OrderList.vue';
+import ProductCategory from '@/views/admin/ProductCategory.vue';
 
 // 员工子页面
 import StaffDashboard from '@/views/staff/Dashboard.vue';
-// 以下路由等待创建组件后再启用
-// import StaffAppointments from '@/views/staff/Appointments.vue';
-// import StaffPetFiles from '@/views/staff/PetFiles.vue';
-// import StaffEvaluations from '@/views/staff/Evaluations.vue';
-// import StaffFeedback from '@/views/staff/Feedback.vue';
 
 Vue.use(Router);
 
@@ -94,6 +83,12 @@ const router = new Router({
       meta: { requiresAuth: true }
     },
     {
+      path: '/pay/return',
+      name: 'PayReturn',
+      component: PayReturn,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/pay/:orderNo',
       name: 'Pay',
       component: Pay,
@@ -103,12 +98,6 @@ const router = new Router({
       path: '/orders',
       name: 'Orders',
       component: Orders,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/pay/return',
-      name: 'PayReturn',
-      component: PayReturn,
       meta: { requiresAuth: true }
     },
     // ========== 管理员路由 ==========
@@ -121,16 +110,22 @@ const router = new Router({
         { path: 'dashboard', component: AdminDashboard, meta: { title: '仪表盘' } },
         { path: 'user-list', component: UserList, meta: { title: '用户列表' } },
         { path: 'staff-list', component: StaffList, meta: { title: '员工列表' } },
-        { path: 'carousel', component: CarouselManage, meta: { title: '轮播图管理' } }
-        // 以下路由等待创建对应组件后再启用
-        // { path: 'service-list', component: ServiceList, meta: { title: '服务列表' } },
-        // { path: 'appointment-list', component: AppointmentList, meta: { title: '预约管理' } },
-        // { path: 'pet-list', component: PetList, meta: { title: '宠物列表' } },
-        // { path: 'product-list', component: ProductList, meta: { title: '商品列表' } },
-        // { path: 'order-list', component: OrderList, meta: { title: '订单管理' } },
-        // { path: 'post-list', component: PostList, meta: { title: '帖子管理' } },
-        // { path: 'statistics', component: Statistics, meta: { title: '数据统计' } },
-        // { path: 'settings', component: Settings, meta: { title: '系统设置' } }
+        { path: 'carousel', component: CarouselManage, meta: { title: '轮播图管理' } },
+        { path: 'product-list', component: ProductList, meta: { title: '商品列表' } },
+        { path: 'order-list', component: OrderList, meta: { title: '订单管理' } },
+        { path: 'category-list', component: ProductCategory, meta: { title: '商品分类' } },
+        {
+          path: 'comment-list',
+          name: 'CommentManage',
+          component: () => import('@/views/admin/CommentManage.vue'),
+          meta: { title: '评价管理' }
+        },
+        {
+          path: 'data-analysis',
+          name: 'DataAnalysis',
+          component: () => import('@/views/admin/DataAnalysis.vue'),
+          meta: { title: '数据分析' }
+        }
       ]
     },
     // ========== 员工路由 ==========
@@ -141,11 +136,6 @@ const router = new Router({
       children: [
         { path: '', redirect: 'dashboard' },
         { path: 'dashboard', component: StaffDashboard, meta: { title: '工作台' } }
-        // 以下路由等待创建对应组件后再启用
-        // { path: 'appointments', component: StaffAppointments, meta: { title: '预约管理' } },
-        // { path: 'pet-files', component: StaffPetFiles, meta: { title: '宠物档案' } },
-        // { path: 'evaluations', component: StaffEvaluations, meta: { title: '服务评价' } },
-        // { path: 'feedback', component: StaffFeedback, meta: { title: '异常反馈' } }
       ]
     }
   ]
@@ -158,7 +148,6 @@ router.beforeEach((to, from, next) => {
   const user = userInfo ? JSON.parse(userInfo) : null;
   const userRole = user?.role || 1;
 
-  // 检查是否需要认证
   if (to.meta.requiresAuth) {
     if (!token) {
       next({
@@ -167,14 +156,11 @@ router.beforeEach((to, from, next) => {
       });
       return;
     }
-
-    // 检查角色权限
     if (to.meta.role && !to.meta.role.includes(userRole)) {
       next('/');
       return;
     }
   }
-
   next();
 });
 

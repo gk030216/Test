@@ -23,9 +23,6 @@ public class AlipayNotifyController {
     @Autowired
     private OrderService orderService;
 
-    /**
-     * 支付宝异步通知
-     */
     @PostMapping("/notify")
     public String notify(HttpServletRequest request) {
         try {
@@ -41,7 +38,9 @@ public class AlipayNotifyController {
                 params.put(name, valueStr);
             }
 
-            System.out.println("支付宝回调参数: " + params);
+            System.out.println("========== 支付宝回调开始 ==========");
+            System.out.println("回调参数: " + params);
+            System.out.println("回调IP: " + request.getRemoteAddr());
 
             // 验证签名
             boolean signVerified = AlipaySignature.rsaCheckV1(
@@ -66,8 +65,8 @@ public class AlipayNotifyController {
                 if ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus)) {
                     // 处理支付成功
                     boolean result = orderService.handlePayCallback(outTradeNo, tradeNo);
+                    System.out.println("支付回调处理结果: " + (result ? "成功" : "失败"));
                     if (result) {
-                        System.out.println("支付回调处理成功: " + outTradeNo);
                         return "success";
                     }
                 }
@@ -77,8 +76,15 @@ public class AlipayNotifyController {
                 return "failure";
             }
         } catch (AlipayApiException e) {
+            System.err.println("支付宝回调异常: " + e.getMessage());
             e.printStackTrace();
             return "failure";
+        } catch (Exception e) {
+            System.err.println("处理回调异常: " + e.getMessage());
+            e.printStackTrace();
+            return "failure";
+        } finally {
+            System.out.println("========== 支付宝回调结束 ==========");
         }
     }
 }

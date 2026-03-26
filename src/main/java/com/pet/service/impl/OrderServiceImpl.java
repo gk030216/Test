@@ -95,17 +95,16 @@ public class OrderServiceImpl implements OrderService {
 
             // 扣减库存
             productMapper.updateStock(product.getId(), -item.getQuantity());
+
+            // 删除购物车中对应的商品
+            cartMapper.deleteByUserIdAndProductId(userId, product.getId());
         }
 
         if (!orderItems.isEmpty()) {
             orderItemMapper.batchInsert(orderItems);
         }
 
-        // 设置订单详情
         order.setItems(orderItems);
-
-        // 如果是通过购物车结算，删除购物车中对应的商品
-        // 这里根据实际情况决定是否需要删除购物车商品
 
         return order;
     }
@@ -126,7 +125,26 @@ public class OrderServiceImpl implements OrderService {
         List<Order> list = orderMapper.getOrderList(userId, offset, pageSize, status);
         int total = orderMapper.countOrder(userId, status);
 
-        // 获取每个订单的详情
+        for (Order order : list) {
+            List<OrderItem> items = orderItemMapper.getByOrderNo(order.getOrderNo());
+            order.setItems(items);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getAdminOrderList(Integer page, Integer pageSize, String keyword,
+                                                 Integer orderStatus, Integer payStatus) {
+        int offset = (page - 1) * pageSize;
+        List<Order> list = orderMapper.getAdminOrderList(offset, pageSize, keyword, orderStatus, payStatus);
+        int total = orderMapper.countAdminOrder(keyword, orderStatus, payStatus);
+
         for (Order order : list) {
             List<OrderItem> items = orderItemMapper.getByOrderNo(order.getOrderNo());
             order.setItems(items);
@@ -157,7 +175,6 @@ public class OrderServiceImpl implements OrderService {
             productMapper.updateStock(item.getProductId(), item.getQuantity());
         }
 
-        // 更新订单状态
         return orderMapper.updateOrderStatus(orderNo, 4) > 0;
     }
 
@@ -166,13 +183,41 @@ public class OrderServiceImpl implements OrderService {
     public boolean handlePayCallback(String orderNo, String tradeNo) {
         Order order = orderMapper.getByOrderNo(orderNo);
         if (order == null) {
+            System.out.println("订单不存在: " + orderNo);
             return false;
         }
         if (order.getPayStatus() == 1) {
-            return true; // 已支付
+            System.out.println("订单已支付: " + orderNo);
+            return true;
         }
 
         // 更新订单支付状态
-        return orderMapper.updatePayStatus(orderNo, 1, 1, tradeNo) > 0;
+        int result = orderMapper.updatePayStatus(orderNo, 1, 1, tradeNo);
+        System.out.println("更新订单支付状态结果: " + result);
+
+        // 支付成功后，删除购物车中对应的商品
+        try {
+            List<OrderItem> items = orderItemMapper.getByOrderNo(orderNo);
+            for (OrderItem item : items) {
+                // 删除购物车中对应的商品
+                cartMapper.deleteByUserIdAndProductId(order.getUserId(), item.getProductId());
+            }
+            System.out.println("删除购物车商品成功");
+        } catch (Exception e) {
+            System.err.println("删除购物车商品失败: " + e.getMessage());
+        }
+
+        return result > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean updateOrderStatus(String orderNo, Integer orderStatus) {
+        return orderMapper.updateOrderStatus(orderNo, orderStatus) > 0;
+    }
+
+    @Override
+    public boolean deleteOrder(Integer id) {
+        return orderMapper.deleteById(id) > 0;
     }
 }

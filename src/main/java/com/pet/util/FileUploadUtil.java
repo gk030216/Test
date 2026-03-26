@@ -40,6 +40,18 @@ public class FileUploadUtil implements ServletContextAware {
     }
 
     /**
+     * 上传商品图片
+     */
+    public static String uploadProduct(MultipartFile file) throws Exception {
+        return uploadImage(file, "product");
+    }
+
+    // 上传评价图片
+    public static String uploadComment(MultipartFile file) throws Exception {
+        return uploadImage(file, "comment");
+    }
+
+    /**
      * 通用图片上传
      */
     private static String uploadImage(MultipartFile file, String subDir) throws Exception {

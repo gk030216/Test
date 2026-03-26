@@ -20,7 +20,7 @@ public class AlipayConfig {
     private String notifyUrl = "https://6235ad0.r23.cpolar.top/api/pay/alipay/notify";
 
     // 页面跳转同步通知页面路径
-    private String returnUrl = "http://localhost:8081/#/pay/return";
+    private String returnUrl = "http://localhost:8081/pay/return";
 
     // 签名方式
     private String signType = "RSA2";

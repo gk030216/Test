@@ -35,8 +35,11 @@
                 AND (name LIKE CONCAT('%', #{keyword}, '%')
                 OR description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <if test="categoryId != null">
-                AND category_id = #{categoryId}
+            <if test="categoryIds != null and categoryIds != ''">
+                AND category_id IN
+                <foreach collection="categoryIds.split(',')" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
             </if>
             <if test="isHot != null">
                 AND is_hot = #{isHot}
@@ -58,8 +61,11 @@
                 AND (name LIKE CONCAT('%', #{keyword}, '%')
                 OR description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <if test="categoryId != null">
-                AND category_id = #{categoryId}
+            <if test="categoryIds != null and categoryIds != ''">
+                AND category_id IN
+                <foreach collection="categoryIds.split(',')" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
             </if>
         </where>
     </select>
@@ -72,6 +78,80 @@
     <update id="updateStock">
         UPDATE product SET stock = stock + #{quantity}, sales = sales - #{quantity}
         WHERE id = #{id} AND stock + #{quantity} >= 0
+    </update>
+
+    <!-- 后台商品列表查询 -->
+    <select id="getAdminProductList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countAdminProduct" resultType="int">
+        SELECT COUNT(*)
+        FROM product
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null and categoryId != ''">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product (name, description, price, original_price, stock, category_id, category_name, image, images, status, is_hot, is_new)
+        VALUES (#{name}, #{description}, #{price}, #{originalPrice}, #{stock}, #{categoryId}, #{categoryName}, #{image}, #{images},
+                #{status}, #{isHot}, #{isNew})
+    </insert>
+
+    <update id="update">
+        UPDATE product
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="originalPrice != null">original_price = #{originalPrice},</if>
+            <if test="stock != null">stock = #{stock},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="categoryName != null">category_name = #{categoryName},</if>
+            <if test="image != null">image = #{image},</if>
+            <if test="images != null">images = #{images},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isHot != null">is_hot = #{isHot},</if>
+            <if test="isNew != null">is_new = #{isNew},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE product SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM product WHERE id = #{id}
+    </delete>
+
+    <update id="updateRating">
+        UPDATE product
+        SET avg_rating = #{avgRating}, comment_count = #{commentCount}
+        WHERE id = #{id}
     </update>
 
 </mapper>

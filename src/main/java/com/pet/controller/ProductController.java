@@ -25,7 +25,7 @@ public class ProductController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) String categoryId,  // 改为String，支持多个ID
             @RequestParam(required = false) Integer isHot,
             @RequestParam(required = false) Integer isNew) {
         try {

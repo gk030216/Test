@@ -78,7 +78,7 @@
                 type="primary"
                 size="large"
                 class="submit-btn"
-                :disabled="!selectedAddressId"
+                :disabled="!selectedAddressId || checkoutItems.length === 0"
                 @click="createOrder"
                 :loading="submitting"
             >
@@ -133,7 +133,7 @@ import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getAddressList, addAddress } from '@/api/address';
 import { createOrder } from '@/api/order';
-import { addToCart } from '@/api/cart';
+import { getCartList } from '@/api/cart';
 
 export default {
   name: 'Checkout',
@@ -181,29 +181,37 @@ export default {
     async loadData() {
       this.loading = true;
       try {
-        // 获取结算商品（从localStorage或购物车）
+        // 获取结算商品
         const items = localStorage.getItem('checkoutItems');
         if (items) {
           // 从立即购买来的数据
           this.checkoutItems = JSON.parse(items);
         } else {
-          // 从购物车来的数据 - 需要从后端获取购物车中选中的商品
-          // 这里简化处理，实际应该调用API获取
-          this.$message.warning('请从购物车选择商品');
+          // 从购物车来的数据 - 获取购物车中选中的商品
+          const cartRes = await getCartList();
+          if (cartRes.code === 200) {
+            // 筛选出选中的商品 (selected === 1)
+            this.checkoutItems = cartRes.data.filter(item => item.selected === 1);
+          }
+        }
+
+        if (this.checkoutItems.length === 0) {
+          this.$message.warning('请选择要购买的商品');
           this.$router.push('/cart');
           return;
         }
 
         // 获取地址列表
-        const res = await getAddressList();
-        if (res.code === 200) {
-          this.addressList = res.data;
+        const addressRes = await getAddressList();
+        if (addressRes.code === 200) {
+          this.addressList = addressRes.data;
           const defaultAddr = this.addressList.find(addr => addr.isDefault === 1);
           if (defaultAddr) {
             this.selectedAddressId = defaultAddr.id;
           }
         }
       } catch (error) {
+        console.error('加载数据失败', error);
         this.$message.error('加载失败');
       } finally {
         this.loading = false;

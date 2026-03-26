@@ -1,5 +1,7 @@
 import request from '@/utils/request';
 
+// ============= 前台接口 =============
+
 // 获取商品列表
 export function getProductList(params) {
     return request({
@@ -30,5 +32,69 @@ export function getNewProducts() {
     return request({
         url: '/product/new',
         method: 'get'
+    });
+}
+
+// ============= 管理员接口 =============
+
+// 获取商品列表（后台）
+export function getAdminProductList(params) {
+    return request({
+        url: '/admin/product/list',
+        method: 'get',
+        params
+    });
+}
+
+// 添加商品
+export function addProduct(data) {
+    return request({
+        url: '/admin/product/add',
+        method: 'post',
+        data
+    });
+}
+
+// 更新商品
+export function updateProduct(data) {
+    return request({
+        url: '/admin/product/update',
+        method: 'put',
+        data
+    });
+}
+
+// 更新商品状态
+export function updateProductStatus(id, status) {
+    return request({
+        url: '/admin/product/status',
+        method: 'put',
+        params: { id, status }
+    });
+}
+
+// 批量更新商品状态
+export function batchUpdateProductStatus(ids, status) {
+    return request({
+        url: '/admin/product/batch-status',
+        method: 'put',
+        params: { ids, status }
+    });
+}
+
+// 删除商品
+export function deleteProduct(id) {
+    return request({
+        url: `/admin/product/delete/${id}`,
+        method: 'delete'
+    });
+}
+
+// 批量删除商品
+export function batchDeleteProducts(ids) {
+    return request({
+        url: '/admin/product/batch-delete',
+        method: 'delete',
+        params: { ids }
     });
 }

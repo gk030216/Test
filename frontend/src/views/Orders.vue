@@ -77,11 +77,20 @@
                   确认收货
                 </el-button>
                 <el-button
-                    v-if="order.orderStatus === 3"
+                    v-if="order.orderStatus === 3 && !order.hasCommented"
                     size="small"
-                    @click="goToComment(order.orderNo)"
+                    type="success"
+                    @click="openCommentDialog(order)"
                 >
                   评价
+                </el-button>
+                <el-button
+                    v-if="order.orderStatus === 3 && order.hasCommented"
+                    size="small"
+                    type="info"
+                    disabled
+                >
+                  已评价
                 </el-button>
               </div>
             </div>
@@ -102,6 +111,72 @@
       </div>
     </div>
 
+    <!-- 评价对话框 -->
+    <el-dialog
+        title="发表评价"
+        :visible.sync="commentDialogVisible"
+        width="550px"
+        :close-on-click-modal="false"
+        center
+    >
+      <div class="comment-dialog">
+        <div class="comment-product" v-if="currentOrder">
+          <img :src="currentProduct?.productImage" :alt="currentProduct?.productName">
+          <div class="product-info">
+            <h4>{{ currentProduct?.productName }}</h4>
+            <div class="product-price">¥{{ currentProduct?.price }}</div>
+          </div>
+        </div>
+
+        <el-form :model="commentForm" :rules="commentRules" ref="commentForm" label-width="80px">
+          <el-form-item label="评分" prop="rating">
+            <el-rate
+                v-model="commentForm.rating"
+                :texts="['很差', '较差', '一般', '推荐', '超赞']"
+                show-text
+                :colors="['#f56c6c', '#e6a23c', '#67c23a']"
+            ></el-rate>
+          </el-form-item>
+
+          <el-form-item label="评价内容" prop="content">
+            <el-input
+                type="textarea"
+                v-model="commentForm.content"
+                rows="4"
+                placeholder="说说你的使用感受..."
+                maxlength="500"
+                show-word-limit
+            ></el-input>
+          </el-form-item>
+
+          <el-form-item label="上传图片">
+            <el-upload
+                action="#"
+                :http-request="uploadCommentImage"
+                list-type="picture-card"
+                :on-preview="handlePictureCardPreview"
+                :on-remove="handleRemove"
+                :file-list="commentForm.imageList"
+                :limit="5"
+            >
+              <i class="el-icon-plus"></i>
+            </el-upload>
+            <div class="upload-tip">支持 JPG、PNG 格式，最多5张，每张不超过2MB</div>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <span slot="footer">
+        <el-button @click="commentDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitComment" :loading="commentSubmitting">提交评价</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 图片预览 -->
+    <el-dialog :visible.sync="previewVisible" width="400px">
+      <img :src="previewImage" style="width: 100%" alt="预览图片">
+    </el-dialog>
+
     <Footer />
   </div>
 </template>
@@ -109,7 +184,9 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getOrderList, cancelOrder } from '@/api/order';
+import { getOrderList, cancelOrder, updateOrderStatus } from '@/api/order';
+import { addComment } from '@/api/comment';
+import { uploadCommentImage as uploadImage } from '@/api/upload';
 
 export default {
   name: 'Orders',
@@ -129,7 +206,23 @@ export default {
         { value: 2, label: '已发货' },
         { value: 3, label: '已完成' },
         { value: 4, label: '已取消' }
-      ]
+      ],
+      commentDialogVisible: false,
+      commentSubmitting: false,
+      currentOrder: null,
+      currentProduct: null,
+      commentForm: {
+        rating: 5,
+        content: '',
+        imageList: [],
+        imageUrls: []
+      },
+      commentRules: {
+        rating: [{ required: true, message: '请选择评分', trigger: 'change' }],
+        content: [{ required: true, message: '请输入评价内容', trigger: 'blur' }]
+      },
+      previewVisible: false,
+      previewImage: ''
     };
   },
   created() {
@@ -159,24 +252,11 @@ export default {
       this.loadOrders();
     },
     getStatusText(status) {
-      const map = {
-        0: '待支付',
-        1: '已支付',
-        2: '已发货',
-        3: '已完成',
-        4: '已取消',
-        5: '已退款'
-      };
+      const map = { 0: '待支付', 1: '已支付', 2: '已发货', 3: '已完成', 4: '已取消', 5: '已退款' };
       return map[status] || '未知';
     },
     getStatusClass(status) {
-      const map = {
-        0: 'status-pending',
-        1: 'status-paid',
-        2: 'status-shipped',
-        3: 'status-completed',
-        4: 'status-cancelled'
-      };
+      const map = { 0: 'status-pending', 1: 'status-paid', 2: 'status-shipped', 3: 'status-completed', 4: 'status-cancelled' };
       return map[status] || '';
     },
     formatDate(date) {
@@ -198,15 +278,107 @@ export default {
         }
       }).catch(() => {});
     },
-    confirmReceipt(orderNo) {
+    async confirmReceipt(orderNo) {
       this.$confirm('确认已收到商品？', '提示', { type: 'info' }).then(async () => {
-        // 调用确认收货接口
-        this.$message.success('确认收货成功');
-        this.loadOrders();
+        try {
+          await updateOrderStatus(orderNo, 3);
+          this.$message.success('确认收货成功');
+          this.loadOrders();
+        } catch (error) {
+          this.$message.error('操作失败');
+        }
       }).catch(() => {});
     },
-    goToComment(orderNo) {
-      this.$message.info('评价功能开发中');
+    openCommentDialog(order) {
+      this.currentOrder = order;
+      // 如果有多个商品，让用户选择评价哪个商品
+      if (order.items.length > 1) {
+        this.$confirm('请选择要评价的商品', '选择商品', {
+          distinguishCancelAndClose: true,
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          // 简化处理：评价第一个商品
+          this.currentProduct = order.items[0];
+          this.commentForm = {
+            rating: 5,
+            content: '',
+            imageList: [],
+            imageUrls: []
+          };
+          this.commentDialogVisible = true;
+        }).catch(() => {});
+      } else {
+        this.currentProduct = order.items[0];
+        this.commentForm = {
+          rating: 5,
+          content: '',
+          imageList: [],
+          imageUrls: []
+        };
+        this.commentDialogVisible = true;
+      }
+    },
+    async uploadCommentImage(file) {
+      const formData = new FormData();
+      formData.append('file', file.file);
+
+      try {
+        const res = await uploadImage(formData);
+        if (res.code === 200) {
+          this.commentForm.imageUrls.push(res.data.url);
+          this.commentForm.imageList.push({
+            name: file.file.name,
+            url: res.data.url
+          });
+        } else {
+          this.$message.error('上传失败');
+        }
+      } catch (error) {
+        this.$message.error('上传失败');
+      }
+    },
+    handlePictureCardPreview(file) {
+      this.previewImage = file.url;
+      this.previewVisible = true;
+    },
+    handleRemove(file, fileList) {
+      const index = this.commentForm.imageList.findIndex(f => f.uid === file.uid);
+      if (index !== -1) {
+        this.commentForm.imageList.splice(index, 1);
+        this.commentForm.imageUrls.splice(index, 1);
+      }
+    },
+    async submitComment() {
+      this.$refs.commentForm.validate(async (valid) => {
+        if (!valid) return;
+
+        this.commentSubmitting = true;
+        try {
+          const data = {
+            orderNo: this.currentOrder.orderNo,
+            productId: this.currentProduct.productId,
+            rating: this.commentForm.rating,
+            content: this.commentForm.content,
+            images: this.commentForm.imageUrls.join(',')
+          };
+
+          const res = await addComment(data);
+          if (res.code === 200) {
+            this.$message.success('评价成功');
+            this.commentDialogVisible = false;
+            // 刷新订单列表
+            this.loadOrders();
+          } else {
+            this.$message.error(res.message);
+          }
+        } catch (error) {
+          this.$message.error('评价失败');
+        } finally {
+          this.commentSubmitting = false;
+        }
+      });
     }
   },
   watch: {
@@ -400,6 +572,44 @@ export default {
   margin-top: 30px;
   display: flex;
   justify-content: center;
+}
+
+/* 评价对话框样式 */
+.comment-dialog {
+  padding: 10px 0;
+}
+
+.comment-product {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  background: #f8f9fc;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.comment-product img {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.comment-product .product-info h4 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.comment-product .product-price {
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
 }
 
 @media (max-width: 768px) {

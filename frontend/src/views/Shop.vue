@@ -4,11 +4,11 @@
 
     <div class="shop-content">
       <div class="container">
-        <!-- 分类导航 -->
+        <!-- 分类导航 - 只显示一级分类 -->
         <div class="category-nav">
           <div class="category-list">
             <span
-                v-for="cat in categories"
+                v-for="cat in topCategories"
                 :key="cat.id"
                 :class="['category-item', { active: currentCategory === cat.id }]"
                 @click="handleCategoryChange(cat.id)"
@@ -27,6 +27,28 @@
               <i slot="prefix" class="el-icon-search"></i>
               <el-button slot="append" @click="handleSearch">搜索</el-button>
             </el-input>
+          </div>
+        </div>
+
+        <!-- 二级分类（当选中一级分类时显示） -->
+        <div class="sub-category-nav" v-if="currentCategory && subCategories.length > 0">
+          <div class="sub-category-title">子分类：</div>
+          <div class="sub-category-list">
+            <span
+                v-for="cat in subCategories"
+                :key="cat.id"
+                :class="['sub-category-item', { active: currentSubCategory === cat.id }]"
+                @click="handleSubCategoryChange(cat.id)"
+            >
+              {{ cat.name }}
+            </span>
+            <span
+                v-if="currentSubCategory"
+                class="sub-category-item clear"
+                @click="handleClearSubCategory"
+            >
+              清除筛选
+            </span>
           </div>
         </div>
 
@@ -107,6 +129,7 @@
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getProductList } from '@/api/product';
+import { getAllCategories } from '@/api/category';
 import { addToCart } from '@/api/cart';
 
 export default {
@@ -116,15 +139,11 @@ export default {
     return {
       loading: false,
       productList: [],
-      categories: [
-        { id: null, name: '全部' },
-        { id: 1, name: '狗粮' },
-        { id: 2, name: '猫粮' },
-        { id: 3, name: '玩具' },
-        { id: 4, name: '窝垫' },
-        { id: 5, name: '洗护' }
-      ],
-      currentCategory: null,
+      allCategories: [],      // 所有分类（用于构建树形结构）
+      topCategories: [],      // 一级分类
+      subCategories: [],      // 当前选中的一级分类下的二级分类
+      currentCategory: null,  // 当前选中的一级分类ID
+      currentSubCategory: null, // 当前选中的二级分类ID
       keyword: '',
       sortType: 'default',
       page: 1,
@@ -133,17 +152,60 @@ export default {
     };
   },
   created() {
-    this.loadProducts();
+    this.loadCategories();
   },
   methods: {
+    // 加载分类并构建树形结构
+    async loadCategories() {
+      try {
+        const res = await getAllCategories();
+        if (res.code === 200) {
+          this.allCategories = res.data;
+          // 获取一级分类（parentId === 0）
+          this.topCategories = this.allCategories.filter(cat => cat.parentId === 0);
+        }
+      } catch (error) {
+        console.error('加载分类失败', error);
+        // 使用默认分类
+        this.topCategories = [
+          { id: 1, name: '狗粮', parentId: 0 },
+          { id: 2, name: '猫粮', parentId: 0 },
+          { id: 3, name: '玩具', parentId: 0 },
+          { id: 4, name: '窝垫', parentId: 0 },
+          { id: 5, name: '洗护', parentId: 0 }
+        ];
+      }
+    },
+
+    // 获取子分类
+    getSubCategories(parentId) {
+      return this.allCategories.filter(cat => cat.parentId === parentId);
+    },
+
+    // 获取包含子分类的所有分类ID（用于查询商品）
+    getCategoryIdsForQuery() {
+      if (this.currentSubCategory) {
+        // 如果选中了二级分类，只返回该二级分类ID
+        return [this.currentSubCategory];
+      } else if (this.currentCategory) {
+        // 如果只选中了一级分类，返回该一级分类及其所有子分类ID
+        const ids = [this.currentCategory];
+        const children = this.getSubCategories(this.currentCategory);
+        ids.push(...children.map(c => c.id));
+        return ids;
+      }
+      return null;
+    },
+
     async loadProducts() {
       this.loading = true;
       try {
+        const categoryIds = this.getCategoryIdsForQuery();
         const params = {
           page: this.page,
           pageSize: this.pageSize,
           keyword: this.keyword || undefined,
-          categoryId: this.currentCategory || undefined
+          categoryId: categoryIds ? categoryIds.join(',') : undefined  // 传递逗号分隔的字符串
         };
 
         if (this.sortType === 'price_asc') params.sort = 'price_asc';
@@ -161,48 +223,76 @@ export default {
         this.loading = false;
       }
     },
+
     handleCategoryChange(categoryId) {
       this.currentCategory = categoryId;
+      this.currentSubCategory = null;
+      // 获取该一级分类下的子分类
+      this.subCategories = this.getSubCategories(categoryId);
       this.page = 1;
       this.loadProducts();
     },
+
+    handleSubCategoryChange(subId) {
+      this.currentSubCategory = subId;
+      this.page = 1;
+      this.loadProducts();
+    },
+
+    handleClearSubCategory() {
+      this.currentSubCategory = null;
+      this.page = 1;
+      this.loadProducts();
+    },
+
     handleSearch() {
       this.page = 1;
       this.loadProducts();
     },
+
     handleSort(type) {
       this.sortType = type;
       this.page = 1;
       this.loadProducts();
     },
+
     handlePageChange(page) {
       this.page = page;
       this.loadProducts();
     },
+
     goToDetail(id) {
       this.$router.push(`/product/${id}`);
     },
-    async addToCart(product) {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          this.$confirm('请先登录', '提示', {
-            confirmButtonText: '去登录',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(() => {
-            this.$router.push('/login');
-          });
-          return;
-        }
 
+    async addToCart(product) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        });
+        return;
+      }
+
+      try {
         const res = await addToCart(product.id);
         if (res.code === 200) {
           this.$message.success('已加入购物车');
+          this.$bus.$emit('cart-updated');
         }
       } catch (error) {
         this.$message.error(error.message || '添加失败');
       }
+    }
+  },
+  watch: {
+    currentCategory() {
+      // 当一级分类变化时，重置分页
+      this.page = 1;
     }
   }
 };
@@ -227,18 +317,23 @@ export default {
   padding: 0 20px;
 }
 
+/* 一级分类导航 */
 .category-nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 20px;
+  background: white;
+  padding: 15px 25px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .category-list {
   display: flex;
-  gap: 20px;
+  gap: 25px;
   flex-wrap: wrap;
 }
 
@@ -247,13 +342,13 @@ export default {
   border-radius: 30px;
   cursor: pointer;
   transition: all 0.3s;
-  background: #fff;
+  background: #f5f5f5;
   color: #666;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-weight: 500;
 }
 
 .category-item:hover {
-  color: #667eea;
+  background: #e8e8e8;
   transform: translateY(-2px);
 }
 
@@ -261,6 +356,63 @@ export default {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+/* 二级分类导航 */
+.sub-category-nav {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  background: #f8f9fc;
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.sub-category-title {
+  font-size: 14px;
+  color: #999;
+  font-weight: 500;
+}
+
+.sub-category-list {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.sub-category-item {
+  padding: 5px 16px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: white;
+  color: #666;
+  font-size: 13px;
+  border: 1px solid #e0e0e0;
+}
+
+.sub-category-item:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.sub-category-item.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+}
+
+.sub-category-item.clear {
+  background: #f5f5f5;
+  border-color: #ddd;
+  color: #999;
+}
+
+.sub-category-item.clear:hover {
+  background: #e8e8e8;
+  color: #666;
 }
 
 .search-box {
@@ -290,6 +442,7 @@ export default {
   font-weight: 500;
 }
 
+/* 商品网格 */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -419,6 +572,11 @@ export default {
 
   .search-box {
     width: 100%;
+  }
+
+  .sub-category-nav {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .products-grid {

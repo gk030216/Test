@@ -38,7 +38,7 @@ public class JwtInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 将用户信息存入请求属性中，供后续使用
+        // 将用户信息存入请求属性中
         Integer userId = JwtUtil.getUserIdFromToken(token);
         String username = JwtUtil.getUsernameFromToken(token);
         Integer role = JwtUtil.getRoleFromToken(token);
@@ -50,9 +50,6 @@ public class JwtInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /**
-     * 发送错误响应
-     */
     private void sendErrorResponse(HttpServletResponse response, int code, String message) throws Exception {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");

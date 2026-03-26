@@ -45,7 +45,7 @@
         <if test="status != null">
             AND order_status = #{status}
         </if>
-        ORDER BY create_time DESC
+        ORDER BY create_time ASC
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -66,5 +66,48 @@
     <update id="updateOrderStatus">
         UPDATE orders SET order_status = #{orderStatus} WHERE order_no = #{orderNo}
     </update>
+
+    <!-- 后台订单列表查询 -->
+    <select id="getAdminOrderList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM orders
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (order_no LIKE CONCAT('%', #{keyword}, '%')
+                OR user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR user_phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="orderStatus != null">
+                AND order_status = #{orderStatus}
+            </if>
+            <if test="payStatus != null">
+                AND pay_status = #{payStatus}
+            </if>
+        </where>
+        ORDER BY create_time ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countAdminOrder" resultType="int">
+        SELECT COUNT(*)
+        FROM orders
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (order_no LIKE CONCAT('%', #{keyword}, '%')
+                OR user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR user_phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="orderStatus != null">
+                AND order_status = #{orderStatus}
+            </if>
+            <if test="payStatus != null">
+                AND pay_status = #{payStatus}
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM orders WHERE id = #{id}
+    </delete>
 
 </mapper>

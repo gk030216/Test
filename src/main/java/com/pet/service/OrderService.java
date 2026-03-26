@@ -17,9 +17,15 @@ public interface OrderService {
     Order getOrderByNo(String orderNo);
 
     /**
-     * 获取订单列表
+     * 获取用户订单列表
      */
     Map<String, Object> getOrderList(Integer userId, Integer page, Integer pageSize, Integer status);
+
+    /**
+     * 获取后台订单列表（全量）
+     */
+    Map<String, Object> getAdminOrderList(Integer page, Integer pageSize, String keyword,
+                                          Integer orderStatus, Integer payStatus);
 
     /**
      * 取消订单
@@ -30,4 +36,14 @@ public interface OrderService {
      * 支付成功回调
      */
     boolean handlePayCallback(String orderNo, String tradeNo);
+
+    /**
+     * 更新订单状态（后台用）
+     */
+    boolean updateOrderStatus(String orderNo, Integer orderStatus);
+
+    /**
+     * 删除订单
+     */
+    boolean deleteOrder(Integer id);
 }

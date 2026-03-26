@@ -25,6 +25,10 @@ public class Order {
     // 非数据库字段，用于关联订单详情
     private List<OrderItem> items;
 
+    // 导出临时字段（非数据库字段）
+    private String orderStatusName;
+    private String payStatusName;
+
     // getter和setter
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -76,4 +80,10 @@ public class Order {
 
     public List<OrderItem> getItems() { return items; }
     public void setItems(List<OrderItem> items) { this.items = items; }
+
+    public String getOrderStatusName() { return orderStatusName; }
+    public void setOrderStatusName(String orderStatusName) { this.orderStatusName = orderStatusName; }
+
+    public String getPayStatusName() { return payStatusName; }
+    public void setPayStatusName(String payStatusName) { this.payStatusName = payStatusName; }
 }

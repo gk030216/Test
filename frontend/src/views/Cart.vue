@@ -26,7 +26,7 @@
             </div>
 
             <div class="cart-item" v-for="item in cartList" :key="item.id">
-              <el-checkbox v-model="item.selected" @change="handleSelectChange"></el-checkbox>
+              <el-checkbox v-model="item.selected" @change="() => handleSelectChange(item)"></el-checkbox>
               <div class="item-info" @click="goToDetail(item.productId)">
                 <img :src="item.productImage" :alt="item.productName">
                 <div class="item-detail">
@@ -40,7 +40,7 @@
                     :min="1"
                     :max="99"
                     size="small"
-                    @change="updateQuantity(item)"
+                    @change="() => updateQuantity(item)"
                 ></el-input-number>
               </div>
               <div class="item-total">¥{{ (item.price * item.quantity).toFixed(2) }}</div>
@@ -97,17 +97,17 @@ export default {
     selectAll: {
       get() {
         if (this.cartList.length === 0) return false;
-        return this.cartList.every(item => item.selected === 1);
+        return this.cartList.every(item => item.selected === true);
       },
       set(val) {
         this.handleSelectAll(val);
       }
     },
     selectedCount() {
-      return this.cartList.filter(item => item.selected === 1).reduce((sum, item) => sum + item.quantity, 0);
+      return this.cartList.filter(item => item.selected === true).reduce((sum, item) => sum + item.quantity, 0);
     },
     totalAmount() {
-      return this.cartList.filter(item => item.selected === 1).reduce((sum, item) => sum + item.price * item.quantity, 0);
+      return this.cartList.filter(item => item.selected === true).reduce((sum, item) => sum + item.price * item.quantity, 0);
     }
   },
   created() {
@@ -119,6 +119,7 @@ export default {
       try {
         const res = await getCartList();
         if (res.code === 200) {
+          // 将后端返回的 selected (0/1) 转换为布尔值
           this.cartList = res.data.map(item => ({
             ...item,
             selected: item.selected === 1
@@ -133,28 +134,36 @@ export default {
     async updateQuantity(item) {
       try {
         await updateCartQuantity(item.id, item.quantity);
+        // 更新成功后触发购物车更新事件
+        this.$bus.$emit('cart-updated');
       } catch (error) {
         this.$message.error('更新失败');
         this.loadCart();
       }
     },
-    async handleSelectChange() {
+    async handleSelectChange(item) {
       try {
-        const promises = this.cartList.map(item => {
-          return updateCartSelected(item.id, item.selected ? 1 : 0);
-        });
-        await Promise.all(promises);
+        // 将布尔值转换为数字 (true=1, false=0)
+        const selectedValue = item.selected ? 1 : 0;
+        await updateCartSelected(item.id, selectedValue);
+        // 更新成功后触发购物车更新事件
+        this.$bus.$emit('cart-updated');
       } catch (error) {
         this.$message.error('更新失败');
+        // 失败时重新加载购物车
+        this.loadCart();
       }
     },
     async handleSelectAll(selected) {
       try {
         const promises = this.cartList.map(item => {
           item.selected = selected;
-          return updateCartSelected(item.id, selected ? 1 : 0);
+          const selectedValue = selected ? 1 : 0;
+          return updateCartSelected(item.id, selectedValue);
         });
         await Promise.all(promises);
+        // 更新成功后触发购物车更新事件
+        this.$bus.$emit('cart-updated');
       } catch (error) {
         this.$message.error('更新失败');
         this.loadCart();
@@ -192,12 +201,14 @@ export default {
       this.$router.push(`/product/${id}`);
     },
     goToCheckout() {
-      const selectedItems = this.cartList.filter(item => item.selected === 1);
+      const selectedItems = this.cartList.filter(item => item.selected === true);
       if (selectedItems.length === 0) {
         this.$message.warning('请先选择商品');
         return;
       }
+      // 存入结算商品
       localStorage.setItem('checkoutItems', JSON.stringify(selectedItems));
+      // 注意：不要清除购物车数据，支付成功后才由后端删除
       this.$router.push('/checkout');
     }
   }

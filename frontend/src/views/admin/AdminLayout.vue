@@ -59,9 +59,26 @@
             <i class="el-icon-goods"></i>
             <span slot="title">商品管理</span>
           </template>
-          <el-menu-item index="product-list">商品列表</el-menu-item>
-          <el-menu-item index="product-category">商品分类</el-menu-item>
-          <el-menu-item index="order-list">订单管理</el-menu-item>
+          <el-menu-item index="category-list">
+            <i class="el-icon-menu"></i>
+            <span slot="title">商品分类</span>
+          </el-menu-item>
+          <el-menu-item index="product-list">
+            <i class="el-icon-goods"></i>
+            <span slot="title">商品管理</span>
+          </el-menu-item>
+          <el-menu-item index="order-list">
+            <i class="el-icon-s-order"></i>
+            <span slot="title">订单管理</span>
+          </el-menu-item>
+          <el-menu-item index="comment-list">
+            <i class="el-icon-chat-dot-round"></i>
+            <span slot="title">评价管理</span>
+          </el-menu-item>
+          <el-menu-item index="data-analysis">
+            <i class="el-icon-data-line"></i>
+            <span slot="title">数据分析</span>
+          </el-menu-item>
         </el-submenu>
 
         <el-submenu index="community">

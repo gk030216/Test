@@ -36,4 +36,28 @@ public class FileUploadController {
             return Result.error(e.getMessage());
         }
     }
+
+    @PostMapping("/product")
+    public Result<Map<String, String>> uploadProduct(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadProduct(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/comment")
+    public Result<Map<String, String>> uploadComment(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadComment(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

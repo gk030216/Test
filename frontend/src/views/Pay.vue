@@ -92,7 +92,8 @@ export default {
       payType: 1,
       payStatus: 'pending',
       payTitle: '订单待支付',
-      payMessage: '请在30分钟内完成支付，超时订单将自动取消'
+      payMessage: '请在30分钟内完成支付，超时订单将自动取消',
+      pollingTimer: null
     };
   },
   computed: {
@@ -102,7 +103,12 @@ export default {
   },
   created() {
     this.loadOrder();
-    this.checkPayResult();
+    localStorage.setItem('lastOrderNo', this.orderNo);
+  },
+  beforeDestroy() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+    }
   },
   methods: {
     async loadOrder() {
@@ -115,32 +121,39 @@ export default {
             this.payStatus = 'success';
             this.payTitle = '支付成功';
             this.payMessage = '您的订单已支付成功，我们将尽快为您发货';
+            if (this.pollingTimer) {
+              clearInterval(this.pollingTimer);
+            }
+            localStorage.removeItem('lastOrderNo');
           } else if (this.order.orderStatus === 4) {
             this.payStatus = 'failed';
             this.payTitle = '订单已取消';
             this.payMessage = '订单已取消，如需购买请重新下单';
           }
         } else {
-          this.$message.error('订单不存在');
-          this.$router.push('/orders');
+          console.error('订单不存在:', res.message);
         }
       } catch (error) {
-        this.$message.error('加载失败');
+        console.error('加载订单失败', error);
       } finally {
         this.loading = false;
       }
     },
+
     async handlePay() {
       this.paying = true;
       try {
         const res = await payOrder({ orderNo: this.orderNo, payType: this.payType });
-
         if (res.code === 200) {
           const payForm = res.data;
-
-          // 方法1：直接替换当前页面内容
-          document.write(payForm);
-          document.close();
+          const div = document.createElement('div');
+          div.innerHTML = payForm;
+          document.body.appendChild(div);
+          const form = div.getElementsByTagName('form')[0];
+          if (form) {
+            form.submit();
+          }
+          this.startPolling();
         } else {
           this.$message.error(res.message);
         }
@@ -151,14 +164,33 @@ export default {
         this.paying = false;
       }
     },
-    checkPayResult() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tradeNo = urlParams.get('trade_no');
-      const outTradeNo = urlParams.get('out_trade_no');
-      if (tradeNo && outTradeNo) {
-        this.loadOrder();
-      }
+
+    startPolling() {
+      let count = 0;
+      this.pollingTimer = setInterval(async () => {
+        count++;
+        try {
+          const res = await getOrderDetail(this.orderNo);
+          if (res.code === 200 && res.data.payStatus === 1) {
+            clearInterval(this.pollingTimer);
+            this.$message.success('支付成功');
+            localStorage.removeItem('lastOrderNo');
+            this.$router.push('/orders');
+          } else if (count >= 20) {
+            clearInterval(this.pollingTimer);
+            this.$message.warning('支付处理中，请稍后查看订单状态');
+            this.$router.push('/orders');
+          }
+        } catch (error) {
+          console.error('查询订单失败', error);
+          if (count >= 20) {
+            clearInterval(this.pollingTimer);
+            this.$router.push('/orders');
+          }
+        }
+      }, 3000);
     },
+
     async cancelOrder() {
       this.$confirm('确定要取消该订单吗？', '提示', { type: 'warning' }).then(async () => {
         try {
@@ -170,6 +202,7 @@ export default {
         }
       }).catch(() => {});
     },
+
     retryPay() {
       this.payStatus = 'pending';
       this.payTitle = '订单待支付';
@@ -186,136 +219,29 @@ export default {
   flex-direction: column;
   background: #f8f9fa;
 }
-
-.pay-content {
-  flex: 1;
-  padding: 60px 0;
-}
-
-.container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.pay-card {
-  background: white;
-  border-radius: 24px;
-  padding: 40px;
-  text-align: center;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-}
-
-.pay-header i {
-  font-size: 80px;
-  margin-bottom: 20px;
-}
-
-.pay-header .el-icon-success {
-  color: #67c23a;
-}
-
-.pay-header .el-icon-warning {
-  color: #e6a23c;
-}
-
-.pay-header .el-icon-time {
-  color: #409EFF;
-}
-
-.pay-header h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
-  color: #333;
-}
-
-.pay-header p {
-  color: #999;
-  font-size: 14px;
-}
-
-.pay-info {
-  background: #f8f9fc;
-  border-radius: 16px;
-  padding: 20px;
-  margin: 30px 0;
-  text-align: left;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-}
-
-.info-item .amount {
-  color: #ff6b6b;
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.pay-methods {
-  margin: 30px 0;
-  text-align: left;
-}
-
-.method-title {
-  margin-bottom: 15px;
-  font-weight: 500;
-  color: #333;
-}
-
-.method-list {
-  display: flex;
-  gap: 15px;
-}
-
-.method-item {
-  width: 120px;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.method-item i {
-  font-size: 32px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.method-item.active {
-  border-color: #667eea;
-  background: #f8f9ff;
-}
-
-.pay-actions {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-top: 30px;
-}
-
-.pay-btn {
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
-  border: none;
-  padding: 12px 50px;
-  font-size: 16px;
-}
-
+.pay-content { flex: 1; padding: 60px 0; }
+.container { max-width: 600px; margin: 0 auto; padding: 0 20px; }
+.pay-card { background: white; border-radius: 24px; padding: 40px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+.pay-header i { font-size: 80px; margin-bottom: 20px; }
+.pay-header .el-icon-success { color: #67c23a; }
+.pay-header .el-icon-warning { color: #e6a23c; }
+.pay-header .el-icon-time { color: #409EFF; }
+.pay-header h2 { font-size: 24px; margin-bottom: 10px; color: #333; }
+.pay-header p { color: #999; font-size: 14px; }
+.pay-info { background: #f8f9fc; border-radius: 16px; padding: 20px; margin: 30px 0; text-align: left; }
+.info-item { display: flex; justify-content: space-between; padding: 8px 0; }
+.info-item .amount { color: #ff6b6b; font-size: 20px; font-weight: bold; }
+.pay-methods { margin: 30px 0; text-align: left; }
+.method-title { margin-bottom: 15px; font-weight: 500; color: #333; }
+.method-list { display: flex; gap: 15px; }
+.method-item { width: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.3s; }
+.method-item i { font-size: 32px; margin-bottom: 8px; display: block; }
+.method-item.active { border-color: #667eea; background: #f8f9ff; }
+.pay-actions { display: flex; gap: 20px; justify-content: center; margin-top: 30px; }
+.pay-btn { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); border: none; padding: 12px 50px; font-size: 16px; }
 @media (max-width: 768px) {
-  .pay-card {
-    padding: 30px 20px;
-  }
-
-  .method-list {
-    flex-direction: column;
-  }
-
-  .method-item {
-    width: 100%;
-  }
+  .pay-card { padding: 30px 20px; }
+  .method-list { flex-direction: column; }
+  .method-item { width: 100%; }
 }
 </style>

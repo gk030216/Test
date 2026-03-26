@@ -59,7 +59,7 @@ public class CartServiceImpl implements CartService {
             cart.setProductImage(product.getImage());
             cart.setPrice(product.getPrice());
             cart.setQuantity(quantity);
-            cart.setSelected(1);
+            cart.setSelected(1);  // 默认选中
             cartMapper.insert(cart);
         }
         return true;

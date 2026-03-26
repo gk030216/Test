@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ProductCommentMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.ProductComment">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="product_id" property="productId"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="rating" property="rating"/>
+        <result column="content" property="content"/>
+        <result column="images" property="images"/>
+        <result column="reply" property="reply"/>
+        <result column="reply_time" property="replyTime"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product_comment (order_no, product_id, user_id, user_name, rating, content, images)
+        VALUES (#{orderNo}, #{productId}, #{userId}, #{userName}, #{rating}, #{content}, #{images})
+    </insert>
+
+    <select id="getCommentList" resultMap="BaseResultMap">
+        SELECT * FROM product_comment
+        WHERE product_id = #{productId} AND status = 1
+        ORDER BY create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countComment" resultType="int">
+        SELECT COUNT(*) FROM product_comment
+        WHERE product_id = #{productId} AND status = 1
+    </select>
+
+    <select id="getAdminCommentList" resultMap="BaseResultMap">
+        SELECT * FROM product_comment
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="rating != null">
+                AND rating = #{rating}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countAdminComment" resultType="int">
+        SELECT COUNT(*) FROM product_comment
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="rating != null">
+                AND rating = #{rating}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE product_comment SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="reply">
+        UPDATE product_comment SET reply = #{reply}, reply_time = NOW() WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM product_comment WHERE id = #{id}
+    </delete>
+
+    <select id="getRatingStats" resultType="java.util.HashMap">
+        SELECT
+            ROUND(AVG(rating), 1) as avg_rating,
+            COUNT(*) as total_count,
+            SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as star5,
+            SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as star4,
+            SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as star3,
+            SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as star2,
+            SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as star1
+        FROM product_comment
+        WHERE product_id = #{productId} AND status = 1
+    </select>
+
+    <select id="getRatingDistribution" resultType="java.util.HashMap">
+        SELECT rating, COUNT(*) as count
+        FROM product_comment
+        WHERE status = 1
+        GROUP BY rating
+        ORDER BY rating DESC
+    </select>
+
+    <select id="getCommentTrend" resultType="java.util.HashMap">
+        SELECT
+            DATE_FORMAT(create_time, '%Y-%m-%d') as date,
+            COUNT(*) as count
+        FROM product_comment
+        WHERE create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        ORDER BY date ASC
+    </select>
+
+</mapper>
