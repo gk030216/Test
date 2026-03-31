@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.AIFaqMapper">
+
+    <resultMap id="BaseResultMap" type="java.util.HashMap">
+        <id column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="question" property="question"/>
+        <result column="answer" property="answer"/>
+        <result column="category" property="category"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <!-- 获取启用的常见问题 -->
+    <select id="getEnabledList" resultType="java.util.HashMap">
+        SELECT
+            id,
+            question,
+            answer,
+            category,
+            sort_order as sortOrder
+        FROM ai_faq
+        WHERE status = 1
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 获取常见问题列表（后台） -->
+    <select id="getList" resultType="java.util.HashMap">
+        SELECT
+        id,
+        question,
+        answer,
+        category,
+        sort_order as sortOrder,
+        status,
+        DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s') as createTime
+        FROM ai_faq
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND question LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取总数 -->
+    <select id="countList" resultType="int">
+        SELECT COUNT(*) FROM ai_faq
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND question LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- 插入常见问题 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_faq (question, answer, category, sort_order, status)
+        VALUES (#{question}, #{answer}, #{category}, #{sortOrder}, #{status})
+    </insert>
+
+    <!-- 更新常见问题 -->
+    <update id="update">
+        UPDATE ai_faq
+        <set>
+            <if test="question != null">question = #{question},</if>
+            <if test="answer != null">answer = #{answer},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新常见问题状态 -->
+    <update id="updateStatus">
+        UPDATE ai_faq SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 删除常见问题 -->
+    <delete id="deleteById">
+        DELETE FROM ai_faq WHERE id = #{id}
+    </delete>
+
+</mapper>

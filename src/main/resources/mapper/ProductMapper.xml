@@ -26,6 +26,7 @@
         image, images, sales, status, is_hot, is_new, create_time, update_time
     </sql>
 
+    <!-- 前台商品列表查询（支持一级分类查询所有子分类商品） -->
     <select id="getProductList" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM product
@@ -35,11 +36,11 @@
                 AND (name LIKE CONCAT('%', #{keyword}, '%')
                 OR description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <if test="categoryIds != null and categoryIds != ''">
-                AND category_id IN
-                <foreach collection="categoryIds.split(',')" item="id" open="(" separator="," close=")">
-                    #{id}
-                </foreach>
+            <if test="categoryId != null">
+                AND category_id IN (
+                SELECT id FROM product_category
+                WHERE id = #{categoryId} OR parent_id = #{categoryId}
+                )
             </if>
             <if test="isHot != null">
                 AND is_hot = #{isHot}
@@ -61,26 +62,15 @@
                 AND (name LIKE CONCAT('%', #{keyword}, '%')
                 OR description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <if test="categoryIds != null and categoryIds != ''">
-                AND category_id IN
-                <foreach collection="categoryIds.split(',')" item="id" open="(" separator="," close=")">
-                    #{id}
-                </foreach>
+            <if test="categoryId != null">
+                AND category_id IN (
+                SELECT id FROM product_category
+                WHERE id = #{categoryId} OR parent_id = #{categoryId}
+                )
             </if>
         </where>
     </select>
 
-    <select id="getById" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM product WHERE id = #{id}
-    </select>
-
-    <update id="updateStock">
-        UPDATE product SET stock = stock + #{quantity}, sales = sales - #{quantity}
-        WHERE id = #{id} AND stock + #{quantity} >= 0
-    </update>
-
-    <!-- 后台商品列表查询 -->
     <select id="getAdminProductList" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM product
@@ -95,7 +85,7 @@
                 AND status = #{status}
             </if>
         </where>
-        ORDER BY id ASC
+        ORDER BY id DESC
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -115,9 +105,14 @@
         </where>
     </select>
 
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product WHERE id = #{id}
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO product (name, description, price, original_price, stock, category_id, category_name, image, images, status, is_hot, is_new)
-        VALUES (#{name}, #{description}, #{price}, #{originalPrice}, #{stock}, #{categoryId}, #{categoryName}, #{image}, #{images},
+        INSERT INTO product (name, description, price, original_price, stock, category_id, category_name, image, status, is_hot, is_new)
+        VALUES (#{name}, #{description}, #{price}, #{originalPrice}, #{stock}, #{categoryId}, #{categoryName}, #{image},
                 #{status}, #{isHot}, #{isNew})
     </insert>
 
@@ -144,14 +139,18 @@
         UPDATE product SET status = #{status} WHERE id = #{id}
     </update>
 
+    <update id="updateStock">
+        UPDATE product SET stock = stock + #{quantity}, sales = sales - #{quantity}
+        WHERE id = #{id} AND stock + #{quantity} >= 0
+    </update>
+
+    <update id="updateRating">
+        UPDATE product SET avg_rating = #{avgRating}, comment_count = #{commentCount}
+        WHERE id = #{id}
+    </update>
+
     <delete id="deleteById">
         DELETE FROM product WHERE id = #{id}
     </delete>
-
-    <update id="updateRating">
-        UPDATE product
-        SET avg_rating = #{avgRating}, comment_count = #{commentCount}
-        WHERE id = #{id}
-    </update>
 
 </mapper>

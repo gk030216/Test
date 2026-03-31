@@ -15,6 +15,11 @@
         <result column="reply_time" property="replyTime"/>
         <result column="status" property="status"/>
         <result column="create_time" property="createTime"/>
+        <!-- 关联查询的商品字段 -->
+        <result column="product_name" property="productName"/>
+        <result column="product_image" property="productImage"/>
+        <result column="product_price" property="productPrice"/>
+        <result column="user_avatar" property="userAvatar"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -23,9 +28,17 @@
     </insert>
 
     <select id="getCommentList" resultMap="BaseResultMap">
-        SELECT * FROM product_comment
-        WHERE product_id = #{productId} AND status = 1
-        ORDER BY create_time DESC
+        SELECT
+            pc.*,
+            p.name as product_name,
+            p.image as product_image,
+            p.price as product_price,
+            u.avatar as user_avatar
+        FROM product_comment pc
+                 LEFT JOIN product p ON pc.product_id = p.id
+                 LEFT JOIN user u ON pc.user_id = u.id
+        WHERE pc.product_id = #{productId} AND pc.status = 1
+        ORDER BY pc.create_time DESC
             LIMIT #{offset}, #{limit}
     </select>
 
@@ -35,35 +48,63 @@
     </select>
 
     <select id="getAdminCommentList" resultMap="BaseResultMap">
-        SELECT * FROM product_comment
+        SELECT
+        pc.*,
+        p.name as product_name,
+        p.image as product_image,
+        p.price as product_price,
+        u.avatar as user_avatar
+        FROM product_comment pc
+        LEFT JOIN product p ON pc.product_id = p.id
+        LEFT JOIN user u ON pc.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (user_name LIKE CONCAT('%', #{keyword}, '%')
-                OR content LIKE CONCAT('%', #{keyword}, '%'))
+                AND (pc.user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR pc.content LIKE CONCAT('%', #{keyword}, '%')
+                OR p.name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="rating != null">
-                AND rating = #{rating}
+                AND pc.rating = #{rating}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND pc.status = #{status}
+            </if>
+            <if test="replyStatus != null">
+                <if test="replyStatus == 0">
+                    AND (pc.reply IS NULL OR pc.reply = '')
+                </if>
+                <if test="replyStatus == 1">
+                    AND pc.reply IS NOT NULL AND pc.reply != ''
+                </if>
             </if>
         </where>
-        ORDER BY create_time DESC
-        LIMIT #{offset}, #{limit}
+        ORDER BY
+        CASE WHEN (pc.reply IS NULL OR pc.reply = '') THEN 0 ELSE 1 END,
+        pc.id ASC
     </select>
 
     <select id="countAdminComment" resultType="int">
-        SELECT COUNT(*) FROM product_comment
+        SELECT COUNT(*) FROM product_comment pc
+        LEFT JOIN product p ON pc.product_id = p.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (user_name LIKE CONCAT('%', #{keyword}, '%')
-                OR content LIKE CONCAT('%', #{keyword}, '%'))
+                AND (pc.user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR pc.content LIKE CONCAT('%', #{keyword}, '%')
+                OR p.name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="rating != null">
-                AND rating = #{rating}
+                AND pc.rating = #{rating}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND pc.status = #{status}
+            </if>
+            <if test="replyStatus != null">
+                <if test="replyStatus == 0">
+                    AND (pc.reply IS NULL OR pc.reply = '')
+                </if>
+                <if test="replyStatus == 1">
+                    AND pc.reply IS NOT NULL AND pc.reply != ''
+                </if>
             </if>
         </where>
     </select>

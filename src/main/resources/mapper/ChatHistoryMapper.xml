@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ChatHistoryMapper">
+
+    <resultMap id="BaseResultMap" type="java.util.HashMap">
+        <id column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="user_question" property="userQuestion"/>
+        <result column="answer_source" property="answerSource"/>
+        <result column="ai_answer" property="aiAnswer"/>
+        <result column="knowledge_id" property="knowledgeId"/>
+        <result column="rating" property="rating"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <!-- 获取用户对话历史（用户端） -->
+    <select id="getByUserId" resultType="java.util.HashMap">
+        SELECT
+            id,
+            user_id as userId,
+            user_question as userQuestion,
+            answer_source as answerSource,
+            ai_answer as aiAnswer,
+            rating,
+            DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s') as createTime
+        FROM chat_history
+        WHERE user_id = #{userId}
+        ORDER BY create_time ASC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 插入对话记录 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_history (user_id, session_id, user_question, answer_source, ai_answer, knowledge_id)
+        VALUES (#{userId}, #{sessionId}, #{userQuestion}, #{answerSource}, #{aiAnswer}, #{knowledgeId})
+    </insert>
+
+    <!-- 获取对话总数（用户端） -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM chat_history WHERE user_id = #{userId}
+    </select>
+
+    <!-- 更新评价 -->
+    <update id="updateRating">
+        UPDATE chat_history SET rating = #{rating} WHERE id = #{id}
+    </update>
+
+    <!-- 删除用户对话历史 -->
+    <delete id="deleteByUserId">
+        DELETE FROM chat_history WHERE user_id = #{userId}
+    </delete>
+
+    <!-- ============= 后台管理接口 ============= -->
+
+    <!-- 获取对话记录列表（后台）- 按时间升序，确保用户名正确返回 -->
+    <select id="getAdminList" resultType="java.util.HashMap">
+        SELECT
+        ch.id,
+        ch.user_id as userId,
+        IFNULL(u.username, CONCAT('用户', ch.user_id)) as userName,
+        ch.user_question as userQuestion,
+        ch.answer_source as answerSource,
+        ch.ai_answer as aiAnswer,
+        ch.rating,
+        DATE_FORMAT(ch.create_time, '%Y-%m-%d %H:%i:%s') as createTime
+        FROM chat_history ch
+        LEFT JOIN user u ON ch.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (ch.user_question LIKE CONCAT('%', #{keyword}, '%')
+                OR ch.ai_answer LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="answerSource != null">
+                AND ch.answer_source = #{answerSource}
+            </if>
+            <if test="rating != null">
+                <if test="rating == 0">
+                    AND ch.rating IS NULL
+                </if>
+                <if test="rating > 0">
+                    AND ch.rating = #{rating}
+                </if>
+            </if>
+        </where>
+        ORDER BY ch.create_time ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取对话记录总数（后台） -->
+    <select id="countAdminList" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_history ch
+        LEFT JOIN user u ON ch.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (ch.user_question LIKE CONCAT('%', #{keyword}, '%')
+                OR ch.ai_answer LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="answerSource != null">
+                AND ch.answer_source = #{answerSource}
+            </if>
+            <if test="rating != null">
+                <if test="rating == 0">
+                    AND ch.rating IS NULL
+                </if>
+                <if test="rating > 0">
+                    AND ch.rating = #{rating}
+                </if>
+            </if>
+        </where>
+    </select>
+
+    <!-- 删除单条对话记录 -->
+    <delete id="deleteById">
+        DELETE FROM chat_history WHERE id = #{id}
+    </delete>
+
+</mapper>

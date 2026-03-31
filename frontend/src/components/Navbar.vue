@@ -33,11 +33,6 @@
 
       <!-- 右侧用户区域 -->
       <div class="user-area">
-        <!-- 购物车图标 -->
-        <div class="cart-icon" @click="goToCart">
-          <i class="el-icon-shopping-cart-2"></i>
-          <span class="cart-badge" v-if="cartCount > 0">{{ cartCount }}</span>
-        </div>
 
         <!-- 未登录状态 -->
         <div v-if="!isLoggedIn" class="auth-buttons">
@@ -145,7 +140,7 @@ export default {
       this.$message.info('宠物社区功能开发中，敬请期待');
     },
     goToAIChat() {
-      this.$message.info('AI咨询功能开发中，敬请期待');
+      this.$router.push('/ai-chat');
     },
     goToCart() {
       this.$router.push('/cart');

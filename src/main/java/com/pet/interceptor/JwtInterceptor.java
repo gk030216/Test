@@ -18,6 +18,24 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 获取请求路径
+        String requestUri = request.getRequestURI();
+
+        // 放行 AI 相关接口
+        if (requestUri.startsWith("/api/ai/")) {
+            return true;
+        }
+
+        // 放行登录注册等接口
+        if (requestUri.equals("/api/user/login") ||
+                requestUri.equals("/api/user/register") ||
+                requestUri.equals("/api/user/check-username") ||
+                requestUri.equals("/api/user/check-email") ||
+                requestUri.startsWith("/api/code/") ||
+                requestUri.equals("/api/pay/alipay/notify")) {
+            return true;
+        }
+
         // 获取请求头中的 token
         String token = request.getHeader("Authorization");
 

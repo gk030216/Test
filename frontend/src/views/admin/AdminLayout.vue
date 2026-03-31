@@ -100,6 +100,25 @@
           <span slot="title">数据统计</span>
         </el-menu-item>
 
+        <el-submenu index="ai">
+          <template slot="title">
+            <i class="el-icon-cpu"></i>
+            <span slot="title">AI咨询管理</span>
+          </template>
+          <el-menu-item index="knowledge-list">
+            <i class="el-icon-document"></i>
+            <span slot="title">知识库管理</span>
+          </el-menu-item>
+          <el-menu-item index="faq-list">
+            <i class="el-icon-question"></i>
+            <span slot="title">常见问题管理</span>
+          </el-menu-item>
+          <el-menu-item index="chat-history">
+            <i class="el-icon-chat-dot-round"></i>
+            <span slot="title">对话记录</span>
+          </el-menu-item>
+        </el-submenu>
+
         <el-menu-item index="settings">
           <i class="el-icon-setting"></i>
           <span slot="title">系统设置</span>
@@ -196,6 +215,9 @@ export default {
         'post-list': '帖子管理',
         'comment-list': '评论管理',
         'carousel': '轮播图管理',
+        'knowledge-list': '知识库管理',
+        'faq-list': '常见问题管理',
+        'chat-history': '对话记录',
         'statistics': '数据统计',
         'settings': '系统设置'
       };

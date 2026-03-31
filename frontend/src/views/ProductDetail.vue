@@ -41,6 +41,9 @@
             <div class="product-sales">
               <span>销量：{{ product.sales || 0 }}件</span>
               <span>库存：{{ product.stock || 0 }}件</span>
+              <span class="rating-info" v-if="product.avgRating">
+                评分：<el-rate v-model="product.avgRating" disabled show-score text-color="#ff9900"></el-rate>
+              </span>
             </div>
             <div class="product-description">
               <div class="desc-label">商品描述：</div>
@@ -81,34 +84,80 @@
                 </div>
               </div>
             </el-tab-pane>
+            <!-- 用户评价Tab -->
             <el-tab-pane label="用户评价" name="comment">
               <div class="comment-content">
-                <div class="comment-summary">
+                <!-- 评分统计 -->
+                <div class="comment-summary" v-if="ratingStats">
                   <div class="rating-score">
-                    <span class="score">{{ product.avgRating || 5.0 }}</span>
-                    <el-rate v-model="product.avgRating || 5" disabled show-score text-color="#ff9900"></el-rate>
-                    <span>{{ product.commentCount || 0 }}条评价</span>
+                    <span class="score">{{ ratingStats.avg_rating }}</span>
+                    <el-rate v-model="ratingStats.avg_rating" disabled show-score text-color="#ff9900"></el-rate>
+                    <span class="total">{{ ratingStats.total_count }}条评价</span>
+                  </div>
+                  <div class="rating-bars">
+                    <div class="rating-bar-item" v-for="i in [5,4,3,2,1]" :key="i">
+                      <span class="star-label">{{ i }}星</span>
+                      <div class="bar">
+                        <div class="bar-fill" :style="{ width: getPercent(i) + '%' }"></div>
+                      </div>
+                      <span class="count">{{ ratingStats['star' + i] || 0 }}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="comment-list" v-if="comments.length">
-                  <div class="comment-item" v-for="comment in comments" :key="comment.id">
+
+                <!-- 评价列表 -->
+                <div class="comment-list" v-loading="commentLoading">
+                  <div class="comment-item" v-for="comment in commentList" :key="comment.id">
                     <div class="comment-header">
-                      <el-avatar :size="32" :src="comment.avatar">{{ comment.nickname.charAt(0) }}</el-avatar>
+                      <el-avatar :size="40" :src="comment.userAvatar" class="comment-avatar">
+                        {{ comment.userName ? comment.userName.charAt(0).toUpperCase() : 'U' }}
+                      </el-avatar>
                       <div class="comment-info">
-                        <span class="nickname">{{ comment.nickname }}</span>
-                        <el-rate v-model="comment.rating" disabled></el-rate>
-                        <span class="time">{{ formatDate(comment.createTime) }}</span>
+                        <div class="user-info">
+                          <span class="user-name">{{ comment.userName }}</span>
+                          <el-rate v-model="comment.rating" disabled show-score text-color="#ff9900"></el-rate>
+                        </div>
+                        <div class="comment-time">{{ formatDate(comment.createTime) }}</div>
                       </div>
                     </div>
                     <div class="comment-content">{{ comment.content }}</div>
                     <div class="comment-images" v-if="comment.images">
-                      <img v-for="(img, idx) in comment.images.split(',')" :key="idx" :src="img" />
+                      <el-image
+                          v-for="(img, idx) in comment.images.split(',')"
+                          :key="idx"
+                          :src="img"
+                          :preview-src-list="comment.images.split(',')"
+                          fit="cover"
+                          class="comment-img"
+                      ></el-image>
+                    </div>
+                    <div class="comment-reply" v-if="comment.reply">
+                      <div class="reply-header">
+                        <i class="el-icon-chat-dot-round"></i>
+                        <span>商家回复：</span>
+                      </div>
+                      <div class="reply-content">{{ comment.reply }}</div>
+                      <div class="reply-time">{{ formatDate(comment.replyTime) }}</div>
                     </div>
                   </div>
-                </div>
-                <div class="empty-comment" v-else>
-                  <i class="el-icon-chat-dot-round"></i>
-                  <p>暂无评价，快来发表第一条评价吧！</p>
+
+                  <!-- 空状态 -->
+                  <div class="empty-comment" v-if="!commentLoading && commentList.length === 0">
+                    <i class="el-icon-chat-dot-round"></i>
+                    <p>暂无评价，快来发表第一条评价吧！</p>
+                  </div>
+
+                  <!-- 分页 -->
+                  <div class="comment-pagination" v-if="commentTotal > 10">
+                    <el-pagination
+                        @current-change="handleCommentPageChange"
+                        :current-page="commentPage"
+                        :page-size="10"
+                        layout="prev, pager, next"
+                        :total="commentTotal"
+                        small
+                    ></el-pagination>
+                  </div>
                 </div>
               </div>
             </el-tab-pane>
@@ -144,6 +193,7 @@
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getProductById, getHotProducts } from '@/api/product';
+import { getProductComments, getProductRatingStats } from '@/api/comment';
 import { addToCart } from '@/api/cart';
 
 export default {
@@ -152,12 +202,17 @@ export default {
   data() {
     return {
       loading: false,
+      commentLoading: false,
       product: {},
       quantity: 1,
       activeTab: 'detail',
       currentImage: '',
-      comments: [],
-      recommendProducts: []
+      recommendProducts: [],
+      // 评价相关
+      commentList: [],
+      commentPage: 1,
+      commentTotal: 0,
+      ratingStats: null
     };
   },
   computed: {
@@ -192,6 +247,8 @@ export default {
           this.product = res.data;
           this.currentImage = this.product.image;
           this.loadRecommend();
+          this.loadComments();
+          this.loadRatingStats();
         } else {
           this.$message.error('商品不存在');
           this.$router.push('/shop');
@@ -202,6 +259,43 @@ export default {
         this.loading = false;
       }
     },
+
+    async loadComments() {
+      this.commentLoading = true;
+      try {
+        const res = await getProductComments(this.productId, this.commentPage);
+        if (res.code === 200) {
+          this.commentList = res.data.list;
+          this.commentTotal = res.data.total;
+        }
+      } catch (error) {
+        console.error('加载评价失败', error);
+      } finally {
+        this.commentLoading = false;
+      }
+    },
+
+    async loadRatingStats() {
+      try {
+        const res = await getProductRatingStats(this.productId);
+        if (res.code === 200) {
+          this.ratingStats = res.data;
+        }
+      } catch (error) {
+        console.error('加载评分统计失败', error);
+      }
+    },
+
+    getPercent(star) {
+      if (!this.ratingStats || this.ratingStats.total_count === 0) return 0;
+      return (this.ratingStats['star' + star] / this.ratingStats.total_count) * 100;
+    },
+
+    handleCommentPageChange(page) {
+      this.commentPage = page;
+      this.loadComments();
+    },
+
     async loadRecommend() {
       try {
         const res = await getHotProducts();
@@ -212,6 +306,7 @@ export default {
         console.error('加载推荐失败', error);
       }
     },
+
     async handleAddToCart() {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -235,8 +330,8 @@ export default {
         this.$message.error(error.message || '添加失败');
       }
     },
-    // 修复立即购买方法 - 直接跳转到结算页面
-    async handleBuyNow() {
+
+    handleBuyNow() {
       const token = localStorage.getItem('token');
       if (!token) {
         this.$confirm('请先登录', '提示', {
@@ -249,7 +344,6 @@ export default {
         return;
       }
 
-      // 直接创建结算商品数据，跳转到结算页面
       const checkoutItem = {
         productId: this.product.id,
         productName: this.product.name,
@@ -259,19 +353,18 @@ export default {
         selected: 1
       };
 
-      // 将商品存入 localStorage，供结算页面使用
       localStorage.setItem('checkoutItems', JSON.stringify([checkoutItem]));
-
-      // 跳转到结算页面
       this.$router.push('/checkout');
     },
+
     goToDetail(id) {
       this.$router.push(`/product/${id}`);
     },
+
     formatDate(date) {
       if (!date) return '';
       const d = new Date(date);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
   }
 };
@@ -397,6 +490,12 @@ export default {
   color: #666;
 }
 
+.rating-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .product-description {
   padding: 20px 0;
   border-bottom: 1px solid #f0f0f0;
@@ -449,6 +548,7 @@ export default {
   color: #667eea;
 }
 
+/* 评价区域样式 */
 .product-tabs {
   margin-top: 40px;
   background: white;
@@ -456,48 +556,67 @@ export default {
   padding: 20px;
 }
 
-.detail-content {
-  padding: 20px;
-  line-height: 1.8;
-  color: #666;
-}
-
-.spec-content {
-  padding: 20px;
-}
-
-.spec-item {
-  display: flex;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.spec-label {
-  width: 120px;
-  color: #999;
-}
-
-.spec-value {
-  color: #333;
-}
-
 .comment-summary {
+  display: flex;
+  gap: 40px;
   padding: 20px;
   background: #f8f9fc;
-  border-radius: 12px;
+  border-radius: 16px;
   margin-bottom: 30px;
+  flex-wrap: wrap;
 }
 
 .rating-score {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+  text-align: center;
+  min-width: 150px;
 }
 
 .score {
-  font-size: 32px;
+  font-size: 48px;
   font-weight: bold;
   color: #ff9900;
+}
+
+.rating-bars {
+  flex: 1;
+}
+
+.rating-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.star-label {
+  width: 40px;
+  font-size: 13px;
+  color: #666;
+}
+
+.bar {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: #ff9900;
+  border-radius: 4px;
+}
+
+.count {
+  width: 40px;
+  font-size: 13px;
+  color: #999;
+}
+
+.comment-list {
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .comment-item {
@@ -507,38 +626,86 @@ export default {
 
 .comment-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 15px;
   margin-bottom: 12px;
+}
+
+.comment-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  flex-shrink: 0;
 }
 
 .comment-info {
   flex: 1;
 }
 
-.nickname {
-  font-weight: 500;
-  color: #333;
-  margin-right: 12px;
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
 }
 
-.time {
+.user-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.comment-time {
   font-size: 12px;
   color: #999;
-  margin-left: 12px;
+}
+
+.comment-content {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 
 .comment-images {
   display: flex;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }
 
-.comment-images img {
+.comment-img {
   width: 80px;
   height: 80px;
   border-radius: 8px;
   object-fit: cover;
+  cursor: pointer;
+}
+
+.comment-reply {
+  background: #f8f9fc;
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 12px;
+  border-left: 3px solid #67c23a;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #67c23a;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.reply-content {
+  color: #666;
+  line-height: 1.5;
+}
+
+.reply-time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 6px;
 }
 
 .empty-comment {
@@ -552,6 +719,13 @@ export default {
   margin-bottom: 16px;
 }
 
+.comment-pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 猜你喜欢 */
 .recommend-section {
   margin-top: 40px;
 }
@@ -631,6 +805,19 @@ export default {
 
   .current-price {
     font-size: 24px;
+  }
+
+  .comment-summary {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .rating-score {
+    text-align: center;
+  }
+
+  .rating-bar-item {
+    justify-content: center;
   }
 }
 </style>

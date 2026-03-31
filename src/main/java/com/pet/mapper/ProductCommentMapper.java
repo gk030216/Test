@@ -24,12 +24,14 @@ public interface ProductCommentMapper {
                                              @Param("limit") Integer limit,
                                              @Param("keyword") String keyword,
                                              @Param("rating") Integer rating,
-                                             @Param("status") Integer status);
+                                             @Param("status") Integer status,
+                                             @Param("replyStatus") Integer replyStatus);
 
     // 获取后台评价总数
     int countAdminComment(@Param("keyword") String keyword,
                           @Param("rating") Integer rating,
-                          @Param("status") Integer status);
+                          @Param("status") Integer status,
+                          @Param("replyStatus") Integer replyStatus);
 
     // 更新评价状态
     int updateStatus(@Param("id") Integer id, @Param("status") Integer status);

@@ -126,3 +126,11 @@ export function batchDeleteUsers(ids) {
     params: { ids }
   });
 }
+
+// 获取用户头像
+export function getUserAvatar(userId) {
+  return request({
+    url: `/user/avatar/${userId}`,
+    method: 'get'
+  });
+}

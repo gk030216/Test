@@ -4,9 +4,15 @@
 
     <div class="shop-content">
       <div class="container">
-        <!-- 分类导航 - 只显示一级分类 -->
+        <!-- 分类导航 - 显示所有一级分类 + "全部"标签 -->
         <div class="category-nav">
           <div class="category-list">
+            <span
+                :class="['category-item', { active: currentCategory === null }]"
+                @click="handleCategoryChange(null)"
+            >
+              全部
+            </span>
             <span
                 v-for="cat in topCategories"
                 :key="cat.id"
@@ -28,12 +34,23 @@
               <el-button slot="append" @click="handleSearch">搜索</el-button>
             </el-input>
           </div>
+          <!-- 购物车图标 -->
+          <div class="cart-icon" @click="goToCart">
+            <i class="el-icon-shopping-cart-2"></i>
+            <span class="cart-badge" v-if="cartCount > 0">{{ cartCount }}</span>
+          </div>
         </div>
 
-        <!-- 二级分类（当选中一级分类时显示） -->
-        <div class="sub-category-nav" v-if="currentCategory && subCategories.length > 0">
+        <!-- 二级分类（当选中一级分类且有子分类时显示） -->
+        <div class="sub-category-nav" v-if="currentCategory !== null && subCategories.length > 0">
           <div class="sub-category-title">子分类：</div>
           <div class="sub-category-list">
+            <span
+                :class="['sub-category-item', { active: currentSubCategory === null }]"
+                @click="handleSubCategoryChange(null)"
+            >
+              全部
+            </span>
             <span
                 v-for="cat in subCategories"
                 :key="cat.id"
@@ -41,13 +58,6 @@
                 @click="handleSubCategoryChange(cat.id)"
             >
               {{ cat.name }}
-            </span>
-            <span
-                v-if="currentSubCategory"
-                class="sub-category-item clear"
-                @click="handleClearSubCategory"
-            >
-              清除筛选
             </span>
           </div>
         </div>
@@ -130,7 +140,7 @@ import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getProductList } from '@/api/product';
 import { getAllCategories } from '@/api/category';
-import { addToCart } from '@/api/cart';
+import { addToCart, getCartSummary } from '@/api/cart';
 
 export default {
   name: 'Shop',
@@ -139,34 +149,38 @@ export default {
     return {
       loading: false,
       productList: [],
-      allCategories: [],      // 所有分类（用于构建树形结构）
-      topCategories: [],      // 一级分类
-      subCategories: [],      // 当前选中的一级分类下的二级分类
-      currentCategory: null,  // 当前选中的一级分类ID
-      currentSubCategory: null, // 当前选中的二级分类ID
+      allCategories: [],
+      topCategories: [],
+      subCategories: [],
+      currentCategory: null,  // null 表示全部
+      currentSubCategory: null, // null 表示全部
       keyword: '',
       sortType: 'default',
       page: 1,
       pageSize: 12,
-      total: 0
+      total: 0,
+      cartCount: 0
     };
   },
   created() {
     this.loadCategories();
+    this.loadCartCount();
+    this.$bus.$on('cart-updated', this.loadCartCount);
+  },
+  beforeDestroy() {
+    this.$bus.$off('cart-updated', this.loadCartCount);
   },
   methods: {
-    // 加载分类并构建树形结构
+    // 加载分类
     async loadCategories() {
       try {
         const res = await getAllCategories();
         if (res.code === 200) {
           this.allCategories = res.data;
-          // 获取一级分类（parentId === 0）
           this.topCategories = this.allCategories.filter(cat => cat.parentId === 0);
         }
       } catch (error) {
         console.error('加载分类失败', error);
-        // 使用默认分类
         this.topCategories = [
           { id: 1, name: '狗粮', parentId: 0 },
           { id: 2, name: '猫粮', parentId: 0 },
@@ -175,6 +189,25 @@ export default {
           { id: 5, name: '洗护', parentId: 0 }
         ];
       }
+      this.loadProducts();
+    },
+
+    // 加载购物车数量
+    async loadCartCount() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await getCartSummary();
+          if (res.code === 200) {
+            this.cartCount = res.data.totalCount || 0;
+          }
+        } catch (error) {
+          console.error('加载购物车数量失败', error);
+        }
+      } else {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        this.cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+      }
     },
 
     // 获取子分类
@@ -182,30 +215,28 @@ export default {
       return this.allCategories.filter(cat => cat.parentId === parentId);
     },
 
-    // 获取包含子分类的所有分类ID（用于查询商品）
-    getCategoryIdsForQuery() {
-      if (this.currentSubCategory) {
-        // 如果选中了二级分类，只返回该二级分类ID
-        return [this.currentSubCategory];
-      } else if (this.currentCategory) {
-        // 如果只选中了一级分类，返回该一级分类及其所有子分类ID
-        const ids = [this.currentCategory];
-        const children = this.getSubCategories(this.currentCategory);
-        ids.push(...children.map(c => c.id));
-        return ids;
+    // 获取查询的分类ID
+    getCategoryIdForQuery() {
+      if (this.currentSubCategory !== null) {
+        // 如果选中了二级分类，返回该二级分类ID
+        return this.currentSubCategory;
+      } else if (this.currentCategory !== null) {
+        // 如果只选中了一级分类，返回该一级分类ID（后端需支持查询该分类及其子分类）
+        return this.currentCategory;
       }
+      // 全部商品，返回null
       return null;
     },
 
     async loadProducts() {
       this.loading = true;
       try {
-        const categoryIds = this.getCategoryIdsForQuery();
+        const categoryId = this.getCategoryIdForQuery();
         const params = {
           page: this.page,
           pageSize: this.pageSize,
           keyword: this.keyword || undefined,
-          categoryId: categoryIds ? categoryIds.join(',') : undefined  // 传递逗号分隔的字符串
+          categoryId: categoryId  // 直接传整数，不是字符串
         };
 
         if (this.sortType === 'price_asc') params.sort = 'price_asc';
@@ -227,20 +258,17 @@ export default {
     handleCategoryChange(categoryId) {
       this.currentCategory = categoryId;
       this.currentSubCategory = null;
-      // 获取该一级分类下的子分类
-      this.subCategories = this.getSubCategories(categoryId);
+      if (categoryId !== null) {
+        this.subCategories = this.getSubCategories(categoryId);
+      } else {
+        this.subCategories = [];
+      }
       this.page = 1;
       this.loadProducts();
     },
 
     handleSubCategoryChange(subId) {
       this.currentSubCategory = subId;
-      this.page = 1;
-      this.loadProducts();
-    },
-
-    handleClearSubCategory() {
-      this.currentSubCategory = null;
       this.page = 1;
       this.loadProducts();
     },
@@ -265,6 +293,10 @@ export default {
       this.$router.push(`/product/${id}`);
     },
 
+    goToCart() {
+      this.$router.push('/cart');
+    },
+
     async addToCart(product) {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -282,17 +314,12 @@ export default {
         const res = await addToCart(product.id);
         if (res.code === 200) {
           this.$message.success('已加入购物车');
+          this.loadCartCount();
           this.$bus.$emit('cart-updated');
         }
       } catch (error) {
         this.$message.error(error.message || '添加失败');
       }
-    }
-  },
-  watch: {
-    currentCategory() {
-      // 当一级分类变化时，重置分页
-      this.page = 1;
     }
   }
 };
@@ -333,18 +360,20 @@ export default {
 
 .category-list {
   display: flex;
-  gap: 25px;
+  gap: 15px;
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .category-item {
-  padding: 8px 20px;
+  padding: 8px 24px;
   border-radius: 30px;
   cursor: pointer;
   transition: all 0.3s;
   background: #f5f5f5;
   color: #666;
   font-weight: 500;
+  font-size: 14px;
 }
 
 .category-item:hover {
@@ -356,6 +385,49 @@ export default {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+.search-box {
+  width: 260px;
+}
+
+/* 购物车图标 */
+.cart-icon {
+  position: relative;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 40px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+}
+
+.cart-icon:hover {
+  background: #f5f5f5;
+  color: #667eea;
+}
+
+.cart-icon i {
+  font-size: 24px;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #ff6b6b;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
 }
 
 /* 二级分类导航 */
@@ -378,7 +450,7 @@ export default {
 
 .sub-category-list {
   display: flex;
-  gap: 15px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -402,21 +474,6 @@ export default {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   border: none;
-}
-
-.sub-category-item.clear {
-  background: #f5f5f5;
-  border-color: #ddd;
-  color: #999;
-}
-
-.sub-category-item.clear:hover {
-  background: #e8e8e8;
-  color: #666;
-}
-
-.search-box {
-  width: 280px;
 }
 
 .sort-bar {

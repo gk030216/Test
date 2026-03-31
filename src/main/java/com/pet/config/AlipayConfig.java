@@ -17,7 +17,7 @@ public class AlipayConfig {
     private String alipayPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6K1r0k1/ZoYf/Z4uUDDNkdndgtE2nyRKesQauhI/Qi8RVyvG8+XUSQ06hMWXwpdGX5ItD+r2E/LOf3FLnZLC0R1yTpJHQ0kAPDfVEu4xwRpqJNZvwqmklajATemdL/sYuV1zIMktHwiTDWyDR5JrotgZEuXI7RPCxSaHK2UHhcmH6mhLX1vYVqa6C/wNr4Nq/p/rXiH+3nYMkLFb2uN5SE7jum/8msKZuokkr/TT1XxRge8MdSuclerbo0YvUWgcgpkbRjqsJ9cKrt4nm8fPvGo0xw7Ojo8EWVarqM4De5eUDTusF6aWWqJUpQkchZGXv04KDV4qYBXNHHbcPPvXRwIDAQAB";
 
     // 服务器异步通知页面路径 - 需要修改为正确的内网穿透地址 + /api/pay/alipay/notify
-    private String notifyUrl = "https://6235ad0.r23.cpolar.top/api/pay/alipay/notify";
+    private String notifyUrl = "https://35300ed3.r20.vip.cpolar.cn/api/pay/alipay/notify";
 
     // 页面跳转同步通知页面路径
     private String returnUrl = "http://localhost:8081/pay/return";

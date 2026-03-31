@@ -13,7 +13,8 @@ public interface ProductCommentService {
     Map<String, Object> getCommentList(Integer productId, Integer page, Integer pageSize);
 
     // 获取后台评价列表
-    Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword, Integer rating, Integer status);
+    Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword,
+                                            Integer rating, Integer status, Integer replyStatus);
 
     // 更新评价状态
     boolean updateStatus(Integer id, Integer status);

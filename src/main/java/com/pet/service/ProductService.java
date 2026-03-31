@@ -8,7 +8,7 @@ public interface ProductService {
 
     // 前台接口
     Map<String, Object> getProductList(Integer page, Integer pageSize, String keyword,
-                                       String categoryIds, Integer isHot, Integer isNew);
+                                       Integer categoryId, Integer isHot, Integer isNew);
     Product getProductById(Integer id);
     List<Product> getHotProducts();
     List<Product> getNewProducts();

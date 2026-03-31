@@ -3,27 +3,35 @@
     <!-- 顶部操作栏 -->
     <div class="action-bar">
       <div class="action-left">
-        <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+        <el-button
+            v-if="selectedRows.length > 0"
+            type="danger"
+            plain
+            @click="handleBatchDelete"
+            class="batch-btn"
+        >
           <i class="el-icon-delete"></i> 批量删除 ({{ selectedRows.length }})
         </el-button>
       </div>
       <div class="action-right">
-        <el-input
-            v-model="searchForm.keyword"
-            placeholder="搜索用户/内容"
-            clearable
-            size="medium"
-            style="width: 200px"
-            @keyup.enter="handleSearch"
-        >
-          <i slot="prefix" class="el-icon-search"></i>
-        </el-input>
+        <div class="search-wrapper">
+          <i class="el-icon-search search-icon"></i>
+          <el-input
+              v-model="searchForm.keyword"
+              placeholder="搜索商品/用户/内容"
+              clearable
+              size="medium"
+              @keyup.enter="handleSearch"
+              class="search-input"
+          >
+          </el-input>
+        </div>
         <el-select
             v-model="searchForm.rating"
             placeholder="评分"
             clearable
             size="medium"
-            style="width: 100px"
+            class="status-select"
             @change="handleSearch"
         >
           <el-option label="5星" :value="5"></el-option>
@@ -37,14 +45,31 @@
             placeholder="状态"
             clearable
             size="medium"
-            style="width: 100px"
+            class="status-select"
             @change="handleSearch"
         >
+          <el-option label="全部" :value="''"></el-option>
           <el-option label="显示" :value="1"></el-option>
           <el-option label="隐藏" :value="0"></el-option>
         </el-select>
-        <el-button type="primary" size="medium" @click="handleSearch">搜索</el-button>
-        <el-button size="medium" @click="handleReset">重置</el-button>
+        <el-select
+            v-model="searchForm.replyStatus"
+            placeholder="回复状态"
+            clearable
+            size="medium"
+            class="status-select"
+            @change="handleSearch"
+        >
+          <el-option label="全部" :value="''"></el-option>
+          <el-option label="未回复" :value="0"></el-option>
+          <el-option label="已回复" :value="1"></el-option>
+        </el-select>
+        <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">
+          搜索
+        </el-button>
+        <el-button size="medium" @click="handleReset" class="reset-btn">
+          重置
+        </el-button>
       </div>
     </div>
 
@@ -59,21 +84,59 @@
     >
       <el-table-column type="selection" width="45" align="center"></el-table-column>
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
-      <el-table-column prop="productId" label="商品ID" width="80" align="center"></el-table-column>
-      <el-table-column prop="userName" label="用户" width="120">
+
+      <!-- 商品信息列 -->
+      <el-table-column label="商品信息" min-width="280">
         <template slot-scope="scope">
-          <div class="user-info">
-            <el-avatar :size="32" class="user-avatar">{{ scope.row.userName.charAt(0) }}</el-avatar>
-            <span>{{ scope.row.userName }}</span>
+          <div class="product-info-cell">
+            <el-image
+                :src="scope.row.productImage"
+                class="product-img"
+                fit="cover"
+                :preview-src-list="[scope.row.productImage]"
+            >
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline"></i>
+                <span>暂无图片</span>
+              </div>
+            </el-image>
+            <div class="product-detail">
+              <div class="product-name">{{ scope.row.productName || '商品已删除' }}</div>
+              <div class="product-price">¥{{ scope.row.productPrice || '0.00' }}</div>
+              <div class="product-id">商品ID: {{ scope.row.productId }}</div>
+            </div>
           </div>
         </template>
       </el-table-column>
+
+      <!-- 用户列 -->
+      <el-table-column label="用户" width="160">
+        <template slot-scope="scope">
+          <div class="user-info">
+            <el-avatar
+                :size="40"
+                :src="scope.row.userAvatar"
+                class="user-avatar"
+            >
+              {{ scope.row.userName ? scope.row.userName.charAt(0).toUpperCase() : 'U' }}
+            </el-avatar>
+            <div class="user-detail">
+              <span class="user-name">{{ scope.row.userName }}</span>
+              <span class="user-id">ID: {{ scope.row.userId }}</span>
+            </div>
+          </div>
+        </template>
+      </el-table-column>
+
+      <!-- 评分列 -->
       <el-table-column label="评分" width="120" align="center">
         <template slot-scope="scope">
           <el-rate v-model="scope.row.rating" disabled show-score text-color="#ff9900"></el-rate>
         </template>
       </el-table-column>
-      <el-table-column prop="content" label="评价内容" min-width="250">
+
+      <!-- 评价内容列 -->
+      <el-table-column label="评价内容" min-width="280">
         <template slot-scope="scope">
           <div class="comment-content">{{ scope.row.content }}</div>
           <div class="comment-images" v-if="scope.row.images">
@@ -88,34 +151,68 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="80" align="center">
+
+      <!-- 状态列 - 保留切换开关 -->
+      <el-table-column label="状态" width="100" align="center">
         <template slot-scope="scope">
           <el-switch
               :value="scope.row.status === 1"
               active-color="#67c23a"
               inactive-color="#f56c6c"
               @change="(val) => handleStatusChange(scope.row, val)"
-          ></el-switch>
+              :loading="scope.row.statusLoading"
+          >
+          </el-switch>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="评价时间" width="160">
+
+      <!-- 评价时间 -->
+      <el-table-column prop="createTime" label="评价时间" width="170">
         <template slot-scope="scope">
           {{ formatDate(scope.row.createTime) }}
         </template>
       </el-table-column>
-      <el-table-column label="商家回复" width="150">
+
+      <!-- 商家回复列 -->
+      <el-table-column label="商家回复" width="200">
         <template slot-scope="scope">
           <div v-if="scope.row.reply" class="reply-text">
-            {{ scope.row.reply }}
+            <div class="reply-content">{{ scope.row.reply }}</div>
             <div class="reply-time">{{ formatDate(scope.row.replyTime) }}</div>
           </div>
-          <el-button v-else size="small" type="text" @click="openReplyDialog(scope.row)">回复</el-button>
+          <el-button v-else size="small" type="primary" plain @click="openReplyDialog(scope.row)">
+            <i class="el-icon-chat-dot-round"></i> 回复
+          </el-button>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" align="center" fixed="right">
+
+      <!-- 操作列 -->
+      <el-table-column label="操作" width="140" align="center" fixed="right">
         <template slot-scope="scope">
-          <el-button size="small" type="text" @click="openReplyDialog(scope.row)">回复</el-button>
-          <el-button size="small" type="text" style="color: #f56c6c" @click="handleDelete(scope.row)">删除</el-button>
+          <div class="action-buttons">
+            <el-button
+                size="small"
+                type="primary"
+                plain
+                circle
+                @click="openReplyDialog(scope.row)"
+                class="action-icon-btn"
+                title="回复"
+            >
+              <i class="el-icon-chat-dot-round"></i>
+            </el-button>
+            <el-button
+                size="small"
+                type="danger"
+                plain
+                circle
+                @click="handleDelete(scope.row)"
+                class="action-icon-btn"
+                title="删除"
+            >
+              <i class="el-icon-delete"></i>
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -135,30 +232,89 @@
     </div>
 
     <!-- 回复对话框 -->
-    <el-dialog title="回复评价" :visible.sync="replyVisible" width="450px" center>
-      <div class="reply-dialog">
-        <div class="original-comment" v-if="currentComment">
-          <div class="comment-user">
-            <el-avatar :size="32">{{ currentComment.userName ? currentComment.userName.charAt(0) : 'U' }}</el-avatar>
-            <div class="comment-info">
-              <span class="user-name">{{ currentComment.userName }}</span>
-              <el-rate v-model="currentComment.rating" disabled></el-rate>
+    <el-dialog title="回复评价" :visible.sync="replyVisible" width="550px" center class="reply-dialog">
+      <div class="dialog-content">
+        <!-- 商品信息 -->
+        <div class="product-info-section">
+          <div class="section-title">
+            <i class="el-icon-goods"></i>
+            <span>商品信息</span>
+          </div>
+          <div class="product-info-card" v-if="currentComment">
+            <el-image
+                :src="currentComment.productImage"
+                class="product-img"
+                fit="cover"
+            >
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline"></i>
+              </div>
+            </el-image>
+            <div class="product-detail">
+              <div class="product-name">{{ currentComment.productName || '商品已删除' }}</div>
+              <div class="product-price">¥{{ currentComment.productPrice || '0.00' }}</div>
             </div>
           </div>
-          <div class="comment-content">{{ currentComment.content }}</div>
         </div>
-        <el-input
-            type="textarea"
-            v-model="replyContent"
-            rows="4"
-            placeholder="请输入回复内容..."
-            maxlength="500"
-            show-word-limit
-        ></el-input>
+
+        <!-- 用户评价 -->
+        <div class="user-comment-section">
+          <div class="section-title">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>用户评价</span>
+          </div>
+          <div class="original-comment" v-if="currentComment">
+            <div class="comment-header">
+              <div class="user-info">
+                <el-avatar
+                    :size="36"
+                    :src="currentComment.userAvatar"
+                    class="user-avatar"
+                >
+                  {{ currentComment.userName ? currentComment.userName.charAt(0).toUpperCase() : 'U' }}
+                </el-avatar>
+                <div class="user-detail">
+                  <span class="user-name">{{ currentComment.userName }}</span>
+                  <el-rate v-model="currentComment.rating" disabled text-color="#ff9900"></el-rate>
+                </div>
+              </div>
+              <div class="comment-time">{{ formatDate(currentComment.createTime) }}</div>
+            </div>
+            <div class="comment-content">{{ currentComment.content }}</div>
+            <div class="comment-images" v-if="currentComment.images">
+              <el-image
+                  v-for="(img, idx) in currentComment.images.split(',')"
+                  :key="idx"
+                  :src="img"
+                  fit="cover"
+                  class="comment-img"
+              ></el-image>
+            </div>
+          </div>
+        </div>
+
+        <!-- 回复输入 -->
+        <div class="reply-input-section">
+          <div class="section-title">
+            <i class="el-icon-edit"></i>
+            <span>商家回复</span>
+          </div>
+          <el-input
+              type="textarea"
+              v-model="replyContent"
+              rows="4"
+              placeholder="请输入回复内容..."
+              maxlength="500"
+              show-word-limit
+          ></el-input>
+        </div>
       </div>
-      <span slot="footer">
+
+      <span slot="footer" class="dialog-footer">
         <el-button @click="replyVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitReply" :loading="replyLoading">确定</el-button>
+        <el-button type="primary" @click="submitReply" :loading="replyLoading">
+          <i class="el-icon-check"></i> 确定回复
+        </el-button>
       </span>
     </el-dialog>
   </div>
@@ -187,7 +343,8 @@ export default {
       searchForm: {
         keyword: '',
         rating: '',
-        status: ''
+        status: '',
+        replyStatus: ''
       },
       replyVisible: false,
       replyContent: '',
@@ -206,59 +363,93 @@ export default {
           pageSize: this.pageSize,
           keyword: this.searchForm.keyword || undefined,
           rating: this.searchForm.rating || undefined,
-          status: this.searchForm.status || undefined
+          status: this.searchForm.status !== '' ? this.searchForm.status : undefined,
+          replyStatus: this.searchForm.replyStatus !== '' ? this.searchForm.replyStatus : undefined
         };
         const res = await getCommentList(params);
         if (res.code === 200) {
-          this.commentList = res.data.list;
+          // 为每条数据添加 loading 状态
+          this.commentList = res.data.list.map(item => ({
+            ...item,
+            statusLoading: false
+          }));
           this.total = res.data.total;
         }
       } catch (error) {
+        console.error('加载评价列表失败', error);
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
       }
     },
+
     handleSearch() {
       this.page = 1;
       this.loadList();
     },
+
     handleReset() {
-      this.searchForm = { keyword: '', rating: '', status: '' };
+      this.searchForm = {
+        keyword: '',
+        rating: '',
+        status: '',
+        replyStatus: ''
+      };
       this.page = 1;
       this.loadList();
     },
+
     handlePageChange(page) {
       this.page = page;
       this.loadList();
     },
+
     handleSizeChange(size) {
       this.pageSize = size;
       this.page = 1;
       this.loadList();
     },
+
     handleSelectionChange(rows) {
       this.selectedRows = rows;
     },
+
     formatDate(date) {
       if (!date) return '';
       const d = new Date(date);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     },
+
     async handleStatusChange(row, val) {
       const newStatus = val ? 1 : 0;
-      try {
-        const res = await updateCommentStatus(row.id, newStatus);
-        if (res.code === 200) {
-          row.status = newStatus;
-          this.$message.success(res.message);
-        } else {
-          this.$message.error(res.message);
+      const action = newStatus === 1 ? '显示' : '隐藏';
+
+      this.$confirm(`确定要${action}该评价吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: newStatus === 1 ? 'info' : 'warning'
+      }).then(async () => {
+        row.statusLoading = true;
+        try {
+          const res = await updateCommentStatus(row.id, newStatus);
+          if (res.code === 200) {
+            row.status = newStatus;
+            this.$message.success(`${action}成功`);
+            // 如果当前筛选状态与修改后的状态不符，刷新列表
+            if (this.searchForm.status !== '' && this.searchForm.status !== newStatus) {
+              this.loadList();
+            }
+          } else {
+            this.$message.error(res.message);
+          }
+        } catch (error) {
+          this.$message.error('操作失败');
+        } finally {
+          row.statusLoading = false;
         }
-      } catch (error) {
-        this.$message.error('操作失败');
-      }
+      }).catch(() => {});
     },
+
     async handleDelete(row) {
       this.$confirm(`确定要删除该评价吗？删除后无法恢复！`, '提示', {
         confirmButtonText: '确定',
@@ -278,6 +469,7 @@ export default {
         }
       }).catch(() => {});
     },
+
     async handleBatchDelete() {
       if (this.selectedRows.length === 0) return;
       const ids = this.selectedRows.map(row => row.id).join(',');
@@ -300,11 +492,13 @@ export default {
         }
       }).catch(() => {});
     },
+
     openReplyDialog(row) {
       this.currentComment = row;
       this.replyContent = row.reply || '';
       this.replyVisible = true;
     },
+
     async submitReply() {
       if (!this.replyContent.trim()) {
         this.$message.warning('请输入回复内容');
@@ -321,6 +515,7 @@ export default {
           this.$message.error(res.message);
         }
       } catch (error) {
+        console.error('回复失败', error);
         this.$message.error('回复失败');
       } finally {
         this.replyLoading = false;
@@ -350,11 +545,68 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.action-left, .action-right {
+.action-left {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.action-right {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.batch-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.search-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #909399;
+  font-size: 16px;
+  z-index: 1;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.search-input ::v-deep .el-input__inner {
+  padding-left: 36px;
+  border-radius: 8px;
+}
+
+.status-select {
+  width: 100px;
+}
+
+.status-select ::v-deep .el-input__inner {
+  border-radius: 8px;
+}
+
+.search-btn, .reset-btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
 }
 
 .comment-table {
@@ -364,27 +616,100 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+.comment-table ::v-deep .el-table__header th {
+  background: #f8f9fc;
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 14px 0;
+}
+
+/* 商品信息样式 */
+.product-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.product-detail {
+  flex: 1;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-price {
+  color: #ff6b6b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.product-id {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+/* 用户信息样式 */
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .user-avatar {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
+  flex-shrink: 0;
 }
 
+.user-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.user-id {
+  font-size: 11px;
+  color: #909399;
+}
+
+/* 评价内容样式 */
 .comment-content {
-  color: #333;
-  line-height: 1.5;
+  color: #5a6874;
+  line-height: 1.6;
   margin-bottom: 8px;
+  word-break: break-word;
 }
 
 .comment-images {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 
 .comment-img {
@@ -393,19 +718,52 @@ export default {
   border-radius: 8px;
   cursor: pointer;
   object-fit: cover;
+  transition: transform 0.2s;
 }
 
+.comment-img:hover {
+  transform: scale(1.05);
+}
+
+/* 回复样式 */
 .reply-text {
+  background: #f8f9fc;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.reply-content {
   color: #67c23a;
   font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 6px;
 }
 
 .reply-time {
   font-size: 11px;
   color: #999;
-  margin-top: 4px;
+  text-align: right;
 }
 
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action-icon-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.action-icon-btn:hover {
+  transform: scale(1.1);
+}
+
+/* 分页 */
 .pagination-wrapper {
   margin-top: 20px;
   display: flex;
@@ -415,32 +773,159 @@ export default {
   border-radius: 16px;
 }
 
-.reply-dialog {
-  padding: 10px 0;
+/* 回复对话框 */
+.reply-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.reply-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.reply-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.reply-dialog ::v-deep .el-dialog__close {
+  color: white;
+}
+
+.dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 18px;
+}
+
+.product-info-card {
+  display: flex;
+  gap: 12px;
+  background: #f8f9fc;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.product-info-card .product-img {
+  width: 70px;
+  height: 70px;
+}
+
+.product-info-card .product-name {
+  font-size: 14px;
+  margin-bottom: 6px;
 }
 
 .original-comment {
   background: #f8f9fc;
-  border-radius: 12px;
-  padding: 15px;
+  border-radius: 16px;
+  padding: 16px;
   margin-bottom: 20px;
 }
 
-.comment-user {
+.comment-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.comment-info {
+.comment-header .user-info {
+  flex: 1;
+}
+
+.comment-header .comment-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.original-comment .comment-content {
+  margin: 12px 0;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 12px;
+}
+
+.reply-input-section {
+  margin-top: 8px;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding-top: 10px;
+  border-top: 1px solid #eef2f6;
+}
+
+.image-slot {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+  color: #999;
+  font-size: 12px;
 }
 
-.user-name {
-  font-weight: 500;
-  color: #333;
+.image-slot i {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .comment-manage {
+    padding: 12px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-left, .action-right {
+    justify-content: center;
+  }
+
+  .product-info-cell {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-info {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-detail {
+    align-items: center;
+  }
+
+  .comment-header {
+    flex-direction: column;
+  }
 }
 </style>

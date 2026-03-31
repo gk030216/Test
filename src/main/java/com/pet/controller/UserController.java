@@ -114,4 +114,21 @@ public class UserController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 获取用户头像
+     */
+    @GetMapping("/avatar/{userId}")
+    public Result<String> getUserAvatar(@PathVariable Integer userId) {
+        try {
+            User user = userService.getUserById(userId);
+            if (user != null) {
+                return Result.success(user.getAvatar());
+            } else {
+                return Result.error("用户不存在");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

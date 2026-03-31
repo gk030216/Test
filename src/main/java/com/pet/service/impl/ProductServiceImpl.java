@@ -20,10 +20,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Map<String, Object> getProductList(Integer page, Integer pageSize, String keyword,
-                                              String categoryIds, Integer isHot, Integer isNew) {
+                                              Integer categoryId, Integer isHot, Integer isNew) {
         int offset = (page - 1) * pageSize;
-        List<Product> list = productMapper.getProductList(offset, pageSize, keyword, categoryIds, isHot, isNew);
-        int total = productMapper.countProduct(keyword, categoryIds);
+        List<Product> list = productMapper.getProductList(offset, pageSize, keyword, categoryId, isHot, isNew);
+        int total = productMapper.countProduct(keyword, categoryId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);

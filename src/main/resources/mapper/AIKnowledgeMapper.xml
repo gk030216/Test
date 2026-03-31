@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.AIKnowledgeMapper">
+
+    <resultMap id="BaseResultMap" type="java.util.HashMap">
+        <id column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="keywords" property="keywords"/>
+        <result column="category" property="category"/>
+        <result column="use_count" property="useCount"/>
+        <result column="status" property="status"/>
+        <result column="source" property="source"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <!-- 关键词匹配搜索最佳答案 - 增强版，支持关键词匹配 -->
+    <select id="searchBestMatch" resultType="java.util.HashMap">
+        SELECT
+            id,
+            title,
+            content,
+            keywords,
+            category,
+            GREATEST(
+                    CASE WHEN title = #{question} THEN 200 ELSE 0 END,
+                    CASE WHEN title LIKE CONCAT('%', #{question}, '%') THEN 150 ELSE 0 END,
+                    CASE WHEN #{question} LIKE CONCAT('%', title, '%') THEN 120 ELSE 0 END,
+                    CASE WHEN keywords LIKE CONCAT('%', #{question}, '%') THEN 100 ELSE 0 END,
+                    CASE WHEN #{question} LIKE CONCAT('%', keywords, '%') THEN 90 ELSE 0 END,
+                    (
+                        SELECT COALESCE(SUM(
+                                                CASE WHEN keywords LIKE CONCAT('%', word, '%') THEN 30 ELSE 0 END
+                                        ), 0)
+                        FROM (
+                                 SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(#{question}, ' ', n), ' ', -1) as word
+                                 FROM (SELECT 1 as n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) numbers
+                                 WHERE n &lt;= LENGTH(#{question}) - LENGTH(REPLACE(#{question}, ' ', '')) + 1
+                             ) words
+                        WHERE LENGTH(word) &gt; 1
+                    ),
+                    (
+                        SELECT COALESCE(SUM(
+                                                CASE WHEN title LIKE CONCAT('%', word, '%') THEN 20 ELSE 0 END
+                                        ), 0)
+                        FROM (
+                                 SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(#{question}, ' ', n), ' ', -1) as word
+                                 FROM (SELECT 1 as n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) numbers
+                                 WHERE n &lt;= LENGTH(#{question}) - LENGTH(REPLACE(#{question}, ' ', '')) + 1
+                             ) words
+                        WHERE LENGTH(word) &gt; 1
+                    )
+            ) as score
+        FROM ai_knowledge_base
+        WHERE status = 1
+          AND (
+            title LIKE CONCAT('%', #{question}, '%')
+                OR #{question} LIKE CONCAT('%', title, '%')
+                OR keywords LIKE CONCAT('%', #{question}, '%')
+                OR #{question} LIKE CONCAT('%', keywords, '%')
+                OR EXISTS (
+                SELECT 1 FROM (
+                                  SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(#{question}, ' ', n), ' ', -1) as word
+                                  FROM (SELECT 1 as n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) numbers
+                                  WHERE n &lt;= LENGTH(#{question}) - LENGTH(REPLACE(#{question}, ' ', '')) + 1
+                              ) words
+                WHERE keywords LIKE CONCAT('%', word, '%') OR title LIKE CONCAT('%', word, '%')
+            )
+            )
+        ORDER BY score DESC
+            LIMIT 1
+    </select>
+
+    <!-- 关键词搜索 -->
+    <select id="searchByKeyword" resultType="java.util.HashMap">
+        SELECT
+        id,
+        title,
+        content,
+        keywords,
+        category,
+        use_count as useCount
+        FROM ai_knowledge_base
+        WHERE status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (title LIKE CONCAT('%', #{keyword}, '%')
+            OR content LIKE CONCAT('%', #{keyword}, '%')
+            OR keywords LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY id ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取知识库列表（分页） -->
+    <select id="getList" resultType="java.util.HashMap">
+        SELECT
+        id,
+        title,
+        content,
+        keywords,
+        category,
+        use_count as useCount,
+        status,
+        source,
+        DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s') as createTime,
+        DATE_FORMAT(update_time, '%Y-%m-%d %H:%i:%s') as updateTime
+        FROM ai_knowledge_base
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%')
+                OR content LIKE CONCAT('%', #{keyword}, '%')
+                OR keywords LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="source != null">
+                AND source = #{source}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取知识库总数 -->
+    <select id="countList" resultType="int">
+        SELECT COUNT(*)
+        FROM ai_knowledge_base
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%')
+                OR content LIKE CONCAT('%', #{keyword}, '%')
+                OR keywords LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="source != null">
+                AND source = #{source}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 插入知识库 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_knowledge_base (title, content, keywords, category, status, source)
+        VALUES (#{title}, #{content}, #{keywords}, #{category}, #{status}, #{source})
+    </insert>
+
+    <!-- 更新知识库 -->
+    <update id="update">
+        UPDATE ai_knowledge_base
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="keywords != null">keywords = #{keywords},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新知识库状态 -->
+    <update id="updateStatus">
+        UPDATE ai_knowledge_base SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 删除知识库 -->
+    <delete id="deleteById">
+        DELETE FROM ai_knowledge_base WHERE id = #{id}
+    </delete>
+
+    <!-- 增加使用次数 -->
+    <update id="incrementUseCount">
+        UPDATE ai_knowledge_base SET use_count = use_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID获取 -->
+    <select id="getById" resultType="java.util.HashMap">
+        SELECT
+            id,
+            title,
+            content,
+            keywords,
+            category,
+            use_count as useCount,
+            status,
+            source,
+            DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s') as createTime,
+            DATE_FORMAT(update_time, '%Y-%m-%d %H:%i:%s') as updateTime
+        FROM ai_knowledge_base
+        WHERE id = #{id}
+    </select>
+
+</mapper>

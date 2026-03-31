@@ -55,10 +55,11 @@ public class ProductCommentServiceImpl implements ProductCommentService {
     }
 
     @Override
-    public Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword, Integer rating, Integer status) {
+    public Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword,
+                                                   Integer rating, Integer status, Integer replyStatus) {
         int offset = (page - 1) * pageSize;
-        List<ProductComment> list = commentMapper.getAdminCommentList(offset, pageSize, keyword, rating, status);
-        int total = commentMapper.countAdminComment(keyword, rating, status);
+        List<ProductComment> list = commentMapper.getAdminCommentList(offset, pageSize, keyword, rating, status, replyStatus);
+        int total = commentMapper.countAdminComment(keyword, rating, status, replyStatus);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -101,7 +102,7 @@ public class ProductCommentServiceImpl implements ProductCommentService {
         result.put("commentTrend", trend);
 
         // 总评价数
-        int total = commentMapper.countAdminComment(null, null, null);
+        int total = commentMapper.countAdminComment(null, null, null, null);
         result.put("totalComments", total);
 
         // 平均评分
@@ -134,7 +135,7 @@ public class ProductCommentServiceImpl implements ProductCommentService {
         }
 
         // 回复率
-        List<ProductComment> allComments = commentMapper.getAdminCommentList(0, 9999, null, null, null);
+        List<ProductComment> allComments = commentMapper.getAdminCommentList(0, 9999, null, null, null, null);
         long repliedCount = allComments.stream().filter(c -> c.getReply() != null && !c.getReply().isEmpty()).count();
         result.put("replyRate", allComments.size() > 0 ? repliedCount * 100 / allComments.size() : 0);
 
@@ -143,7 +144,7 @@ public class ProductCommentServiceImpl implements ProductCommentService {
 
     @Override
     public List<Map<String, Object>> getRecentComments(Integer limit) {
-        List<ProductComment> comments = commentMapper.getAdminCommentList(0, limit, null, null, 1);
+        List<ProductComment> comments = commentMapper.getAdminCommentList(0, limit, null, null, 1, null);
         return comments.stream().map(c -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", c.getId());

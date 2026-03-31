@@ -27,9 +27,10 @@ public class AdminCommentController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer rating,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Integer replyStatus) {
         try {
-            Map<String, Object> result = commentService.getAdminCommentList(page, pageSize, keyword, rating, status);
+            Map<String, Object> result = commentService.getAdminCommentList(page, pageSize, keyword, rating, status, replyStatus);
             return Result.success(result);
         } catch (Exception e) {
             return Result.error(e.getMessage());

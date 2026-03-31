@@ -15,6 +15,7 @@ import Checkout from '@/views/Checkout.vue';
 import Pay from '@/views/Pay.vue';
 import Orders from '@/views/Orders.vue';
 import PayReturn from '@/views/PayReturn.vue';
+import AIChat from '@/views/AIChat.vue';
 
 // 管理员子页面
 import AdminDashboard from '@/views/admin/Dashboard.vue';
@@ -24,6 +25,11 @@ import CarouselManage from '@/views/admin/CarouselManage.vue';
 import ProductList from '@/views/admin/ProductList.vue';
 import OrderList from '@/views/admin/OrderList.vue';
 import ProductCategory from '@/views/admin/ProductCategory.vue';
+
+// AI管理子页面
+import KnowledgeManage from '@/views/admin/KnowledgeManage.vue';
+import FaqManage from '@/views/admin/FaqManage.vue';
+import ChatHistory from '@/views/admin/ChatHistory.vue';
 
 // 员工子页面
 import StaffDashboard from '@/views/staff/Dashboard.vue';
@@ -100,6 +106,13 @@ const router = new Router({
       component: Orders,
       meta: { requiresAuth: true }
     },
+    // ========== AI咨询路由 ==========
+    {
+      path: '/ai-chat',
+      name: 'AIChat',
+      component: AIChat,
+      meta: { requiresAuth: true }
+    },
     // ========== 管理员路由 ==========
     {
       path: '/admin',
@@ -116,15 +129,29 @@ const router = new Router({
         { path: 'category-list', component: ProductCategory, meta: { title: '商品分类' } },
         {
           path: 'comment-list',
-          name: 'CommentManage',
           component: () => import('@/views/admin/CommentManage.vue'),
           meta: { title: '评价管理' }
         },
         {
           path: 'data-analysis',
-          name: 'DataAnalysis',
           component: () => import('@/views/admin/DataAnalysis.vue'),
           meta: { title: '数据分析' }
+        },
+        // AI管理路由
+        {
+          path: 'knowledge-list',
+          component: KnowledgeManage,
+          meta: { title: '知识库管理' }
+        },
+        {
+          path: 'faq-list',
+          component: FaqManage,
+          meta: { title: '常见问题管理' }
+        },
+        {
+          path: 'chat-history',
+          component: ChatHistory,
+          meta: { title: '对话记录' }
         }
       ]
     },
