@@ -1,0 +1,15 @@
+package com.pet.mapper;
+
+import org.apache.ibatis.annotations.Param;
+
+public interface PostFavoriteMapper {
+
+    // 检查是否已收藏
+    int checkFavorite(@Param("postId") Integer postId, @Param("userId") Integer userId);
+
+    // 添加收藏
+    int insert(@Param("postId") Integer postId, @Param("userId") Integer userId);
+
+    // 取消收藏
+    int delete(@Param("postId") Integer postId, @Param("userId") Integer userId);
+}

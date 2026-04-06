@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.PostMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.Post">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="images" property="images"/>
+        <result column="category" property="category"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="is_top" property="isTop"/>
+        <result column="is_essence" property="isEssence"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <!-- 关联字段 -->
+        <result column="user_name" property="userName"/>
+        <result column="user_avatar" property="userAvatar"/>
+        <result column="is_liked" property="isLiked"/>
+        <result column="is_favorited" property="isFavorited"/>
+    </resultMap>
+
+    <!-- 基础字段 -->
+    <sql id="Base_Column_List">
+        p.id, p.user_id, p.title, p.content, p.images, p.category,
+        p.like_count, p.comment_count, p.view_count, p.is_top, p.is_essence,
+        p.status, p.create_time, p.update_time,
+        u.username as user_name, u.avatar as user_avatar
+    </sql>
+
+    <!-- ========== 前台接口 ========== -->
+
+    <!-- 获取帖子列表 -->
+    <select id="getPostList" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>,
+        CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked,
+        CASE WHEN pf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
+        FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
+        LEFT JOIN post_like pl ON p.id = pl.post_id AND pl.user_id = #{userId}
+        LEFT JOIN post_favorite pf ON p.id = pf.post_id AND pf.user_id = #{userId}
+        WHERE p.status = 1
+        <if test="category != null and category != ''">
+            AND p.category = #{category}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY p.is_top DESC,
+        <choose>
+            <when test="sort == 'hot'">p.like_count DESC, p.comment_count DESC,</when>
+            <when test="sort == 'latest'">p.create_time DESC,</when>
+            <otherwise>p.create_time DESC</otherwise>
+        </choose>
+        p.id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取帖子总数 -->
+    <select id="countPost" resultType="int">
+        SELECT COUNT(*)
+        FROM post p
+        WHERE p.status = 1
+        <if test="category != null and category != ''">
+            AND p.category = #{category}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </select>
+
+    <!-- 获取用户帖子列表 -->
+    <select id="getUserPosts" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
+        WHERE p.user_id = #{userId} AND p.status = 1
+        ORDER BY p.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取用户帖子总数 -->
+    <select id="countUserPosts" resultType="int">
+        SELECT COUNT(*) FROM post WHERE user_id = #{userId} AND status = 1
+    </select>
+
+    <!-- 获取收藏帖子列表 -->
+    <select id="getFavoritePosts" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
+        INNER JOIN post_favorite pf ON p.id = pf.post_id
+        WHERE pf.user_id = #{userId} AND p.status = 1
+        ORDER BY pf.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取收藏帖子总数 -->
+    <select id="countFavoritePosts" resultType="int">
+        SELECT COUNT(*)
+        FROM post_favorite pf
+                 INNER JOIN post p ON pf.post_id = p.id
+        WHERE pf.user_id = #{userId} AND p.status = 1
+    </select>
+
+    <!-- 根据ID获取帖子详情 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>,
+        CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked,
+        CASE WHEN pf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
+        FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
+        LEFT JOIN post_like pl ON p.id = pl.post_id AND pl.user_id = #{userId}
+        LEFT JOIN post_favorite pf ON p.id = pf.post_id AND pf.user_id = #{userId}
+        WHERE p.id = #{id} AND p.status = 1
+    </select>
+
+    <!-- 增加浏览量 -->
+    <update id="incrementViewCount">
+        UPDATE post SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 发布帖子 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO post (user_id, title, content, images, category)
+        VALUES (#{userId}, #{title}, #{content}, #{images}, #{category})
+    </insert>
+
+    <!-- 更新帖子 -->
+    <update id="update">
+        UPDATE post
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="images != null">images = #{images},</if>
+            <if test="category != null">category = #{category},</if>
+        </set>
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <!-- 更新评论数 -->
+    <update id="updateCommentCount">
+        UPDATE post SET comment_count = comment_count + #{delta} WHERE id = #{id}
+    </update>
+
+    <!-- 更新点赞数 -->
+    <update id="updateLikeCount">
+        UPDATE post SET like_count = like_count + #{delta} WHERE id = #{id}
+    </update>
+
+    <!-- 删除帖子（软删除） -->
+    <update id="deleteById">
+        UPDATE post SET status = 0 WHERE id = #{id}
+    </update>
+
+    <!-- ========== 管理员接口 ========== -->
+
+    <!-- 管理员获取帖子列表 -->
+    <select id="getAdminPostList" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (p.title LIKE CONCAT('%', #{keyword}, '%')
+                OR p.content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="isTop != null">
+                AND p.is_top = #{isTop}
+            </if>
+            <if test="isEssence != null">
+                AND p.is_essence = #{isEssence}
+            </if>
+        </where>
+        ORDER BY p.is_top DESC, p.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 管理员获取帖子总数 -->
+    <select id="countAdminPost" resultType="int">
+        SELECT COUNT(*)
+        FROM post p
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (p.title LIKE CONCAT('%', #{keyword}, '%')
+                OR p.content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="isTop != null">
+                AND p.is_top = #{isTop}
+            </if>
+            <if test="isEssence != null">
+                AND p.is_essence = #{isEssence}
+            </if>
+        </where>
+    </select>
+
+    <!-- 更新帖子状态 -->
+    <update id="updateStatus">
+        UPDATE post SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 置顶/取消置顶 -->
+    <update id="updateTop">
+        UPDATE post SET is_top = #{isTop} WHERE id = #{id}
+    </update>
+
+    <!-- 精华/取消精华 -->
+    <update id="updateEssence">
+        UPDATE post SET is_essence = #{isEssence} WHERE id = #{id}
+    </update>
+
+</mapper>

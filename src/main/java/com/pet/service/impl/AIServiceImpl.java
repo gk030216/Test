@@ -375,10 +375,13 @@ public class AIServiceImpl implements AIService {
             Map<String, Object> formatted = new LinkedHashMap<>();
             formatted.put("id", item.get("id"));
             formatted.put("userId", item.get("userId"));
+            formatted.put("userName", item.get("userName"));
             formatted.put("userQuestion", item.get("userQuestion"));
             formatted.put("answerSource", item.get("answerSource"));
             formatted.put("aiAnswer", item.get("aiAnswer"));
-            formatted.put("rating", item.get("rating"));
+            // 确保评分是数字类型
+            Object ratingObj = item.get("rating");
+            formatted.put("rating", ratingObj != null ? Integer.parseInt(ratingObj.toString()) : null);
             formatted.put("createTime", item.get("createTime") != null ? item.get("createTime").toString() : "");
             formattedList.add(formatted);
         }
@@ -449,7 +452,7 @@ public class AIServiceImpl implements AIService {
             knowledge.put("status", 1);
         }
         if (!knowledge.containsKey("source")) {
-            knowledge.put("source", 2);  // AI生成待审核
+            knowledge.put("source", 2);  // 改为 2：AI生成
         }
         if (!knowledge.containsKey("useCount")) {
             knowledge.put("useCount", 0);
@@ -466,7 +469,7 @@ public class AIServiceImpl implements AIService {
                 item.put("status", 1);
             }
             if (!item.containsKey("source")) {
-                item.put("source", 2);
+                item.put("source", 2);  // 改为 2：AI生成
             }
             if (!item.containsKey("useCount")) {
                 item.put("useCount", 0);
@@ -476,5 +479,55 @@ public class AIServiceImpl implements AIService {
             }
         }
         return successCount;
+    }
+
+    @Override
+    public String generateKeywords(String question, String answer) {
+        String prompt = "请为以下问题和回答生成3-5个关键词，用英文逗号分隔，只返回关键词，不要有其他内容。\n\n问题：" + question + "\n\n回答：" + answer;
+        return callDeepSeekAPIWithPrompt(prompt);
+    }
+
+    private String callDeepSeekAPIWithPrompt(String prompt) {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpPost httpPost = new HttpPost(aiConfig.getBaseUrl() + "/v1/chat/completions");
+            httpPost.setHeader("Content-Type", "application/json");
+            httpPost.setHeader("Authorization", "Bearer " + aiConfig.getApiKey());
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("model", aiConfig.getModel());
+
+            JSONArray messages = new JSONArray();
+
+            JSONObject userMessage = new JSONObject();
+            userMessage.put("role", "user");
+            userMessage.put("content", prompt);
+            messages.add(userMessage);
+
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", 0.3);
+            requestBody.put("max_tokens", 100);
+
+            httpPost.setEntity(new StringEntity(requestBody.toJSONString(), "UTF-8"));
+
+            try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                String responseBody = EntityUtils.toString(response.getEntity(), "UTF-8");
+                JSONObject jsonResponse = JSON.parseObject(responseBody);
+
+                if (jsonResponse.containsKey("choices")) {
+                    JSONArray choices = jsonResponse.getJSONArray("choices");
+                    if (choices != null && !choices.isEmpty()) {
+                        JSONObject choice = choices.getJSONObject(0);
+                        JSONObject message = choice.getJSONObject("message");
+                        String keywords = message.getString("content");
+                        // 清理关键词
+                        return keywords.replaceAll("[\\[\\]\"']", "").trim();
+                    }
+                }
+                return "";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 }

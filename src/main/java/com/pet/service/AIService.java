@@ -110,9 +110,18 @@ public interface AIService {
      */
     void exportChatHistory(String keyword, Integer answerSource, Integer rating, HttpServletResponse response);
 
-    // 添加以下方法
+    /**
+     * 单条对话记录转为知识库
+     */
     boolean convertToKnowledge(Map<String, Object> knowledge);
+
+    /**
+     * 批量转换对话记录为知识库
+     */
     int batchConvertToKnowledge(List<Map<String, Object>> items);
 
+    /**
+     * AI生成关键词
+     */
+    String generateKeywords(String question, String answer);
 }
-

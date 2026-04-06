@@ -52,7 +52,7 @@
             @change="handleSearch"
         >
           <el-option label="人工录入" :value="1"></el-option>
-          <el-option label="AI生成待审核" :value="2"></el-option>
+          <el-option label="AI生成" :value="2"></el-option>
         </el-select>
         <el-select
             v-model="searchForm.status"
@@ -82,8 +82,9 @@
         style="width: 100%"
         class="knowledge-table"
         @selection-change="handleSelectionChange"
+        row-key="id"
     >
-      <el-table-column type="selection" width="45" align="center"></el-table-column>
+      <el-table-column type="selection" width="45" align="center" :reserve-selection="true"></el-table-column>
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
       <el-table-column prop="title" label="标题" min-width="200">
         <template slot-scope="scope">
@@ -100,7 +101,7 @@
       <el-table-column prop="keywords" label="关键词" width="150">
         <template slot-scope="scope">
           <div class="keywords">
-            <el-tag v-for="kw in scope.row.keywords.split(',')" :key="kw" size="small">{{ kw }}</el-tag>
+            <el-tag v-for="kw in scope.row.keywords.split(',')" :key="kw" size="small" style="margin: 2px;">{{ kw }}</el-tag>
           </div>
         </template>
       </el-table-column>
@@ -109,10 +110,10 @@
           <span class="category-tag">{{ scope.row.categoryName }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="来源" width="120" align="center">
+      <el-table-column label="来源" width="100" align="center">
         <template slot-scope="scope">
-          <el-tag :type="scope.row.source === 1 ? 'success' : 'warning'" size="small">
-            {{ scope.row.source === 1 ? '人工录入' : 'AI生成待审核' }}
+          <el-tag :type="scope.row.source === 1 ? 'success' : 'primary'" size="small">
+            {{ scope.row.source === 1 ? '人工录入' : 'AI生成' }}
           </el-tag>
         </template>
       </el-table-column>
@@ -200,8 +201,24 @@
           </el-form-item>
 
           <el-form-item label="关键词" prop="keywords">
-            <el-input v-model="currentKnowledge.keywords" placeholder="多个关键词用英文逗号分隔" size="medium"></el-input>
-            <div class="form-tip">例如：狗,食物,禁忌,中毒</div>
+            <div style="display: flex; gap: 10px;">
+              <el-input
+                  v-model="currentKnowledge.keywords"
+                  placeholder="多个关键词用英文逗号分隔"
+                  size="medium"
+                  style="flex: 1;"
+              ></el-input>
+              <el-button
+                  type="primary"
+                  size="medium"
+                  @click="generateKeywordsByAI"
+                  :loading="aiGenerating"
+                  :disabled="!currentKnowledge.title && !currentKnowledge.content"
+              >
+                <i class="el-icon-magic-stick"></i> AI生成
+              </el-button>
+            </div>
+            <div class="form-tip">例如：狗,食物,禁忌,中毒 | 点击AI生成按钮可自动根据标题和内容生成关键词</div>
           </el-form-item>
 
           <el-form-item label="分类" prop="category">
@@ -212,13 +229,6 @@
               <el-option label="行为" value="behavior"></el-option>
               <el-option label="其他" value="other"></el-option>
             </el-select>
-          </el-form-item>
-
-          <el-form-item label="来源" v-if="!isEdit">
-            <el-radio-group v-model="currentKnowledge.source">
-              <el-radio :label="1">人工录入</el-radio>
-              <el-radio :label="2">AI生成待审核</el-radio>
-            </el-radio-group>
           </el-form-item>
 
           <el-form-item label="状态">
@@ -242,6 +252,7 @@
 
 <script>
 import { getKnowledgeList, addKnowledge, updateKnowledge, updateKnowledgeStatus, deleteKnowledge, batchDeleteKnowledge } from '@/api/ai';
+import request from '@/utils/request';
 
 export default {
   name: 'KnowledgeManage',
@@ -249,6 +260,7 @@ export default {
     return {
       loading: false,
       submitLoading: false,
+      aiGenerating: false,
       knowledgeList: [],
       total: 0,
       page: 1,
@@ -268,7 +280,7 @@ export default {
         content: '',
         keywords: '',
         category: '',
-        source: 1,
+        source: 1,  // 新增的知识默认为人工录入
         status: 1
       },
       formRules: {
@@ -408,7 +420,7 @@ export default {
         content: '',
         keywords: '',
         category: '',
-        source: 1,
+        source: 1,  // 新增的知识默认为人工录入
         status: 1
       };
       this.dialogVisible = true;
@@ -436,6 +448,40 @@ export default {
         }
       });
     },
+
+    // AI生成关键词
+    async generateKeywordsByAI() {
+      // 验证标题和内容是否填写
+      if (!this.currentKnowledge.title && !this.currentKnowledge.content) {
+        this.$message.warning('请先填写标题或内容，以便AI生成关键词');
+        return;
+      }
+
+      this.aiGenerating = true;
+      try {
+        const res = await request({
+          url: '/admin/ai/generate-keywords',
+          method: 'post',
+          data: {
+            question: this.currentKnowledge.title || this.currentKnowledge.content,
+            answer: this.currentKnowledge.content
+          }
+        });
+
+        if (res.code === 200 && res.data.keywords) {
+          this.currentKnowledge.keywords = res.data.keywords;
+          this.$message.success('AI关键词生成成功');
+        } else {
+          this.$message.error('AI生成失败，请手动输入');
+        }
+      } catch (error) {
+        console.error('AI生成关键词失败', error);
+        this.$message.error('AI生成失败，请手动输入');
+      } finally {
+        this.aiGenerating = false;
+      }
+    },
+
     submitForm() {
       this.$refs.knowledgeForm.validate(async (valid) => {
         if (!valid) return;
@@ -446,7 +492,12 @@ export default {
           if (this.isEdit) {
             res = await updateKnowledge(this.currentKnowledge);
           } else {
-            res = await addKnowledge(this.currentKnowledge);
+            // 新增时，来源固定为人工录入 (source: 1)
+            const knowledgeData = {
+              ...this.currentKnowledge,
+              source: 1
+            };
+            res = await addKnowledge(knowledgeData);
           }
 
           if (res.code === 200) {
@@ -468,7 +519,7 @@ export default {
 </script>
 
 <style scoped>
-/* 样式保持不变... */
+/* 样式保持不变 */
 .knowledge-manage {
   padding: 20px;
   background: #f5f7fa;
@@ -676,5 +727,20 @@ export default {
   text-align: right;
   padding: 16px 24px 20px;
   border-top: 1px solid #eef2f6;
+}
+
+@media (max-width: 768px) {
+  .knowledge-manage {
+    padding: 12px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-left, .action-right {
+    justify-content: center;
+  }
 }
 </style>

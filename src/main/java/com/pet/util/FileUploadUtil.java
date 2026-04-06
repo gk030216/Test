@@ -17,12 +17,16 @@ public class FileUploadUtil implements ServletContextAware {
         FileUploadUtil.servletContext = servletContext;
     }
 
-    // 获取项目部署目录
+    // 获取项目部署目录 - 确保路径正确
     private static String getRealPath() {
         if (servletContext == null) {
-            return System.getProperty("user.dir") + "/upload/";
+            // 开发环境备用路径
+            String userDir = System.getProperty("user.dir");
+            return userDir + "/src/main/webapp/upload/";
         }
-        return servletContext.getRealPath("/") + "upload/";
+        String realPath = servletContext.getRealPath("/");
+        System.out.println("RealPath: " + realPath);
+        return realPath + "upload/";
     }
 
     /**
@@ -46,9 +50,18 @@ public class FileUploadUtil implements ServletContextAware {
         return uploadImage(file, "product");
     }
 
-    // 上传评价图片
+    /**
+     * 上传评价图片
+     */
     public static String uploadComment(MultipartFile file) throws Exception {
         return uploadImage(file, "comment");
+    }
+
+    /**
+     * 上传社区图片
+     */
+    public static String uploadPostImage(MultipartFile file) throws Exception {
+        return uploadImage(file, "post");
     }
 
     /**
@@ -82,7 +95,8 @@ public class FileUploadUtil implements ServletContextAware {
         String savePath = getRealPath() + subDir + "/";
         File dir = new File(savePath);
         if (!dir.exists()) {
-            dir.mkdirs();
+            boolean created = dir.mkdirs();
+            System.out.println("创建目录: " + savePath + ", 成功: " + created);
         }
 
         File destFile = new File(savePath + fileName);
@@ -90,7 +104,9 @@ public class FileUploadUtil implements ServletContextAware {
 
         System.out.println("部署目录: " + getRealPath());
         System.out.println("文件保存路径: " + destFile.getAbsolutePath());
+        System.out.println("文件是否存在: " + destFile.exists());
 
+        // 返回相对路径
         return "/upload/" + subDir + "/" + fileName;
     }
 }

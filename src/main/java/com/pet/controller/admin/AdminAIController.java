@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -298,5 +299,26 @@ public class AdminAIController {
             return Result.error(e.getMessage());
         }
     }
-}
 
+    // ============= AI生成关键词 =============
+
+    /**
+     * AI生成关键词
+     */
+    @PostMapping("/generate-keywords")
+    public Result<?> generateKeywords(@RequestBody Map<String, String> params) {
+        try {
+            String question = params.get("question");
+            String answer = params.get("answer");
+            if (question == null || question.trim().isEmpty()) {
+                return Result.error("问题不能为空");
+            }
+            String keywords = aiService.generateKeywords(question, answer);
+            Map<String, String> result = new HashMap<>();
+            result.put("keywords", keywords);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+}

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.PostCommentMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.PostComment">
+        <id column="id" property="id"/>
+        <result column="post_id" property="postId"/>
+        <result column="user_id" property="userId"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="reply_to_user_id" property="replyToUserId"/>
+        <result column="reply_to_user_name" property="replyToUserName"/>
+        <result column="content" property="content"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="user_name" property="userName"/>
+        <result column="user_avatar" property="userAvatar"/>
+    </resultMap>
+
+    <!-- 获取顶级评论列表 -->
+    <select id="getTopComments" resultMap="BaseResultMap">
+        SELECT
+            c.*,
+            u.username as user_name,
+            u.avatar as user_avatar
+        FROM post_comment c
+                 LEFT JOIN user u ON c.user_id = u.id
+        WHERE c.post_id = #{postId} AND c.parent_id = 0 AND c.status = 1
+        ORDER BY c.like_count DESC, c.create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 获取评论总数 -->
+    <select id="countByPostId" resultType="int">
+        SELECT COUNT(*) FROM post_comment
+        WHERE post_id = #{postId} AND status = 1
+    </select>
+
+    <!-- 获取子回复 -->
+    <select id="getReplies" resultMap="BaseResultMap">
+        SELECT
+            c.*,
+            u.username as user_name,
+            u.avatar as user_avatar
+        FROM post_comment c
+                 LEFT JOIN user u ON c.user_id = u.id
+        WHERE c.parent_id = #{parentId} AND c.status = 1
+        ORDER BY c.create_time ASC
+    </select>
+
+    <!-- 获取用户评论列表 -->
+    <select id="getUserComments" resultMap="BaseResultMap">
+        SELECT
+            c.*,
+            u.username as user_name,
+            u.avatar as user_avatar,
+            p.title as post_title
+        FROM post_comment c
+                 LEFT JOIN user u ON c.user_id = u.id
+                 LEFT JOIN post p ON c.post_id = p.id
+        WHERE c.user_id = #{userId} AND c.status = 1
+        ORDER BY c.create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 根据ID获取评论 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT
+            c.*,
+            u.username as user_name,
+            u.avatar as user_avatar
+        FROM post_comment c
+                 LEFT JOIN user u ON c.user_id = u.id
+        WHERE c.id = #{id} AND c.status = 1
+    </select>
+
+    <!-- 插入评论 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO post_comment (post_id, user_id, parent_id, reply_to_user_id, reply_to_user_name, content)
+        VALUES (#{postId}, #{userId}, #{parentId}, #{replyToUserId}, #{replyToUserName}, #{content})
+    </insert>
+
+    <!-- 删除评论（软删除） -->
+    <update id="deleteById">
+        UPDATE post_comment SET status = 0 WHERE id = #{id}
+    </update>
+
+    <!-- 更新点赞数 -->
+    <update id="updateLikeCount">
+        UPDATE post_comment SET like_count = like_count + #{delta} WHERE id = #{id}
+    </update>
+
+</mapper>

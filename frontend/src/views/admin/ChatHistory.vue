@@ -109,9 +109,20 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="评分" width="120" align="center">
+      <!-- 修复评分显示 -->
+      <el-table-column label="评分" width="150" align="center">
         <template slot-scope="scope">
-          <el-rate v-model="scope.row.rating" disabled show-score text-color="#ff9900" v-if="scope.row.rating"></el-rate>
+          <div v-if="scope.row.rating && scope.row.rating > 0" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <el-rate
+                v-model="scope.row.rating"
+                disabled
+                :max="5"
+                :colors="['#F7BA2A', '#F7BA2A', '#F7BA2A']"
+                show-text
+                text-color="#ff9900"
+                :score-template="`${scope.row.rating}星`"
+            ></el-rate>
+          </div>
           <span v-else class="no-rating">未评分</span>
         </template>
       </el-table-column>
@@ -206,7 +217,17 @@
         <div class="detail-item">
           <div class="detail-label">用户评分：</div>
           <div class="detail-value">
-            <el-rate v-model="currentDetail.rating" disabled show-score text-color="#ff9900" v-if="currentDetail.rating"></el-rate>
+            <div v-if="currentDetail.rating && currentDetail.rating > 0" style="display: flex; align-items: center; gap: 8px;">
+              <el-rate
+                  v-model="currentDetail.rating"
+                  disabled
+                  :max="5"
+                  :colors="['#F7BA2A', '#F7BA2A', '#F7BA2A']"
+                  show-text
+                  text-color="#ff9900"
+              ></el-rate>
+              <span style="color: #ff9900; font-weight: 500;">{{ currentDetail.rating }}星</span>
+            </div>
             <span v-else>未评分</span>
           </div>
         </div>
@@ -226,8 +247,22 @@
           <el-input type="textarea" v-model="convertForm.content" :rows="5" placeholder="知识内容"></el-input>
         </el-form-item>
         <el-form-item label="关键词" prop="keywords">
-          <el-input v-model="convertForm.keywords" placeholder="多个关键词用英文逗号分隔"></el-input>
-          <div class="form-tip">例如：狗,食物,禁忌,中毒</div>
+          <div style="display: flex; gap: 10px;">
+            <el-input
+                v-model="convertForm.keywords"
+                placeholder="多个关键词用英文逗号分隔"
+                style="flex: 1;"
+            ></el-input>
+            <el-button
+                type="primary"
+                @click="generateKeywordsForConvert"
+                :loading="aiGenerating"
+                :disabled="!convertForm.title && !convertForm.content"
+            >
+              <i class="el-icon-magic-stick"></i> AI生成
+            </el-button>
+          </div>
+          <div class="form-tip">例如：狗,食物,禁忌,中毒 | 点击AI生成按钮可根据标题和内容自动生成关键词</div>
         </el-form-item>
         <el-form-item label="分类" prop="category">
           <el-select v-model="convertForm.category" placeholder="请选择分类">
@@ -256,6 +291,7 @@ import {
   convertToKnowledge,
   batchConvertToKnowledge
 } from '@/api/ai';
+import request from '@/utils/request';
 
 export default {
   name: 'ChatHistory',
@@ -264,6 +300,7 @@ export default {
       loading: false,
       exportLoading: false,
       convertLoading: false,
+      aiGenerating: false,
       historyList: [],
       total: 0,
       page: 1,
@@ -317,7 +354,20 @@ export default {
         };
         const res = await getChatHistoryList(params);
         if (res.code === 200) {
-          this.historyList = res.data.list;
+          // 确保评分是数字类型，并且确保正确显示5星
+          this.historyList = res.data.list.map(item => {
+            let rating = null;
+            if (item.rating !== null && item.rating !== undefined && item.rating !== '') {
+              rating = Number(item.rating);
+              if (isNaN(rating)) rating = null;
+              if (rating < 1) rating = null;
+              if (rating > 5) rating = 5;
+            }
+            return {
+              ...item,
+              rating: rating
+            };
+          });
           this.total = res.data.total;
         }
       } catch (error) {
@@ -354,7 +404,17 @@ export default {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     },
     handleDetail(row) {
-      this.currentDetail = row;
+      let rating = null;
+      if (row.rating !== null && row.rating !== undefined && row.rating !== '') {
+        rating = Number(row.rating);
+        if (isNaN(rating)) rating = null;
+        if (rating < 1) rating = null;
+        if (rating > 5) rating = 5;
+      }
+      this.currentDetail = {
+        ...row,
+        rating: rating
+      };
       this.detailVisible = true;
     },
     async handleDelete(row) {
@@ -439,31 +499,99 @@ export default {
       }
     },
 
-    // 转为知识库
-    convertToKnowledge(row) {
-      this.currentConvertItem = row;
-      // 自动填充表单
-      this.convertForm = {
-        title: row.userQuestion.length > 50 ? row.userQuestion.substring(0, 50) : row.userQuestion,
-        content: row.aiAnswer,
-        keywords: this.extractKeywords(row.userQuestion),
-        category: 'other'
-      };
-      this.convertDialogVisible = true;
-    },
-
     // 提取关键词（简单处理）
-    extractKeywords(question) {
-      // 去除标点符号和常用词
+    extractKeywordsSimple(question) {
       let keywords = question.replace(/[？?！!。，,、]/g, '');
-      // 截取前30个字符作为关键词
       if (keywords.length > 30) {
         keywords = keywords.substring(0, 30);
       }
       return keywords;
     },
 
+    // 使用AI生成关键词
+    async extractKeywordsWithAI(question, answer) {
+      try {
+        const res = await request({
+          url: '/admin/ai/generate-keywords',
+          method: 'post',
+          data: {
+            question: question,
+            answer: answer
+          }
+        });
+        if (res.code === 200 && res.data.keywords) {
+          return res.data.keywords;
+        }
+      } catch (error) {
+        console.error('AI生成关键词失败', error);
+      }
+      return null;
+    },
+
+    // 为转换对话框生成关键词 - 只有用户点击按钮时才调用
+    async generateKeywordsForConvert() {
+      if (!this.convertForm.title && !this.convertForm.content) {
+        this.$message.warning('请先填写标题或内容，以便AI生成关键词');
+        return;
+      }
+
+      this.aiGenerating = true;
+      try {
+        const res = await request({
+          url: '/admin/ai/generate-keywords',
+          method: 'post',
+          data: {
+            question: this.convertForm.title || this.convertForm.content,
+            answer: this.convertForm.content
+          }
+        });
+
+        if (res.code === 200 && res.data.keywords) {
+          this.convertForm.keywords = res.data.keywords;
+          this.$message.success('AI关键词生成成功');
+        } else {
+          this.$message.error('AI生成失败，请手动输入');
+        }
+      } catch (error) {
+        console.error('AI生成关键词失败', error);
+        this.$message.error('AI生成失败，请手动输入');
+      } finally {
+        this.aiGenerating = false;
+      }
+    },
+
+    // 转为知识库 - 只打开对话框，不自动生成任何关键词
+    async convertToKnowledge(row) {
+      this.currentConvertItem = row;
+
+      // 只填充标题和内容，关键词留空，让用户手动输入或点击AI生成
+      this.convertForm = {
+        title: row.userQuestion.length > 50 ? row.userQuestion.substring(0, 50) : row.userQuestion,
+        content: row.aiAnswer,
+        keywords: '',  // 关键词为空，不自动生成
+        category: 'other'
+      };
+
+      // 只打开对话框，不做任何自动生成操作
+      this.convertDialogVisible = true;
+    },
+
     async submitConvert() {
+      // 检查关键词是否为空
+      if (!this.convertForm.keywords || this.convertForm.keywords.trim() === '') {
+        this.$confirm('关键词为空，是否继续保存？', '提示', {
+          confirmButtonText: '继续保存',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(async () => {
+          await this.doSaveConvert();
+        }).catch(() => {});
+      } else {
+        await this.doSaveConvert();
+      }
+    },
+
+    async doSaveConvert() {
       this.$refs.convertForm.validate(async (valid) => {
         if (!valid) return;
 
@@ -474,11 +602,11 @@ export default {
             content: this.convertForm.content,
             keywords: this.convertForm.keywords,
             category: this.convertForm.category,
-            source: 2  // AI生成待审核
+            source: 2
           };
           const res = await convertToKnowledge(data);
           if (res.code === 200) {
-            this.$message.success('已添加到知识库，等待审核');
+            this.$message.success('已添加到知识库');
             this.convertDialogVisible = false;
           } else {
             this.$message.error(res.message);
@@ -493,7 +621,6 @@ export default {
 
     async handleBatchConvertToKnowledge() {
       if (this.selectedRows.length === 0) return;
-      // 只转换AI智能来源的记录
       const aiItems = this.selectedRows.filter(row => row.answerSource === 2);
       if (aiItems.length === 0) {
         this.$message.warning('请选择AI智能来源的记录进行转换');
@@ -505,13 +632,37 @@ export default {
         cancelButtonText: '取消',
         type: 'info'
       }).then(async () => {
-        const items = aiItems.map(row => ({
-          title: row.userQuestion.length > 50 ? row.userQuestion.substring(0, 50) : row.userQuestion,
-          content: row.aiAnswer,
-          keywords: this.extractKeywords(row.userQuestion),
-          category: 'other',
-          source: 2
-        }));
+        this.$message.info('正在使用AI批量生成关键词...');
+
+        const items = [];
+        let aiSuccessCount = 0;
+
+        for (const row of aiItems) {
+          let keywords;
+          try {
+            const aiKeywords = await this.extractKeywordsWithAI(row.userQuestion, row.aiAnswer);
+            if (aiKeywords && aiKeywords !== '') {
+              keywords = aiKeywords;
+              aiSuccessCount++;
+            } else {
+              keywords = this.extractKeywordsSimple(row.userQuestion);
+            }
+          } catch (error) {
+            keywords = this.extractKeywordsSimple(row.userQuestion);
+          }
+
+          items.push({
+            title: row.userQuestion.length > 50 ? row.userQuestion.substring(0, 50) : row.userQuestion,
+            content: row.aiAnswer,
+            keywords: keywords,
+            category: 'other',
+            source: 2
+          });
+        }
+
+        if (aiSuccessCount > 0) {
+          this.$message.success(`成功使用AI生成 ${aiSuccessCount} 条关键词`);
+        }
 
         try {
           const res = await batchConvertToKnowledge({ items });
@@ -531,7 +682,6 @@ export default {
 </script>
 
 <style scoped>
-/* 样式保持不变... */
 .chat-history {
   padding: 20px;
   background: #f5f7fa;

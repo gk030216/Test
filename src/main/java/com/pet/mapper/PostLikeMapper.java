@@ -1,0 +1,15 @@
+package com.pet.mapper;
+
+import org.apache.ibatis.annotations.Param;
+
+public interface PostLikeMapper {
+
+    // 检查是否已点赞
+    int checkLike(@Param("postId") Integer postId, @Param("userId") Integer userId);
+
+    // 添加点赞
+    int insert(@Param("postId") Integer postId, @Param("userId") Integer userId);
+
+    // 取消点赞
+    int delete(@Param("postId") Integer postId, @Param("userId") Integer userId);
+}

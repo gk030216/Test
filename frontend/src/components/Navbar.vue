@@ -137,7 +137,19 @@ export default {
       this.$router.push('/shop');
     },
     goToCommunity() {
-      this.$message.info('宠物社区功能开发中，敬请期待');
+      // 检查是否已登录
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录，才能访问宠物社区', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        }).catch(() => {});
+        return;
+      }
+      this.$router.push('/community');
     },
     goToAIChat() {
       this.$router.push('/ai-chat');
