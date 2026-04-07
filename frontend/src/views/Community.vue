@@ -13,7 +13,7 @@
           </el-button>
         </div>
 
-        <!-- 分类导航 -->
+        <!-- 分类导航 - 添加"其他"分类 -->
         <div class="category-nav">
           <div
               v-for="cat in categories"
@@ -59,7 +59,6 @@
           <div class="post-item" v-for="post in postList" :key="post.id" @click="goToDetail(post.id)">
             <div class="post-header">
               <div class="user-info">
-                <!-- 修复：使用数据库头像，如果没有则显示首字母 -->
                 <el-avatar :size="40" :src="post.userAvatar" class="user-avatar" :style="post.userAvatar ? {} : { background: getAvatarColor(post.userName) }">
                   {{ !post.userAvatar ? getUserInitial(post.userName) : '' }}
                 </el-avatar>
@@ -77,7 +76,6 @@
             <div class="post-content">
               <h3 class="post-title">{{ post.title }}</h3>
               <p class="post-text">{{ truncateText(post.content, 150) }}</p>
-              <!-- 修复：图片显示，确保 images 不为空且是字符串 -->
               <div class="post-images" v-if="post.images && post.images.length > 0">
                 <el-image
                     v-for="(img, idx) in getImageList(post.images).slice(0, 3)"
@@ -110,7 +108,7 @@
               </div>
               <div class="action-item" @click.stop="handleFavorite(post)">
                 <i :class="['el-icon-collection', { favorited: post.isFavorited }]"></i>
-                <span>收藏</span>
+                <span>{{ post.isFavorited ? '已收藏' : '收藏' }}</span>
               </div>
               <div class="action-item">
                 <i class="el-icon-view"></i>
@@ -203,7 +201,7 @@
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getPostList, addPost, toggleLike, toggleFavorite } from '@/api/community';
-import { uploadProductImage } from '@/api/upload';
+import { uploadPostImage } from '@/api/upload';
 
 export default {
   name: 'Community',
@@ -219,12 +217,14 @@ export default {
       currentCategory: 'all',
       currentSort: 'latest',
       searchKeyword: '',
+      // 添加"其他"分类到 categories 数组
       categories: [
         { value: 'all', label: '全部', icon: 'el-icon-menu' },
         { value: 'pet_daily', label: '宠物日常', icon: 'el-icon-camera' },
         { value: 'health', label: '健康分享', icon: 'el-icon-first-aid-kit' },
         { value: 'food', label: '美食分享', icon: 'el-icon-food' },
-        { value: 'adopt', label: '领养信息', icon: 'el-icon-heart' }
+        { value: 'adopt', label: '领养信息', icon: 'el-icon-heart' },
+        { value: 'other', label: '其他', icon: 'el-icon-more' }
       ],
       showPostDialog: false,
       postForm: {
@@ -276,7 +276,6 @@ export default {
       }
     },
 
-    // 获取图片列表（处理字符串分割）
     getImageList(images) {
       if (!images) return [];
       if (typeof images === 'string') {
@@ -337,6 +336,7 @@ export default {
         if (res.code === 200) {
           post.isLiked = res.data.isLiked;
           post.likeCount += post.isLiked ? 1 : -1;
+          this.$message.success(res.data.isLiked ? '点赞成功' : '取消点赞');
         } else {
           this.$message.error(res.message || '操作失败');
         }
@@ -357,7 +357,7 @@ export default {
         }
       } catch (error) {
         console.error('收藏操作失败', error);
-        this.$message.error('操作失败');
+        this.$message.error('操作失败，请稍后重试');
       }
     },
 
@@ -366,7 +366,7 @@ export default {
       formData.append('file', file.file);
 
       try {
-        const res = await uploadProductImage(formData);
+        const res = await uploadPostImage(formData);
         if (res.code === 200) {
           this.imageUrls.push(res.data.url);
           this.imageList.push({
@@ -466,7 +466,7 @@ export default {
 </script>
 
 <style scoped>
-/* 保持原有样式，添加图片加载失败样式 */
+/* 样式保持不变 */
 .community-container {
   min-height: 100vh;
   display: flex;

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.PetHealthRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.PetHealthRecord">
+        <id column="id" property="id"/>
+        <result column="pet_id" property="petId"/>
+        <result column="record_date" property="recordDate"/>
+        <result column="height" property="height"/>
+        <result column="weight" property="weight"/>
+        <result column="temperature" property="temperature"/>
+        <result column="health_status" property="healthStatus"/>
+        <result column="diagnosis" property="diagnosis"/>
+        <result column="treatment" property="treatment"/>
+        <result column="doctor" property="doctor"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="pet_name" property="petName"/>
+    </resultMap>
+
+    <select id="getByPetId" resultMap="BaseResultMap">
+        SELECT h.*, p.name as pet_name
+        FROM pet_health_record h
+                 LEFT JOIN pet_profile p ON h.pet_id = p.id
+        WHERE h.pet_id = #{petId}
+        ORDER BY h.record_date DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pet_health_record (pet_id, record_date, height, weight, temperature, health_status, diagnosis, treatment, doctor, remark)
+        VALUES (#{petId}, #{recordDate}, #{height}, #{weight}, #{temperature}, #{healthStatus}, #{diagnosis}, #{treatment}, #{doctor}, #{remark})
+    </insert>
+
+    <update id="update">
+        UPDATE pet_health_record
+        <set>
+            <if test="recordDate != null">record_date = #{recordDate},</if>
+            <if test="height != null">height = #{height},</if>
+            <if test="weight != null">weight = #{weight},</if>
+            <if test="temperature != null">temperature = #{temperature},</if>
+            <if test="healthStatus != null">health_status = #{healthStatus},</if>
+            <if test="diagnosis != null">diagnosis = #{diagnosis},</if>
+            <if test="treatment != null">treatment = #{treatment},</if>
+            <if test="doctor != null">doctor = #{doctor},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM pet_health_record WHERE id = #{id}
+    </delete>
+
+    <!-- 获取所有体检记录（管理员用） -->
+    <select id="getAllHealthRecords" resultType="java.util.HashMap">
+        SELECT
+        h.id,
+        DATE_FORMAT(h.record_date, '%Y-%m-%d') as recordDate,
+        h.height,
+        h.weight,
+        h.temperature,
+        h.health_status as healthStatus,
+        h.diagnosis,
+        h.treatment,
+        h.doctor,
+        h.remark,
+        DATE_FORMAT(h.create_time, '%Y-%m-%d %H:%i:%s') as createTime,
+        p.id as petId,
+        p.name as petName,
+        u.id as ownerId,
+        u.username as ownerName
+        FROM pet_health_record h
+        LEFT JOIN pet_profile p ON h.pet_id = p.id
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY h.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计所有体检记录 -->
+    <select id="countAllHealthRecords" resultType="int">
+        SELECT COUNT(*)
+        FROM pet_health_record h
+        LEFT JOIN pet_profile p ON h.pet_id = p.id
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+
+</mapper>

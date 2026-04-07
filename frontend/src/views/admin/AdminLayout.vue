@@ -40,18 +40,28 @@
             <i class="el-icon-s-order"></i>
             <span slot="title">服务管理</span>
           </template>
-          <el-menu-item index="service-list">服务列表</el-menu-item>
           <el-menu-item index="service-category">服务分类</el-menu-item>
+          <el-menu-item index="service-list">服务列表</el-menu-item>
           <el-menu-item index="appointment-list">预约管理</el-menu-item>
         </el-submenu>
 
         <el-submenu index="pet">
           <template slot="title">
             <i class="el-icon-s-custom"></i>
-            <span slot="title">宠物档案</span>
+            <span slot="title">宠物管理</span>
           </template>
-          <el-menu-item index="pet-list">宠物列表</el-menu-item>
-          <el-menu-item index="pet-health">健康记录</el-menu-item>
+          <el-menu-item index="pet-list">
+            <i class="el-icon-menu"></i>
+            <span slot="title">宠物列表</span>
+          </el-menu-item>
+          <el-menu-item index="pet-health">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">健康记录</span>
+          </el-menu-item>
+          <el-menu-item index="pet-statistics">
+            <i class="el-icon-data-line"></i>
+            <span slot="title">数据统计</span>
+          </el-menu-item>
         </el-submenu>
 
         <el-submenu index="product">
@@ -86,8 +96,14 @@
             <i class="el-icon-chat-dot-round"></i>
             <span slot="title">社区管理</span>
           </template>
-          <el-menu-item index="post-list">帖子管理</el-menu-item>
-          <el-menu-item index="comment-list">评论管理</el-menu-item>
+          <el-menu-item index="post-manage">
+            <i class="el-icon-document"></i>
+            <span slot="title">帖子管理</span>
+          </el-menu-item>
+          <el-menu-item index="comment-manage">
+            <i class="el-icon-message"></i>
+            <span slot="title">评论管理</span>
+          </el-menu-item>
         </el-submenu>
 
         <el-menu-item index="carousel">

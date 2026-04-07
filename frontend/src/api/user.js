@@ -63,6 +63,49 @@ export function sendForgetCode(email) {
   });
 }
 
+// 获取用户信息
+export function getUserInfo() {
+  return request({
+    url: '/user/current-user',
+    method: 'get'
+  });
+}
+
+// 更新用户信息
+export function updateUserInfo(data) {
+  return request({
+    url: '/user/update',
+    method: 'put',
+    data
+  });
+}
+
+// 修改密码
+export function changePassword(data) {
+  return request({
+    url: '/user/change-password',
+    method: 'post',
+    data
+  });
+}
+
+// 修改邮箱（发送验证码）
+export function sendEmailCode(email) {
+  return request({
+    url: '/code/change-email',
+    method: 'post',
+    params: { email }
+  });
+}
+
+// 修改邮箱（确认）
+export function updateEmail(data) {
+  return request({
+    url: '/user/update-email',
+    method: 'post',
+    data
+  });
+}
 // ============= 管理员接口 =============
 
 // 获取用户列表

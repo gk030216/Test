@@ -47,3 +47,27 @@ export function uploadCommentImage(data) {
         }
     });
 }
+
+// 上传帖子图片
+export function uploadPostImage(data) {
+    return request({
+        url: '/upload/post',
+        method: 'post',
+        data,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+}
+
+// 上传宠物头像
+export function uploadPetAvatar(data) {
+    return request({
+        url: '/upload/pet',
+        method: 'post',
+        data,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+}

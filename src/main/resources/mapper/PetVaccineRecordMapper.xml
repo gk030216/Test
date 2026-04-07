@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.PetVaccineRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.PetVaccineRecord">
+        <id column="id" property="id"/>
+        <result column="pet_id" property="petId"/>
+        <result column="vaccine_name" property="vaccineName"/>
+        <result column="vaccine_date" property="vaccineDate"/>
+        <result column="next_date" property="nextDate"/>
+        <result column="hospital" property="hospital"/>
+        <result column="doctor" property="doctor"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="pet_name" property="petName"/>
+    </resultMap>
+
+    <select id="getByPetId" resultMap="BaseResultMap">
+        SELECT v.*, p.name as pet_name
+        FROM pet_vaccine_record v
+                 LEFT JOIN pet_profile p ON v.pet_id = p.id
+        WHERE v.pet_id = #{petId}
+        ORDER BY v.vaccine_date DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pet_vaccine_record (pet_id, vaccine_name, vaccine_date, next_date, hospital, doctor, remark)
+        VALUES (#{petId}, #{vaccineName}, #{vaccineDate}, #{nextDate}, #{hospital}, #{doctor}, #{remark})
+    </insert>
+
+    <update id="update">
+        UPDATE pet_vaccine_record
+        <set>
+            <if test="vaccineName != null">vaccine_name = #{vaccineName},</if>
+            <if test="vaccineDate != null">vaccine_date = #{vaccineDate},</if>
+            <if test="nextDate != null">next_date = #{nextDate},</if>
+            <if test="hospital != null">hospital = #{hospital},</if>
+            <if test="doctor != null">doctor = #{doctor},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM pet_vaccine_record WHERE id = #{id}
+    </delete>
+
+    <select id="getUpcoming" resultMap="BaseResultMap">
+        SELECT v.*, p.name as pet_name, p.user_id
+        FROM pet_vaccine_record v
+                 LEFT JOIN pet_profile p ON v.pet_id = p.id
+        WHERE p.user_id = #{userId}
+          AND v.next_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+        ORDER BY v.next_date ASC
+    </select>
+
+    <!-- 获取所有疫苗记录（管理员用） -->
+    <select id="getAllVaccineRecords" resultType="java.util.HashMap">
+        SELECT
+        v.id,
+        v.vaccine_name as vaccineName,
+        DATE_FORMAT(v.vaccine_date, '%Y-%m-%d') as vaccineDate,
+        DATE_FORMAT(v.next_date, '%Y-%m-%d') as nextDate,
+        DATE_FORMAT(v.create_time, '%Y-%m-%d %H:%i:%s') as createTime,
+        v.hospital,
+        v.doctor,
+        v.remark,
+        p.id as petId,
+        p.name as petName,
+        u.id as ownerId,
+        u.username as ownerName
+        FROM pet_vaccine_record v
+        LEFT JOIN pet_profile p ON v.pet_id = p.id
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY v.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计所有疫苗记录 -->
+    <select id="countAllVaccineRecords" resultType="int">
+        SELECT COUNT(*)
+        FROM pet_vaccine_record v
+        LEFT JOIN pet_profile p ON v.pet_id = p.id
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+
+</mapper>

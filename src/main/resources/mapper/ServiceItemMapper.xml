@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ServiceItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.ServiceItem">
+        <id column="id" property="id"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="price" property="price"/>
+        <result column="original_price" property="originalPrice"/>
+        <result column="duration" property="duration"/>
+        <result column="image" property="image"/>
+        <result column="images" property="images"/>
+        <result column="suitable_for" property="suitableFor"/>
+        <result column="is_hot" property="isHot"/>
+        <result column="status" property="status"/>
+        <result column="sales" property="sales"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        s.id, s.category_id, s.name, s.description, s.price, s.original_price,
+        s.duration, s.image, s.images, s.suitable_for, s.is_hot, s.status,
+        s.sales, s.create_time, s.update_time,
+        c.name as category_name
+    </sql>
+
+    <!-- 前台服务列表 -->
+    <select id="getServiceList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM service_item s
+        LEFT JOIN service_category c ON s.category_id = c.id
+        WHERE s.status = 1
+        <if test="categoryId != null">
+            AND s.category_id = #{categoryId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND s.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sort == 'price_asc'">s.price ASC</when>
+            <when test="sort == 'price_desc'">s.price DESC</when>
+            <when test="sort == 'sales'">s.sales DESC</when>
+            <when test="sort == 'hot'">s.is_hot DESC</when>
+            <otherwise>s.is_hot DESC, s.sales DESC</otherwise>
+        </choose>
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 前台统计 -->
+    <select id="countService" resultType="int">
+        SELECT COUNT(*)
+        FROM service_item
+        WHERE status = 1
+        <if test="categoryId != null">
+            AND category_id = #{categoryId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </select>
+
+    <!-- 服务详情 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM service_item s
+        LEFT JOIN service_category c ON s.category_id = c.id
+        WHERE s.id = #{id}
+    </select>
+
+    <!-- 热门服务 -->
+    <select id="getHotServices" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM service_item s
+        LEFT JOIN service_category c ON s.category_id = c.id
+        WHERE s.status = 1 AND s.is_hot = 1
+        ORDER BY s.sales DESC
+        LIMIT 6
+    </select>
+
+    <!-- 后台服务列表 -->
+    <select id="getAdminItemList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM service_item s
+        LEFT JOIN service_category c ON s.category_id = c.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND s.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND s.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND s.status = #{status}
+            </if>
+        </where>
+        ORDER BY s.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 后台统计 -->
+    <select id="countAdminItem" resultType="int">
+        SELECT COUNT(*)
+        FROM service_item s
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND s.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND s.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND s.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO service_item (category_id, name, description, price, original_price,
+                                  duration, image, images, suitable_for, is_hot, status)
+        VALUES (#{categoryId}, #{name}, #{description}, #{price}, #{originalPrice},
+                #{duration}, #{image}, #{images}, #{suitableFor}, #{isHot}, #{status})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE service_item
+        <set>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="originalPrice != null">original_price = #{originalPrice},</if>
+            <if test="duration != null">duration = #{duration},</if>
+            <if test="image != null">image = #{image},</if>
+            <if test="images != null">images = #{images},</if>
+            <if test="suitableFor != null">suitable_for = #{suitableFor},</if>
+            <if test="isHot != null">is_hot = #{isHot},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新状态 -->
+    <update id="updateStatus">
+        UPDATE service_item SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteById">
+        DELETE FROM service_item WHERE id = #{id}
+    </delete>
+
+    <!-- 增加销量 -->
+    <update id="incrementSales">
+        UPDATE service_item SET sales = sales + #{quantity} WHERE id = #{id}
+    </update>
+
+</mapper>

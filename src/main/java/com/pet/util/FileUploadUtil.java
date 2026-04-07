@@ -12,21 +12,27 @@ public class FileUploadUtil implements ServletContextAware {
 
     private static ServletContext servletContext;
 
+    // 配置独立的图片存储目录
+    private static final String UPLOAD_BASE_PATH = "D:/pet_uploads/";
+
     @Override
     public void setServletContext(ServletContext servletContext) {
         FileUploadUtil.servletContext = servletContext;
+        initDirs();
     }
 
-    // 获取项目部署目录 - 确保路径正确
-    private static String getRealPath() {
-        if (servletContext == null) {
-            // 开发环境备用路径
-            String userDir = System.getProperty("user.dir");
-            return userDir + "/src/main/webapp/upload/";
+    private static void initDirs() {
+        String[] subDirs = {"avatar", "carousel", "product", "comment", "post"};
+        for (String subDir : subDirs) {
+            File dir = new File(UPLOAD_BASE_PATH + subDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
         }
-        String realPath = servletContext.getRealPath("/");
-        System.out.println("RealPath: " + realPath);
-        return realPath + "upload/";
+    }
+
+    private static String getRealPath() {
+        return UPLOAD_BASE_PATH;
     }
 
     /**
@@ -58,10 +64,17 @@ public class FileUploadUtil implements ServletContextAware {
     }
 
     /**
-     * 上传社区图片
+     * 上传帖子图片
      */
-    public static String uploadPostImage(MultipartFile file) throws Exception {
+    public static String uploadPost(MultipartFile file) throws Exception {
         return uploadImage(file, "post");
+    }
+
+    /**
+     * 上传宠物头像
+     */
+    public static String uploadPetAvatar(MultipartFile file) throws Exception {
+        return uploadImage(file, "pet");
     }
 
     /**
@@ -91,22 +104,41 @@ public class FileUploadUtil implements ServletContextAware {
         }
         String fileName = timestamp + "_" + uuid + extension;
 
-        // 保存到部署目录下的 upload/subDir/
+        // 保存到独立目录
         String savePath = getRealPath() + subDir + "/";
         File dir = new File(savePath);
         if (!dir.exists()) {
-            boolean created = dir.mkdirs();
-            System.out.println("创建目录: " + savePath + ", 成功: " + created);
+            dir.mkdirs();
         }
 
         File destFile = new File(savePath + fileName);
         file.transferTo(destFile);
 
-        System.out.println("部署目录: " + getRealPath());
+        System.out.println("图片保存目录: " + getRealPath());
         System.out.println("文件保存路径: " + destFile.getAbsolutePath());
-        System.out.println("文件是否存在: " + destFile.exists());
+        System.out.println("图片类型: " + subDir);
 
-        // 返回相对路径
-        return "/upload/" + subDir + "/" + fileName;
+        // 返回访问URL
+        return "/uploads/" + subDir + "/" + fileName;
+    }
+
+    /**
+     * 删除图片
+     */
+    public static boolean deleteImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return false;
+        }
+        try {
+            String relativePath = imageUrl.replace("/uploads/", "");
+            String fullPath = UPLOAD_BASE_PATH + relativePath;
+            File file = new File(fullPath);
+            if (file.exists()) {
+                return file.delete();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

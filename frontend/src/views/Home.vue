@@ -219,7 +219,7 @@ export default {
       this.$message.info('商品详情功能开发中');
     },
     goToAIChat() {
-      this.$message.info('AI咨询功能开发中');
+      this.$router.push('/ai-chat');
     }
   }
 };

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.PetProfileMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.PetProfile">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="name" property="name"/>
+        <result column="type" property="type"/>
+        <result column="breed" property="breed"/>
+        <result column="gender" property="gender"/>
+        <result column="birthday" property="birthday"/>
+        <result column="weight" property="weight"/>
+        <result column="color" property="color"/>
+        <result column="avatar" property="avatar"/>
+        <result column="description" property="description"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="user_name" property="userName"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        p.id, p.user_id, p.name, p.type, p.breed, p.gender, p.birthday,
+        p.weight, p.color, p.avatar, p.description, p.is_default,
+        p.status, p.create_time, p.update_time,
+        u.username as user_name
+    </sql>
+
+    <!-- 获取用户宠物列表 -->
+    <select id="getByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM pet_profile p
+        LEFT JOIN user u ON p.user_id = u.id
+        WHERE p.user_id = #{userId} AND p.status = 1
+        ORDER BY p.is_default DESC, p.create_time DESC
+    </select>
+
+    <!-- 获取默认宠物 -->
+    <select id="getDefaultByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM pet_profile p
+        LEFT JOIN user u ON p.user_id = u.id
+        WHERE p.user_id = #{userId} AND p.is_default = 1 AND p.status = 1
+        LIMIT 1
+    </select>
+
+    <!-- 根据ID获取 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM pet_profile p
+        LEFT JOIN user u ON p.user_id = u.id
+        WHERE p.id = #{id} AND p.user_id = #{userId} AND p.status = 1
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pet_profile (user_id, name, type, breed, gender, birthday, weight, color, avatar, description, is_default, status)
+        VALUES (#{userId}, #{name}, #{type}, #{breed}, #{gender}, #{birthday}, #{weight}, #{color}, #{avatar}, #{description}, #{isDefault}, #{status})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE pet_profile
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="breed != null">breed = #{breed},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="birthday != null">birthday = #{birthday},</if>
+            <if test="weight != null">weight = #{weight},</if>
+            <if test="color != null">color = #{color},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="isDefault != null">is_default = #{isDefault},</if>
+            <!-- 只有传递了 userId 才更新主人ID -->
+            <if test="userId != null and userId > 0">user_id = #{userId},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <update id="deleteById">
+        UPDATE pet_profile SET status = 0 WHERE id = #{id}
+    </update>
+
+    <!-- 清除默认 -->
+    <update id="clearDefault">
+        UPDATE pet_profile SET is_default = 0 WHERE user_id = #{userId}
+    </update>
+
+    <!-- 设置默认 -->
+    <update id="setDefault">
+        UPDATE pet_profile SET is_default = 1 WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <!-- 统计数量 -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM pet_profile WHERE user_id = #{userId} AND status = 1
+    </select>
+
+    <!-- ========== 管理员接口 ========== -->
+
+    <!-- 获取所有宠物列表 -->
+    <select id="getAdminPetList" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM pet_profile p
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            p.status = 1
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="type != null and type != ''">
+                AND p.type = #{type}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+        </where>
+        ORDER BY p.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计宠物总数 -->
+    <select id="countAdminPet" resultType="int">
+        SELECT COUNT(*)
+        FROM pet_profile p
+        LEFT JOIN user u ON p.user_id = u.id
+        <where>
+            p.status = 1
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="type != null and type != ''">
+                AND p.type = #{type}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 统计所有宠物数 -->
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM pet_profile WHERE status = 1
+    </select>
+
+    <!-- 按类型统计 -->
+    <select id="countByType" resultType="java.util.HashMap">
+        SELECT
+            type,
+            COUNT(*) as count
+        FROM pet_profile
+        WHERE status = 1
+        GROUP BY type
+    </select>
+
+    <!-- 今日新增 -->
+    <select id="countTodayNew" resultType="int">
+        SELECT COUNT(*) FROM pet_profile
+        WHERE DATE(create_time) = CURDATE() AND status = 1
+    </select>
+
+    <!-- 近7天趋势 -->
+    <select id="getWeeklyTrend" resultType="java.util.HashMap">
+        SELECT
+            DATE(create_time) as date,
+            COUNT(*) as count
+        FROM pet_profile
+        WHERE create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND status = 1
+        GROUP BY DATE(create_time)
+        ORDER BY date ASC
+    </select>
+
+    <!-- 根据宠物ID获取宠物名称 -->
+    <select id="getPetNameById" resultType="String">
+        SELECT name FROM pet_profile WHERE id = #{id} AND status = 1
+    </select>
+
+</mapper>

@@ -25,6 +25,11 @@
           <i class="el-icon-chat-dot-round"></i>
           <span>宠物社区</span>
         </div>
+        <!-- 新增：我的宠物导航项 -->
+        <div class="nav-item" @click="goToMyPets">
+          <i class="el-icon-s-custom"></i>
+          <span>我的宠物</span>
+        </div>
         <div class="nav-item" @click="goToAIChat">
           <i class="el-icon-cpu"></i>
           <span>AI咨询</span>
@@ -56,11 +61,20 @@
             <el-dropdown-item command="orders">
               <i class="el-icon-s-order"></i> 我的订单
             </el-dropdown-item>
-            <el-dropdown-item command="pets">
-              <i class="el-icon-s-custom"></i> 我的宠物
-            </el-dropdown-item>
             <el-dropdown-item command="favorites">
               <i class="el-icon-star-on"></i> 我的收藏
+            </el-dropdown-item>
+            <el-dropdown-item command="posts">
+              <i class="el-icon-document"></i> 我的帖子
+            </el-dropdown-item>
+            <el-dropdown-item command="comments">
+              <i class="el-icon-chat-dot-round"></i> 我的评论
+            </el-dropdown-item>
+            <el-dropdown-item command="address">
+              <i class="el-icon-location"></i> 收货地址
+            </el-dropdown-item>
+            <el-dropdown-item command="security">
+              <i class="el-icon-lock"></i> 账号安全
             </el-dropdown-item>
             <!-- 员工和管理员显示后台管理入口 -->
             <el-dropdown-item v-if="userRole === 2 || userRole === 3" command="admin" divided>
@@ -151,6 +165,21 @@ export default {
       }
       this.$router.push('/community');
     },
+    // 新增：跳转到我的宠物页面
+    goToMyPets() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录，才能管理宠物档案', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        }).catch(() => {});
+        return;
+      }
+      this.$router.push('/my-pets');
+    },
     goToAIChat() {
       this.$router.push('/ai-chat');
     },
@@ -175,16 +204,25 @@ export default {
     handleUserMenuCommand(command) {
       switch (command) {
         case 'profile':
-          this.$message.info('个人中心功能开发中，敬请期待');
+          this.$router.push('/personal');
           break;
         case 'orders':
           this.$router.push('/orders');
           break;
-        case 'pets':
-          this.$message.info('我的宠物功能开发中，敬请期待');
-          break;
         case 'favorites':
-          this.$message.info('我的收藏功能开发中，敬请期待');
+          this.$router.push('/personal/favorites');
+          break;
+        case 'posts':
+          this.$router.push('/personal/posts');
+          break;
+        case 'comments':
+          this.$router.push('/personal/comments');
+          break;
+        case 'address':
+          this.$router.push('/personal/address');
+          break;
+        case 'security':
+          this.$router.push('/personal/security');
           break;
         case 'admin':
           if (this.userRole === 3) {

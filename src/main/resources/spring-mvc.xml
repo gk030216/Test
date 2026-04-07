@@ -23,8 +23,14 @@
         <property name="suffix" value=".jsp"/>
     </bean>
 
-    <!-- 静态资源处理 -->
+    <!-- 静态资源处理 - 原有配置 -->
     <mvc:resources mapping="/static/**" location="/static/"/>
+
+    <!-- 关键配置：映射外部图片目录 -->
+    <!-- 将 /uploads/** 映射到 D:/pet_uploads/ 目录 -->
+    <mvc:resources mapping="/uploads/**" location="file:D:/pet_uploads/"/>
+
+    <!-- 如果还想保留原来的 upload 目录（可选） -->
     <mvc:resources mapping="/upload/**" location="/upload/"/>
 
     <!-- 文件上传配置 -->

@@ -46,20 +46,20 @@ export function deletePost(id) {
 }
 
 // 获取用户帖子列表
-export function getUserPosts(params) {
+export function getUserPosts(page, pageSize) {
     return request({
         url: '/community/user/posts',
         method: 'get',
-        params
+        params: { page, pageSize }
     });
 }
 
 // 获取收藏列表
-export function getFavorites(params) {
+export function getFavorites(page, pageSize) {
     return request({
         url: '/community/favorites',
         method: 'get',
-        params
+        params: { page, pageSize }
     });
 }
 
@@ -73,6 +73,14 @@ export function toggleLike(id) {
 
 // 收藏/取消收藏
 export function toggleFavorite(id) {
+    return request({
+        url: `/community/post/${id}/favorite`,
+        method: 'post'
+    });
+}
+
+// 取消收藏（别名，功能相同）
+export function removeFavorite(id) {
     return request({
         url: `/community/post/${id}/favorite`,
         method: 'post'
@@ -107,6 +115,15 @@ export function deleteComment(id) {
     });
 }
 
+// 获取用户评论列表
+export function getUserComments(page, pageSize) {
+    return request({
+        url: '/community/user/comments',
+        method: 'get',
+        params: { page, pageSize }
+    });
+}
+
 // ========== 管理员接口 ==========
 
 // 获取帖子列表（后台）
@@ -115,6 +132,14 @@ export function getAdminPostList(params) {
         url: '/admin/community/posts',
         method: 'get',
         params
+    });
+}
+
+// 获取帖子统计数据
+export function getPostStatistics() {
+    return request({
+        url: '/admin/community/statistics',
+        method: 'get'
     });
 }
 
@@ -142,6 +167,33 @@ export function updatePostEssence(id, isEssence) {
         url: '/admin/community/post/essence',
         method: 'put',
         params: { id, isEssence }
+    });
+}
+
+// 批量置顶
+export function batchUpdatePostTop(ids, isTop) {
+    return request({
+        url: '/admin/community/posts/batch-top',
+        method: 'put',
+        params: { ids, isTop }
+    });
+}
+
+// 批量精华
+export function batchUpdatePostEssence(ids, isEssence) {
+    return request({
+        url: '/admin/community/posts/batch-essence',
+        method: 'put',
+        params: { ids, isEssence }
+    });
+}
+
+// 批量删除
+export function batchDeletePosts(ids) {
+    return request({
+        url: '/admin/community/posts/batch-delete',
+        method: 'delete',
+        params: { ids }
     });
 }
 

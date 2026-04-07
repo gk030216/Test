@@ -60,4 +60,32 @@ public class FileUploadController {
             return Result.error(e.getMessage());
         }
     }
+
+    @PostMapping("/pet")
+    public Result<Map<String, String>> uploadPet(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadPetAvatar(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    // 帖子图片上传
+    @PostMapping("/post")
+    public Result<Map<String, String>> uploadPost(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadPost(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+
 }
+

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ServiceCategoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.ServiceCategory">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="service_count" property="serviceCount"/>
+        <result column="parent_name" property="parentName"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, parent_id, sort_order, status, create_time, update_time
+    </sql>
+
+    <!-- 获取所有启用的分类 -->
+    <select id="getEnabledCategories" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM service_category
+        WHERE status = 1
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 获取所有分类（后台） -->
+    <select id="getAllCategories" resultMap="BaseResultMap">
+        SELECT
+        c.*,
+        (SELECT COUNT(*) FROM service_item WHERE category_id = c.id) as service_count,
+        (SELECT name FROM service_category WHERE id = c.parent_id) as parent_name
+        FROM service_category c
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND c.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY
+        CASE WHEN c.parent_id = 0 THEN 0 ELSE 1 END,
+        c.sort_order ASC,
+        c.id ASC
+    </select>
+
+    <!-- 获取分类列表（分页） -->
+    <select id="getCategoryList" resultMap="BaseResultMap">
+        SELECT
+        c.*,
+        (SELECT COUNT(*) FROM service_item WHERE category_id = c.id) as service_count,
+        p.name as parent_name
+        FROM service_category c
+        LEFT JOIN service_category p ON c.parent_id = p.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND c.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND c.status = #{status}
+            </if>
+        </where>
+        ORDER BY
+        CASE WHEN c.parent_id = 0 THEN 0 ELSE 1 END,
+        c.sort_order ASC,
+        c.id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计分类数量 -->
+    <select id="countCategoryList" resultType="int">
+        SELECT COUNT(*)
+        FROM service_category c
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND c.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND c.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据ID获取 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM service_category WHERE id = #{id}
+    </select>
+
+    <!-- 检查子分类 -->
+    <select id="countChildren" resultType="int">
+        SELECT COUNT(*) FROM service_category WHERE parent_id = #{parentId}
+    </select>
+
+    <!-- 检查分类下服务数量 -->
+    <select id="countServices" resultType="int">
+        SELECT COUNT(*) FROM service_item WHERE category_id = #{categoryId}
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO service_category (name, parent_id, sort_order, status)
+        VALUES (#{name}, #{parentId}, #{sortOrder}, #{status})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE service_category
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteById">
+        DELETE FROM service_category WHERE id = #{id}
+    </delete>
+
+</mapper>
