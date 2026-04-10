@@ -4,6 +4,7 @@ import com.pet.entity.ServiceItem;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 public interface ServiceItemMapper {
 
@@ -21,8 +22,6 @@ public interface ServiceItemMapper {
     // 获取服务详情
     ServiceItem getById(@Param("id") Integer id);
 
-    // 获取热门服务
-    List<ServiceItem> getHotServices();
 
     // 后台：获取服务列表
     List<ServiceItem> getAdminItemList(@Param("offset") Integer offset,
@@ -50,4 +49,10 @@ public interface ServiceItemMapper {
 
     // 增加销量
     int incrementSales(@Param("id") Integer id, @Param("quantity") Integer quantity);
+
+    // 统计热门服务数量
+    int countHotItems(@Param("keyword") String keyword,
+                      @Param("categoryId") Integer categoryId);
+
+    List<Map<String, Object>> getHotServices(@Param("limit") int limit);
 }

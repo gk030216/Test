@@ -98,3 +98,55 @@ export function batchDeleteProducts(ids) {
         params: { ids }
     });
 }
+
+// 添加收藏
+export function addFavorite(productId) {
+    return request({
+        url: `/product/favorite/${productId}`,
+        method: 'post'
+    });
+}
+
+// 取消收藏
+export function removeFavorite(productId) {
+    return request({
+        url: `/product/favorite/${productId}`,
+        method: 'delete'
+    });
+}
+
+// 检查收藏状态
+export function checkFavorite(productId) {
+    return request({
+        url: `/product/favorite/${productId}/check`,
+        method: 'get'
+    });
+}
+
+// 获取协同过滤推荐
+export function getRecommendProducts(productId, limit = 8) {
+    return request({
+        url: '/product/recommend',
+        method: 'get',
+        params: { productId, limit }
+    });
+}
+
+// @/api/product.js
+
+// 获取商品收藏列表
+export function getProductFavorites(params) {
+    return request({
+        url: '/product/favorites',
+        method: 'get',
+        params
+    });
+}
+
+// 取消商品收藏
+export function removeProductFavorite(productId) {
+    return request({
+        url: `/product/favorite/${productId}`,
+        method: 'delete'
+    });
+}

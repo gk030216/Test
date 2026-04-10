@@ -23,6 +23,9 @@ public interface PostCommentMapper {
                                       @Param("offset") Integer offset,
                                       @Param("limit") Integer limit);
 
+    // 统计用户评论数量
+    int countUserComments(@Param("userId") Integer userId);
+
     // 根据ID获取评论
     PostComment getById(@Param("id") Integer id);
 
@@ -34,4 +37,19 @@ public interface PostCommentMapper {
 
     // 更新点赞数
     int updateLikeCount(@Param("id") Integer id, @Param("delta") Integer delta);
+
+    // 获取评论列表（后台）
+    List<PostComment> getAdminCommentList(@Param("offset") Integer offset,
+                                          @Param("limit") Integer limit,
+                                          @Param("keyword") String keyword,
+                                          @Param("status") Integer status);
+
+    // 统计评论数量（后台）
+    int countAdminCommentList(@Param("keyword") String keyword,
+                              @Param("status") Integer status);
+
+    // 更新评论状态
+    int updateStatus(@Param("id") Integer id, @Param("status") Integer status);
+
+    int countToday();
 }

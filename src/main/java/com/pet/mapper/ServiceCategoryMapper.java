@@ -26,10 +26,7 @@ public interface ServiceCategoryMapper {
     // 根据ID获取
     ServiceCategory getById(@Param("id") Integer id);
 
-    // 检查是否有子分类
-    int countChildren(@Param("parentId") Integer parentId);
-
-    // 检查分类下是否有服务
+    // 检查分类下服务数量
     int countServices(@Param("categoryId") Integer categoryId);
 
     // 插入

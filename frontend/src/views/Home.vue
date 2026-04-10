@@ -31,15 +31,22 @@
           <div class="section-header">
             <h2>我们的服务</h2>
             <p>专业、贴心、全方位的宠物服务</p>
+            <router-link to="/services" class="view-more">查看更多 <i class="el-icon-arrow-right"></i></router-link>
           </div>
-          <div class="services-grid">
+          <div class="services-grid" v-loading="servicesLoading">
             <div class="service-card" v-for="service in services" :key="service.id" @click="goToServiceDetail(service.id)">
-              <div class="service-icon">
-                <i :class="service.icon"></i>
+              <div class="service-image" v-if="service.image">
+                <img :src="service.image" :alt="service.name">
+              </div>
+              <div class="service-icon" v-else>
+                <i class="el-icon-service"></i>
               </div>
               <h3>{{ service.name }}</h3>
-              <p>{{ service.description }}</p>
+              <p>{{ service.description || '专业宠物服务，用心呵护每一只宠物' }}</p>
               <span class="service-price">¥{{ service.price }}起</span>
+              <span class="service-duration" v-if="service.duration">
+                <i class="el-icon-time"></i> {{ service.duration }}分钟
+              </span>
             </div>
           </div>
         </div>
@@ -53,18 +60,22 @@
             <p>精选宠物好物，放心选购</p>
             <router-link to="/shop" class="view-more">查看更多 <i class="el-icon-arrow-right"></i></router-link>
           </div>
-          <div class="products-grid">
+          <div class="products-grid" v-loading="productsLoading">
             <div class="product-card" v-for="product in hotProducts" :key="product.id" @click="goToProductDetail(product.id)">
               <div class="product-image">
                 <img :src="product.image" :alt="product.name">
-                <span class="product-tag" v-if="product.tag">{{ product.tag }}</span>
+                <span class="product-tag" v-if="product.isHot === 1">热卖</span>
+                <span class="product-tag new-tag" v-else-if="product.isNew === 1">新品</span>
               </div>
               <div class="product-info">
                 <h4>{{ product.name }}</h4>
-                <p class="product-desc">{{ product.description }}</p>
+                <p class="product-desc">{{ product.description || '优质宠物商品' }}</p>
                 <div class="product-price">
                   <span class="current-price">¥{{ product.price }}</span>
                   <span class="original-price" v-if="product.originalPrice">¥{{ product.originalPrice }}</span>
+                </div>
+                <div class="product-sales">
+                  <span>已售 {{ product.sales || 0 }}</span>
                 </div>
               </div>
             </div>
@@ -80,24 +91,36 @@
             <p>分享与宠物的温馨瞬间</p>
             <router-link to="/community" class="view-more">更多动态 <i class="el-icon-arrow-right"></i></router-link>
           </div>
-          <div class="community-grid">
-            <div class="community-card" v-for="post in communityPosts" :key="post.id">
+          <div class="community-grid" v-loading="postsLoading">
+            <div class="community-card" v-for="post in communityPosts" :key="post.id" @click="goToPostDetail(post.id)">
               <div class="post-header">
-                <el-avatar :size="40" :src="post.avatar">{{ post.author.charAt(0) }}</el-avatar>
+                <el-avatar :size="40" :src="post.userAvatar" :style="post.userAvatar ? {} : { background: getAvatarColor(post.userName) }">
+                  {{ getUserInitial(post.userName) }}
+                </el-avatar>
                 <div class="post-author">
-                  <span class="author-name">{{ post.author }}</span>
-                  <span class="post-time">{{ post.time }}</span>
+                  <span class="author-name">{{ post.userName || '匿名用户' }}</span>
+                  <span class="post-time">{{ formatTime(post.createTime) }}</span>
                 </div>
               </div>
               <div class="post-content">
-                <p>{{ post.content }}</p>
-                <div class="post-images" v-if="post.images">
-                  <img v-for="(img, idx) in post.images.slice(0, 3)" :key="idx" :src="img" alt="">
+                <h4 class="post-title">{{ post.title }}</h4>
+                <p>{{ truncateText(post.content, 80) }}</p>
+                <div class="post-images" v-if="post.images && post.images.length > 0">
+                  <img
+                      v-for="(img, idx) in getImageList(post.images).slice(0, 3)"
+                      :key="idx"
+                      :src="img"
+                      alt=""
+                  >
+                  <span v-if="getImageList(post.images).length > 3" class="more-images">
+                    +{{ getImageList(post.images).length - 3 }}
+                  </span>
                 </div>
               </div>
               <div class="post-footer">
-                <span><i class="el-icon-star-on"></i> {{ post.likes }}</span>
-                <span><i class="el-icon-chat-dot-round"></i> {{ post.comments }}</span>
+                <span><i class="el-icon-star-on"></i> {{ post.likeCount || 0 }}</span>
+                <span><i class="el-icon-chat-dot-round"></i> {{ post.commentCount || 0 }}</span>
+                <span><i class="el-icon-view"></i> {{ post.viewCount || 0 }}</span>
               </div>
             </div>
           </div>
@@ -131,6 +154,9 @@
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getCarouselList } from '@/api/carousel';
+import { getHotServices } from '@/api/service';
+import { getHotProducts } from '@/api/product';
+import { getPostList } from '@/api/community';
 
 export default {
   name: 'Home',
@@ -141,68 +167,133 @@ export default {
   data() {
     return {
       banners: [],
-      services: [
-        { id: 1, name: '宠物美容', icon: 'el-icon-scissors', description: '专业美容师，让爱宠更美丽', price: 88 },
-        { id: 2, name: '宠物寄养', icon: 'el-icon-house', description: '温馨环境，24小时看护', price: 68 },
-        { id: 3, name: '宠物医疗', icon: 'el-icon-first-aid-kit', description: '专业兽医，健康保障', price: 50 },
-        { id: 4, name: '宠物训练', icon: 'el-icon-medal', description: '行为矫正，技能培养', price: 199 },
-        { id: 5, name: '宠物摄影', icon: 'el-icon-camera', description: '记录美好瞬间', price: 299 },
-        { id: 6, name: '上门喂养', icon: 'el-icon-food', description: '贴心服务，安心出行', price: 49 }
-      ],
-      hotProducts: [
-        { id: 1, name: '优质猫粮', description: '天然无谷，营养均衡', price: 128, originalPrice: 168, image: 'https://picsum.photos/200/200?random=1', tag: '热卖' },
-        { id: 2, name: '狗狗玩具', description: '耐磨耐咬，互动娱乐', price: 39, originalPrice: 59, image: 'https://picsum.photos/200/200?random=2', tag: '新品' },
-        { id: 3, name: '宠物窝垫', description: '舒适保暖，可拆洗', price: 89, originalPrice: 129, image: 'https://picsum.photos/200/200?random=3', tag: '爆款' },
-        { id: 4, name: '宠物牵引绳', description: '安全牢固，防挣脱', price: 45, originalPrice: 69, image: 'https://picsum.photos/200/200?random=4', tag: '' }
-      ],
-      communityPosts: [
-        {
-          id: 1,
-          author: '小猫咪咪',
-          avatar: '',
-          time: '2小时前',
-          content: '我家猫咪今天学会了新技能，太可爱啦！🥰',
-          images: ['https://picsum.photos/200/150?random=1'],
-          likes: 128,
-          comments: 45
-        },
-        {
-          id: 2,
-          author: '狗狗爱好者',
-          avatar: '',
-          time: '5小时前',
-          content: '带着狗狗去公园散步，遇到了好多小伙伴~',
-          images: ['https://picsum.photos/200/150?random=2', 'https://picsum.photos/200/150?random=3'],
-          likes: 256,
-          comments: 78
-        },
-        {
-          id: 3,
-          author: '养宠达人',
-          avatar: '',
-          time: '昨天',
-          content: '分享一个养宠小知识：定期给宠物驱虫很重要！',
-          images: [],
-          likes: 89,
-          comments: 23
-        }
-      ]
+      services: [],
+      hotProducts: [],
+      communityPosts: [],
+      servicesLoading: false,
+      productsLoading: false,
+      postsLoading: false
     };
   },
   created() {
     this.loadCarousels();
+    this.loadServices();
+    this.loadProducts();
+    this.loadPosts();
   },
   methods: {
     async loadCarousels() {
       try {
         const res = await getCarouselList();
         if (res.code === 200 && res.data && res.data.length > 0) {
-          this.banners = res.data;
+          this.banners = res.data.filter(item => item.status === 1);
         }
       } catch (error) {
         console.error('加载轮播图失败', error);
       }
     },
+
+    async loadServices() {
+      this.servicesLoading = true;
+      try {
+        const res = await getHotServices();
+        if (res.code === 200) {
+          this.services = res.data || [];
+        }
+      } catch (error) {
+        console.error('加载服务失败', error);
+        // 使用默认数据
+        this.services = [
+          { id: 1, name: '宠物美容', description: '专业美容师，让爱宠更美丽', price: 88, duration: 60 },
+          { id: 2, name: '宠物寄养', description: '温馨环境，24小时看护', price: 68, duration: 1440 },
+          { id: 3, name: '宠物医疗', description: '专业兽医，健康保障', price: 50, duration: 30 },
+          { id: 4, name: '宠物训练', description: '行为矫正，技能培养', price: 199, duration: 90 },
+          { id: 5, name: '宠物摄影', description: '记录美好瞬间', price: 299, duration: 120 },
+          { id: 6, name: '上门喂养', description: '贴心服务，安心出行', price: 49, duration: 30 }
+        ];
+      } finally {
+        this.servicesLoading = false;
+      }
+    },
+
+    async loadProducts() {
+      this.productsLoading = true;
+      try {
+        const res = await getHotProducts();
+        if (res.code === 200) {
+          this.hotProducts = res.data || [];
+        }
+      } catch (error) {
+        console.error('加载商品失败', error);
+      } finally {
+        this.productsLoading = false;
+      }
+    },
+
+    async loadPosts() {
+      this.postsLoading = true;
+      try {
+        const res = await getPostList({ page: 1, pageSize: 3, sort: 'hot' });
+        if (res.code === 200) {
+          this.communityPosts = res.data.list || [];
+        }
+      } catch (error) {
+        console.error('加载帖子失败', error);
+      } finally {
+        this.postsLoading = false;
+      }
+    },
+
+    getImageList(images) {
+      if (!images) return [];
+      if (typeof images === 'string') {
+        return images.split(',').filter(img => img && img.trim().length > 0);
+      }
+      return images;
+    },
+
+    getAvatarColor(name) {
+      if (!name) return 'linear-gradient(135deg, #667eea, #764ba2)';
+      const colors = [
+        'linear-gradient(135deg, #667eea, #764ba2)',
+        'linear-gradient(135deg, #f093fb, #f5576c)',
+        'linear-gradient(135deg, #4facfe, #00f2fe)',
+        'linear-gradient(135deg, #43e97b, #38f9d7)',
+        'linear-gradient(135deg, #fa709a, #fee140)',
+        'linear-gradient(135deg, #a18cd1, #fbc2eb)'
+      ];
+      let index = 0;
+      for (let i = 0; i < name.length; i++) {
+        index += name.charCodeAt(i);
+      }
+      return colors[index % colors.length];
+    },
+
+    getUserInitial(name) {
+      if (!name) return 'U';
+      return name.charAt(0).toUpperCase();
+    },
+
+    formatTime(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      const now = new Date();
+      const diff = now - d;
+
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+      if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    },
+
+    truncateText(text, length) {
+      if (!text) return '';
+      if (text.length <= length) return text;
+      return text.substring(0, length) + '...';
+    },
+
     goToLink(url) {
       if (url) {
         if (url.startsWith('http')) {
@@ -212,12 +303,19 @@ export default {
         }
       }
     },
+
     goToServiceDetail(id) {
-      this.$message.info('服务详情功能开发中');
+      this.$router.push(`/service/${id}`);
     },
+
     goToProductDetail(id) {
-      this.$message.info('商品详情功能开发中');
+      this.$router.push(`/product/${id}`);
     },
+
+    goToPostDetail(id) {
+      this.$router.push(`/community/post/${id}`);
+    },
+
     goToAIChat() {
       this.$router.push('/ai-chat');
     }
@@ -349,14 +447,14 @@ export default {
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 30px;
 }
 
 .service-card {
   background: white;
   border-radius: 16px;
-  padding: 30px;
+  padding: 30px 20px;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   transition: all 0.3s;
@@ -366,6 +464,20 @@ export default {
 .service-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 12px 30px rgba(102, 126, 234, 0.2);
+}
+
+.service-image {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.service-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .service-icon {
@@ -385,21 +497,37 @@ export default {
 }
 
 .service-card h3 {
-  font-size: 20px;
-  margin-bottom: 12px;
+  font-size: 18px;
+  margin-bottom: 8px;
   color: #333;
 }
 
 .service-card p {
   color: #666;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   line-height: 1.5;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .service-price {
   color: #ff6b6b;
   font-weight: bold;
   font-size: 18px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.service-duration {
+  color: #999;
+  font-size: 13px;
+}
+
+.service-duration i {
+  margin-right: 4px;
 }
 
 /* 商品网格 */
@@ -410,7 +538,7 @@ export default {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 30px;
 }
 
@@ -456,6 +584,10 @@ export default {
   font-size: 12px;
 }
 
+.new-tag {
+  background: linear-gradient(135deg, #67c23a, #85ce61);
+}
+
 .product-info {
   padding: 15px;
 }
@@ -464,18 +596,26 @@ export default {
   font-size: 16px;
   margin-bottom: 8px;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-desc {
   font-size: 13px;
   color: #999;
   margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .product-price {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-bottom: 8px;
 }
 
 .current-price {
@@ -490,6 +630,11 @@ export default {
   font-size: 13px;
 }
 
+.product-sales {
+  font-size: 12px;
+  color: #999;
+}
+
 /* 社区网格 */
 .community-section {
   padding: 60px 0;
@@ -498,7 +643,7 @@ export default {
 
 .community-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 30px;
 }
 
@@ -509,6 +654,7 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.3s;
   border: 1px solid #f0f0f0;
+  cursor: pointer;
 }
 
 .community-card:hover {
@@ -533,16 +679,28 @@ export default {
   color: #999;
 }
 
+.post-content .post-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
 .post-content p {
   color: #666;
   line-height: 1.6;
   margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .post-images {
   display: flex;
   gap: 8px;
   margin-top: 10px;
+  position: relative;
 }
 
 .post-images img {
@@ -550,6 +708,19 @@ export default {
   height: 80px;
   border-radius: 8px;
   object-fit: cover;
+}
+
+.more-images {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 .post-footer {

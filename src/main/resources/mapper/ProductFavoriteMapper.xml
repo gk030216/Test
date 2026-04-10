@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ProductFavoriteMapper">
+
+    <insert id="insert">
+        INSERT INTO product_favorite (user_id, product_id) VALUES (#{userId}, #{productId})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM product_favorite WHERE user_id = #{userId} AND product_id = #{productId}
+    </delete>
+
+    <select id="checkFavorite" resultType="int">
+        SELECT COUNT(*) FROM product_favorite WHERE user_id = #{userId} AND product_id = #{productId}
+    </select>
+
+    <select id="getUserFavorites" resultType="int">
+        SELECT product_id FROM product_favorite WHERE user_id = #{userId}
+    </select>
+
+    <!-- 协同过滤推荐：根据用户收藏的商品，推荐其他用户也收藏的商品 -->
+    <select id="getRecommendByUserFavorites" resultType="java.util.HashMap">
+        SELECT
+            p.id,
+            p.name,
+            p.price,
+            p.image,
+            p.sales,
+            COUNT(DISTINCT pf2.user_id) as score
+        FROM product_favorite pf1
+                 JOIN product_favorite pf2 ON pf1.product_id = pf2.product_id AND pf1.user_id != pf2.user_id
+        JOIN product p ON pf2.product_id = p.id
+        WHERE pf1.user_id = #{userId}
+          AND p.status = 1
+          AND p.id NOT IN (SELECT product_id FROM product_favorite WHERE user_id = #{userId})
+        GROUP BY p.id, p.name, p.price, p.image, p.sales
+        ORDER BY score DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 找到相似用户 -->
+    <select id="findSimilarUsers" resultType="int">
+        SELECT pf2.user_id, COUNT(*) as common_count
+        FROM product_favorite pf1
+                 JOIN product_favorite pf2 ON pf1.product_id = pf2.product_id AND pf1.user_id != pf2.user_id
+        WHERE pf1.user_id = #{userId}
+        GROUP BY pf2.user_id
+        ORDER BY common_count DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 找到相似商品（基于被同一用户收藏） -->
+    <select id="findSimilarProducts" resultType="java.util.HashMap">
+        SELECT
+            pf2.product_id as id,
+            COUNT(DISTINCT pf1.user_id) as similarity
+        FROM product_favorite pf1
+                 JOIN product_favorite pf2 ON pf1.user_id = pf2.user_id AND pf1.product_id != pf2.product_id
+        WHERE pf1.product_id = #{productId}
+        GROUP BY pf2.product_id
+        ORDER BY similarity DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 获取用户收藏的商品列表 -->
+    <select id="getFavoriteProducts" resultType="com.pet.entity.Product">
+        SELECT p.id, p.name, p.description, p.price, p.original_price, p.stock,
+               p.category_id, p.category_name, p.image, p.images, p.sales,
+               p.status, p.is_hot, p.is_new, p.create_time, p.update_time
+        FROM product_favorite pf
+                 INNER JOIN product p ON pf.product_id = p.id
+        WHERE pf.user_id = #{userId} AND p.status = 1
+        ORDER BY pf.create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计用户收藏的商品数量 -->
+    <select id="countFavoriteProducts" resultType="int">
+        SELECT COUNT(*)
+        FROM product_favorite pf
+                 INNER JOIN product p ON pf.product_id = p.id
+        WHERE pf.user_id = #{userId} AND p.status = 1
+    </select>
+
+</mapper>

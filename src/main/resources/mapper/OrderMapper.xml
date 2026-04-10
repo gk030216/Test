@@ -19,18 +19,19 @@
         <result column="create_time" property="createTime"/>
         <result column="pay_time" property="payTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="order_type" property="orderType"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id, order_no, user_id, user_name, user_phone, user_address, total_amount, pay_amount,
-        pay_type, pay_status, order_status, trade_no, remark, create_time, pay_time, update_time
+    pay_type, pay_status, order_status, trade_no, remark, create_time, pay_time, update_time, order_type
     </sql>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO orders (order_no, user_id, user_name, user_phone, user_address,
-                            total_amount, pay_amount, pay_status, order_status, remark)
+                            total_amount, pay_amount, pay_status, order_status, remark, order_type)
         VALUES (#{orderNo}, #{userId}, #{userName}, #{userPhone}, #{userAddress},
-                #{totalAmount}, #{payAmount}, #{payStatus}, #{orderStatus}, #{remark})
+                #{totalAmount}, #{payAmount}, #{payStatus}, #{orderStatus}, #{remark}, #{orderType})
     </insert>
 
     <select id="getByOrderNo" resultMap="BaseResultMap">
@@ -110,4 +111,9 @@
         DELETE FROM orders WHERE id = #{id}
     </delete>
 
+    <select id="countTodayIncome" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(pay_amount), 0)
+        FROM orders
+        WHERE DATE(create_time) = CURDATE() AND pay_status = 1
+    </select>
 </mapper>

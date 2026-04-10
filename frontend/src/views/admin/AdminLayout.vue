@@ -43,6 +43,7 @@
           <el-menu-item index="service-category">服务分类</el-menu-item>
           <el-menu-item index="service-list">服务列表</el-menu-item>
           <el-menu-item index="appointment-list">预约管理</el-menu-item>
+          <el-menu-item index="service-comment-list">服务评价</el-menu-item>
         </el-submenu>
 
         <el-submenu index="pet">
@@ -111,11 +112,6 @@
           <span slot="title">轮播图管理</span>
         </el-menu-item>
 
-        <el-menu-item index="statistics">
-          <i class="el-icon-data-line"></i>
-          <span slot="title">数据统计</span>
-        </el-menu-item>
-
         <el-submenu index="ai">
           <template slot="title">
             <i class="el-icon-cpu"></i>
@@ -134,6 +130,11 @@
             <span slot="title">对话记录</span>
           </el-menu-item>
         </el-submenu>
+
+        <el-menu-item index="feedback-manage">
+          <i class="el-icon-warning"></i>
+          <span slot="title">异常反馈</span>
+        </el-menu-item>
 
         <el-menu-item index="settings">
           <i class="el-icon-setting"></i>
@@ -235,7 +236,8 @@ export default {
         'faq-list': '常见问题管理',
         'chat-history': '对话记录',
         'statistics': '数据统计',
-        'settings': '系统设置'
+        'settings': '系统设置',
+        'feedback': '异常反馈'
       };
       this.currentTitle = titles[index] || '管理页面';
 
@@ -263,14 +265,15 @@ export default {
           'comment-list': '评论管理',
           'carousel': '轮播图管理',
           'statistics': '数据统计',
-          'settings': '系统设置'
+          'settings': '系统设置',
+          'feedback': '异常反馈'
         };
         this.currentTitle = titles[menu] || '管理页面';
       }
     },
     handleUserCommand(command) {
       if (command === 'profile') {
-        this.$message.info('个人中心功能开发中');
+        this.$router.push('/personal/profile');
       } else if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
           confirmButtonText: '确定',

@@ -1,10 +1,11 @@
 <template>
   <nav class="navbar">
     <div class="navbar-container">
-      <!-- Logo区域 -->
+      <!-- Logo区域 - 使用系统设置 -->
       <div class="logo" @click="goToHome">
-        <span class="logo-icon">🐾</span>
-        <span class="logo-text">宠物服务系统</span>
+        <img v-if="siteLogo" :src="siteLogo" class="logo-img" alt="Logo">
+        <span class="logo-icon" v-else>🐾</span>
+        <span class="logo-text">{{ siteName }}</span>
       </div>
 
       <!-- 导航菜单（PC端） -->
@@ -25,7 +26,6 @@
           <i class="el-icon-chat-dot-round"></i>
           <span>宠物社区</span>
         </div>
-        <!-- 新增：我的宠物导航项 -->
         <div class="nav-item" @click="goToMyPets">
           <i class="el-icon-s-custom"></i>
           <span>我的宠物</span>
@@ -38,6 +38,11 @@
 
       <!-- 右侧用户区域 -->
       <div class="user-area">
+        <!-- 购物车图标 -->
+        <div class="cart-icon" @click="goToCart">
+          <i class="el-icon-shopping-cart-2"></i>
+          <span class="cart-badge" v-if="cartCount > 0">{{ cartCount }}</span>
+        </div>
 
         <!-- 未登录状态 -->
         <div v-if="!isLoggedIn" class="auth-buttons">
@@ -58,26 +63,33 @@
             <el-dropdown-item command="profile">
               <i class="el-icon-user"></i> 个人中心
             </el-dropdown-item>
-            <el-dropdown-item command="orders">
-              <i class="el-icon-s-order"></i> 我的订单
+<!--            <el-dropdown-item command="appointments">-->
+<!--              <i class="el-icon-s-order"></i> 我的预约-->
+<!--            </el-dropdown-item>-->
+<!--            <el-dropdown-item command="orders">-->
+<!--              <i class="el-icon-s-order"></i> 我的订单-->
+<!--            </el-dropdown-item>-->
+<!--            <el-dropdown-item command="favorites">-->
+<!--              <i class="el-icon-star-on"></i> 我的收藏-->
+<!--            </el-dropdown-item>-->
+<!--            <el-dropdown-item command="posts">-->
+<!--              <i class="el-icon-document"></i> 我的帖子-->
+<!--            </el-dropdown-item>-->
+<!--            <el-dropdown-item command="comments">-->
+<!--              <i class="el-icon-chat-dot-round"></i> 我的评论-->
+<!--            </el-dropdown-item>-->
+<!--            <el-dropdown-item command="address">-->
+<!--              <i class="el-icon-location"></i> 收货地址-->
+<!--            </el-dropdown-item>-->
+<!--            <el-dropdown-item command="security">-->
+<!--              <i class="el-icon-lock"></i> 账号安全-->
+<!--            </el-dropdown-item>-->
+            <!-- 员工显示员工工作台 -->
+            <el-dropdown-item v-if="userRole === 2" command="staff" divided>
+              <i class="el-icon-s-platform"></i> 员工工作台
             </el-dropdown-item>
-            <el-dropdown-item command="favorites">
-              <i class="el-icon-star-on"></i> 我的收藏
-            </el-dropdown-item>
-            <el-dropdown-item command="posts">
-              <i class="el-icon-document"></i> 我的帖子
-            </el-dropdown-item>
-            <el-dropdown-item command="comments">
-              <i class="el-icon-chat-dot-round"></i> 我的评论
-            </el-dropdown-item>
-            <el-dropdown-item command="address">
-              <i class="el-icon-location"></i> 收货地址
-            </el-dropdown-item>
-            <el-dropdown-item command="security">
-              <i class="el-icon-lock"></i> 账号安全
-            </el-dropdown-item>
-            <!-- 员工和管理员显示后台管理入口 -->
-            <el-dropdown-item v-if="userRole === 2 || userRole === 3" command="admin" divided>
+            <!-- 管理员显示后台管理 -->
+            <el-dropdown-item v-if="userRole === 3" command="admin" divided>
               <i class="el-icon-setting"></i> 后台管理
             </el-dropdown-item>
             <el-dropdown-item command="logout" divided>
@@ -103,7 +115,9 @@ export default {
   data() {
     return {
       mobileMenuOpen: false,
-      cartCount: 0
+      cartCount: 0,
+      siteName: '宠物服务系统',
+      siteLogo: ''
     };
   },
   computed: {
@@ -132,26 +146,46 @@ export default {
       this.mobileMenuOpen = false;
     }
   },
+  created() {
+    this.loadSettings();
+  },
   mounted() {
     this.loadCartCount();
-    // 监听购物车更新事件
     this.$bus.$on('cart-updated', this.loadCartCount);
+    this.$bus.$on('settings-loaded', (settings) => {
+      if (settings && settings.basic) {
+        this.siteName = settings.basic.siteName || '宠物服务系统';
+        this.siteLogo = settings.basic.siteLogo || '';
+      }
+    });
   },
   beforeDestroy() {
     this.$bus.$off('cart-updated', this.loadCartCount);
+    this.$bus.$off('settings-loaded');
   },
   methods: {
+    loadSettings() {
+      const settings = localStorage.getItem('systemSettings');
+      if (settings) {
+        try {
+          const basic = JSON.parse(settings).basic;
+          this.siteName = basic.siteName || '宠物服务系统';
+          this.siteLogo = basic.siteLogo || '';
+        } catch (e) {
+          console.error('解析系统设置失败', e);
+        }
+      }
+    },
     goToHome() {
       this.$router.push('/');
     },
     goToServices() {
-      this.$message.info('服务预约功能开发中，敬请期待');
+      this.$router.push('/services');
     },
     goToShop() {
       this.$router.push('/shop');
     },
     goToCommunity() {
-      // 检查是否已登录
       const token = localStorage.getItem('token');
       if (!token) {
         this.$confirm('请先登录，才能访问宠物社区', '提示', {
@@ -165,7 +199,6 @@ export default {
       }
       this.$router.push('/community');
     },
-    // 新增：跳转到我的宠物页面
     goToMyPets() {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -206,8 +239,11 @@ export default {
         case 'profile':
           this.$router.push('/personal');
           break;
+        case 'appointments':
+          this.$router.push('/personal/appointments');
+          break;
         case 'orders':
-          this.$router.push('/orders');
+          this.$router.push('/personal/orders');
           break;
         case 'favorites':
           this.$router.push('/personal/favorites');
@@ -224,12 +260,11 @@ export default {
         case 'security':
           this.$router.push('/personal/security');
           break;
+        case 'staff':
+          this.$router.push('/staff');
+          break;
         case 'admin':
-          if (this.userRole === 3) {
-            this.$router.push('/admin');
-          } else if (this.userRole === 2) {
-            this.$router.push('/staff');
-          }
+          this.$router.push('/admin');
           break;
         case 'logout':
           this.handleLogout();
@@ -285,6 +320,11 @@ export default {
 
 .logo:hover {
   transform: scale(1.05);
+}
+
+.logo-img {
+  height: 36px;
+  width: auto;
 }
 
 .logo-icon {

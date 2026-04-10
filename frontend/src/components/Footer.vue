@@ -13,12 +13,9 @@
         <div class="footer-brand">
           <div class="brand-logo">
             <span class="logo-icon">🐾</span>
-            <span class="logo-text">宠物服务系统</span>
+            <span class="logo-text">{{ siteName }}</span>
           </div>
-          <p class="brand-desc">
-            用心服务每一个宠物家庭<br>
-            让爱与陪伴更简单
-          </p>
+          <p class="brand-desc">{{ siteDesc }}</p>
           <div class="social-links">
             <a href="#" class="social-link"><i class="el-icon-chat-dot-round"></i></a>
             <a href="#" class="social-link"><i class="el-icon-qq"></i></a>
@@ -63,11 +60,11 @@
           <h4>联系我们</h4>
           <div class="contact-item">
             <i class="el-icon-phone-outline"></i>
-            <span>客服热线：400-888-6666</span>
+            <span>客服热线：{{ servicePhone }}</span>
           </div>
           <div class="contact-item">
             <i class="el-icon-message"></i>
-            <span>客服邮箱：service@petservice.com</span>
+            <span>客服邮箱：{{ serviceEmail }}</span>
           </div>
           <div class="contact-item">
             <i class="el-icon-time"></i>
@@ -78,7 +75,6 @@
             <span>公司地址：XX市XX区XX科技园</span>
           </div>
           <div class="qrcode">
-            <img src="@/assets/qrcode.png" alt="公众号二维码" v-if="false" />
             <div class="qrcode-placeholder">
               <i class="el-icon-mobile-phone"></i>
               <span>扫码关注公众号</span>
@@ -89,8 +85,8 @@
 
       <!-- 底部版权 -->
       <div class="footer-bottom">
-        <p>Copyright © 2026 宠物服务系统 版权所有</p>
-        <p>ICP备案号：京ICP备12345678号</p>
+        <p>{{ copyright }}</p>
+        <p v-if="icp">{{ icp }}</p>
       </div>
     </div>
   </footer>
@@ -98,11 +94,58 @@
 
 <script>
 export default {
-  name: 'Footer'
+  name: 'Footer',
+  data() {
+    return {
+      siteName: '宠物服务系统',
+      siteDesc: '用心服务每一个宠物家庭\n让爱与陪伴更简单',
+      copyright: 'Copyright © 2026 宠物服务系统 版权所有',
+      icp: '',
+      servicePhone: '400-888-6666',
+      serviceEmail: 'service@petservice.com'
+    };
+  },
+  created() {
+    this.loadSettings();
+  },
+  methods: {
+    loadSettings() {
+      const settings = localStorage.getItem('systemSettings');
+      if (settings) {
+        try {
+          const basic = JSON.parse(settings).basic;
+          this.siteName = basic.siteName || '宠物服务系统';
+          this.siteDesc = basic.siteDesc || '用心服务每一个宠物家庭\n让爱与陪伴更简单';
+          this.copyright = basic.copyright || 'Copyright © 2026 宠物服务系统 版权所有';
+          this.icp = basic.icp || '';
+          this.servicePhone = basic.servicePhone || '400-888-6666';
+          this.serviceEmail = basic.serviceEmail || 'service@petservice.com';
+        } catch (e) {
+          console.error('解析系统设置失败', e);
+        }
+      }
+
+      // 监听设置更新
+      this.$bus && this.$bus.$on('settings-loaded', (settings) => {
+        if (settings && settings.basic) {
+          this.siteName = settings.basic.siteName || '宠物服务系统';
+          this.siteDesc = settings.basic.siteDesc || '用心服务每一个宠物家庭\n让爱与陪伴更简单';
+          this.copyright = settings.basic.copyright || 'Copyright © 2026 宠物服务系统 版权所有';
+          this.icp = settings.basic.icp || '';
+          this.servicePhone = settings.basic.servicePhone || '400-888-6666';
+          this.serviceEmail = settings.basic.serviceEmail || 'service@petservice.com';
+        }
+      });
+    }
+  },
+  beforeDestroy() {
+    this.$bus && this.$bus.$off('settings-loaded');
+  }
 };
 </script>
 
 <style scoped>
+/* 保持原有样式不变 */
 .footer {
   background: linear-gradient(135deg, #2c3e50 0%, #1a2632 100%);
   color: #fff;
@@ -142,7 +185,6 @@ export default {
   margin-bottom: 40px;
 }
 
-/* 品牌区域 */
 .brand-logo {
   display: flex;
   align-items: center;
@@ -174,6 +216,7 @@ export default {
   line-height: 1.6;
   margin-bottom: 20px;
   font-size: 14px;
+  white-space: pre-line;
 }
 
 .social-links {
@@ -200,7 +243,6 @@ export default {
   transform: translateY(-3px);
 }
 
-/* 链接区域 */
 .link-group h4 {
   font-size: 16px;
   margin-bottom: 15px;
@@ -240,7 +282,6 @@ export default {
   padding-left: 5px;
 }
 
-/* 联系方式 */
 .footer-contact h4 {
   font-size: 16px;
   margin-bottom: 20px;
@@ -306,7 +347,6 @@ export default {
   transform: scale(1.05);
 }
 
-/* 底部版权 */
 .footer-bottom {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 20px;
@@ -323,7 +363,6 @@ export default {
   margin: 0;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .footer-content {
     grid-template-columns: 1fr;

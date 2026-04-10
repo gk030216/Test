@@ -72,16 +72,6 @@
         WHERE s.id = #{id}
     </select>
 
-    <!-- 热门服务 -->
-    <select id="getHotServices" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM service_item s
-        LEFT JOIN service_category c ON s.category_id = c.id
-        WHERE s.status = 1 AND s.is_hot = 1
-        ORDER BY s.sales DESC
-        LIMIT 6
-    </select>
-
     <!-- 后台服务列表 -->
     <select id="getAdminItemList" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
@@ -160,5 +150,28 @@
     <update id="incrementSales">
         UPDATE service_item SET sales = sales + #{quantity} WHERE id = #{id}
     </update>
+
+    <!-- 统计热门服务数量 -->
+    <select id="countHotItems" resultType="int">
+        SELECT COUNT(*)
+        FROM service_item s
+        <where>
+            s.is_hot = 1
+            <if test="keyword != null and keyword != ''">
+                AND s.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND s.category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
+    <select id="getHotServices" resultType="java.util.HashMap">
+        SELECT id, name, sales as count
+        FROM service_item
+        WHERE status = 1
+        ORDER BY sales DESC
+            LIMIT #{limit}
+    </select>
 
 </mapper>

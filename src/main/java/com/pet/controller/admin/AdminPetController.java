@@ -39,7 +39,7 @@ public class AdminPetController {
     }
 
     /**
-     * 获取所有宠物列表（管理员）
+     * 获取所有宠物列表（管理员和员工）
      */
     @GetMapping("/list")
     public Result<Map<String, Object>> getPetList(
@@ -51,7 +51,8 @@ public class AdminPetController {
             HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             Map<String, Object> result = petService.getAdminPetList(page, pageSize, keyword, type, status);
@@ -69,7 +70,8 @@ public class AdminPetController {
     public Result<PetProfile> getPetDetail(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             PetProfile pet = petService.getPetDetail(id, null);
@@ -85,14 +87,15 @@ public class AdminPetController {
     }
 
     /**
-     * 添加宠物（管理员）
+     * 添加宠物（管理员和员工）
      */
     @PostMapping("/add")
     public Result<?> addPet(@RequestBody PetProfile pet, HttpServletRequest request) {
         try {
             Integer currentUserId = getUserId(request);
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
 
@@ -107,7 +110,6 @@ public class AdminPetController {
                 return Result.error("选择的用户不存在");
             }
 
-            // 传递当前管理员ID作为操作者，但宠物关联的用户ID使用前端传递的值
             boolean success = petService.addPet(pet, currentUserId);
             if (success) {
                 return Result.success("添加成功");
@@ -121,14 +123,15 @@ public class AdminPetController {
     }
 
     /**
-     * 更新宠物（管理员）
+     * 更新宠物（管理员和员工）
      */
     @PutMapping("/update")
     public Result<?> updatePet(@RequestBody PetProfile pet, HttpServletRequest request) {
         try {
             Integer userId = getUserId(request);
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             boolean success = petService.updatePet(pet, userId);
@@ -144,13 +147,14 @@ public class AdminPetController {
     }
 
     /**
-     * 删除宠物（管理员）
+     * 删除宠物（管理员和员工）
      */
     @DeleteMapping("/delete/{id}")
     public Result<?> deletePet(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             boolean success = petService.adminDeletePet(id);
@@ -172,7 +176,8 @@ public class AdminPetController {
     public Result<?> batchDeletePets(@RequestParam String ids, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             String[] idArray = ids.split(",");
@@ -196,7 +201,8 @@ public class AdminPetController {
     public Result<Map<String, Object>> getStatistics(HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             Map<String, Object> stats = petService.getPetStatistics();
@@ -216,7 +222,8 @@ public class AdminPetController {
     public Result<List<PetVaccineRecord>> getVaccineRecords(@RequestParam Integer petId, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             List<PetVaccineRecord> list = petService.getVaccineRecords(petId);
@@ -228,7 +235,7 @@ public class AdminPetController {
     }
 
     /**
-     * 获取所有疫苗记录（管理员）
+     * 获取所有疫苗记录（管理员和员工）
      */
     @GetMapping("/vaccine/all")
     public Result<Map<String, Object>> getAllVaccineRecords(
@@ -238,7 +245,8 @@ public class AdminPetController {
             HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             Map<String, Object> result = petService.getAllVaccineRecords(page, pageSize, keyword);
@@ -250,7 +258,7 @@ public class AdminPetController {
     }
 
     /**
-     * 获取所有体检记录（管理员）
+     * 获取所有体检记录（管理员和员工）
      */
     @GetMapping("/health/all")
     public Result<Map<String, Object>> getAllHealthRecords(
@@ -260,7 +268,8 @@ public class AdminPetController {
             HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             Map<String, Object> result = petService.getAllHealthRecords(page, pageSize, keyword);
@@ -278,7 +287,8 @@ public class AdminPetController {
     public Result<?> addVaccineRecord(@RequestBody PetVaccineRecord record, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             boolean success = petService.addVaccineRecord(record);
@@ -300,7 +310,8 @@ public class AdminPetController {
     public Result<?> deleteVaccineRecord(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             boolean success = petService.deleteVaccineRecord(id);
@@ -324,7 +335,8 @@ public class AdminPetController {
     public Result<List<PetHealthRecord>> getHealthRecords(@RequestParam Integer petId, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             List<PetHealthRecord> list = petService.getHealthRecords(petId);
@@ -342,7 +354,8 @@ public class AdminPetController {
     public Result<?> addHealthRecord(@RequestBody PetHealthRecord record, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             boolean success = petService.addHealthRecord(record);
@@ -364,7 +377,8 @@ public class AdminPetController {
     public Result<?> deleteHealthRecord(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            // 修改：允许员工和管理员访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             boolean success = petService.deleteHealthRecord(id);

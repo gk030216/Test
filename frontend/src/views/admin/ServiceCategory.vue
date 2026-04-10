@@ -49,32 +49,21 @@
       </div>
     </div>
 
-    <!-- 分类表格 - 树形结构 -->
+    <!-- 分类表格 - 简单表格，无树形结构 -->
     <el-table
         v-loading="loading"
-        :data="treeData"
+        :data="categoryList"
         stripe
         style="width: 100%"
         class="category-table"
         @selection-change="handleSelectionChange"
-        row-key="id"
-        default-expand-all
     >
       <el-table-column type="selection" width="45" align="center"></el-table-column>
-      <el-table-column prop="id" label="ID" width="85" align="center"></el-table-column>
+      <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
 
       <el-table-column prop="name" label="分类名称" min-width="200">
         <template slot-scope="scope">
-          <div class="category-name" :style="{ paddingLeft: (scope.row.level * 24) + 'px' }">
-            <span class="name-text">{{ scope.row.name }}</span>
-          </div>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="父分类" width="150" align="center">
-        <template slot-scope="scope">
-          <span v-if="scope.row.parentId === 0" class="parent-text">顶级分类</span>
-          <span v-else class="parent-text">{{ getParentName(scope.row) }}</span>
+          <span class="name-text">{{ scope.row.name }}</span>
         </template>
       </el-table-column>
 
@@ -162,26 +151,11 @@
         :close-on-click-modal="false"
         class="category-dialog"
         center
-        @opened="loadParentOptions"
     >
       <div class="dialog-content">
         <el-form :model="currentCategory" :rules="formRules" ref="categoryForm" label-width="80px">
           <el-form-item label="分类名称" prop="name">
             <el-input v-model="currentCategory.name" placeholder="请输入分类名称" size="medium"></el-input>
-          </el-form-item>
-
-          <el-form-item label="父分类">
-            <el-select v-model="currentCategory.parentId" placeholder="请选择父分类" size="medium" clearable>
-              <el-option label="顶级分类" :value="0"></el-option>
-              <el-option
-                  v-for="item in parentOptions"
-                  :key="item.id"
-                  :label="item.name"
-                  :value="item.id"
-                  :disabled="item.id === currentCategory.id"
-              ></el-option>
-            </el-select>
-            <div class="form-tip">选择父分类后，该分类将成为子分类</div>
           </el-form-item>
 
           <el-form-item label="排序">
@@ -211,7 +185,6 @@
 <script>
 import {
   getServiceCategoryList,
-  getAllServiceCategories,
   addServiceCategory,
   updateServiceCategory,
   updateServiceCategoryStatus,
@@ -226,9 +199,6 @@ export default {
       loading: false,
       submitLoading: false,
       categoryList: [],
-      treeData: [],
-      allCategories: [],
-      parentOptions: [],
       total: 0,
       page: 1,
       pageSize: 10,
@@ -242,7 +212,6 @@ export default {
       currentCategory: {
         id: null,
         name: '',
-        parentId: 0,
         sortOrder: 0,
         status: 1
       },
@@ -276,11 +245,9 @@ export default {
         if (res.code === 200) {
           this.categoryList = res.data.list.map(item => ({
             ...item,
-            statusLoading: false,
-            level: 0
+            statusLoading: false
           }));
           this.total = res.data.total;
-          this.buildTree();
         }
       } catch (error) {
         console.error('加载分类列表失败', error);
@@ -290,146 +257,60 @@ export default {
       }
     },
 
-    buildTree() {
-      const list = [...this.categoryList];
-      const tree = [];
-      const map = {};
-
-      list.forEach(item => {
-        map[item.id] = { ...item, children: [], level: 0 };
-      });
-
-      list.forEach(item => {
-        if (item.parentId === 0) {
-          map[item.id].level = 0;
-          tree.push(map[item.id]);
-        } else if (map[item.parentId]) {
-          map[item.parentId].children.push(map[item.id]);
-          map[item.id].level = (map[item.parentId].level || 0) + 1;
-        } else {
-          map[item.id].level = 0;
-          tree.push(map[item.id]);
-        }
-      });
-
-      const sortFn = (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0);
-      tree.sort(sortFn);
-
-      const sortChildren = (node) => {
-        if (node.children && node.children.length) {
-          node.children.sort(sortFn);
-          node.children.forEach(sortChildren);
-        }
+    handleSearch() {
+      this.page = 1;
+      this.loadCategoryList();
+    },
+    handleReset() {
+      this.searchForm = {
+        keyword: '',
+        status: ''
       };
-      tree.forEach(sortChildren);
-
-      this.treeData = tree;
+      this.page = 1;
+      this.loadCategoryList();
     },
-
-    async loadParentOptions() {
-      try {
-        const res = await getAllServiceCategories();
-        if (res.code === 200) {
-          // 只显示启用的顶级分类作为父分类选项
-          let options = res.data.filter(item => item.parentId === 0 && item.status === 1);
-
-          if (this.isEdit && this.currentCategory.id) {
-            options = options.filter(item => item.id !== this.currentCategory.id);
-          }
-
-          this.parentOptions = options;
-        }
-      } catch (error) {
-        console.error('加载父分类失败', error);
-      }
+    handlePageChange(page) {
+      this.page = page;
+      this.loadCategoryList();
     },
-
-    getParentName(row) {
-      if (row.parentId === 0) return '顶级分类';
-      // 优先使用后端返回的 parentName
-      if (row.parentName) {
-        return row.parentName;
-      }
-      const parent = this.categoryList.find(item => item.id === row.parentId);
-      return parent ? parent.name : '顶级分类';
+    handleSizeChange(size) {
+      this.pageSize = size;
+      this.page = 1;
+      this.loadCategoryList();
     },
-
-    // 递归获取所有子分类ID
-    getAllChildIds(parentId, list) {
-      const childIds = [];
-      const children = list.filter(item => item.parentId === parentId);
-      for (const child of children) {
-        childIds.push(child.id);
-        childIds.push(...this.getAllChildIds(child.id, list));
-      }
-      return childIds;
+    handleSelectionChange(rows) {
+      this.selectedRows = rows;
     },
-
+    formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    },
     async handleStatusChange(row, val) {
       const newStatus = val ? 1 : 0;
-
-      // 如果要启用子分类，检查父分类是否启用
-      if (newStatus === 1 && row.parentId !== 0) {
-        const parent = this.categoryList.find(item => item.id === row.parentId);
-        if (parent && parent.status !== 1) {
-          this.$message.warning('父分类已禁用，无法启用子分类，请先启用父分类');
-          return;
-        }
-      }
-
       const action = newStatus === 1 ? '启用' : '禁用';
-
-      // 如果要禁用顶级分类，提示是否同时禁用子分类
-      if (newStatus === 0 && row.parentId === 0) {
-        const childIds = this.getAllChildIds(row.id, this.categoryList);
-        if (childIds.length > 0) {
-          this.$confirm(`禁用顶级分类 "${row.name}" 将会同时禁用其下的 ${childIds.length} 个子分类，是否继续？`, '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(async () => {
-            await this.doStatusChange(row, newStatus, action, childIds);
-          }).catch(() => {});
-          return;
-        }
-      }
-
-      await this.doStatusChange(row, newStatus, action, []);
-    },
-
-    async doStatusChange(row, newStatus, action, childIds) {
-      row.statusLoading = true;
-      try {
-        // 先更新当前分类
-        const res = await updateServiceCategoryStatus(row.id, newStatus);
-        if (res.code === 200) {
-          row.status = newStatus;
-
-          // 如果有子分类需要禁用，逐个更新
-          for (const childId of childIds) {
-            await updateServiceCategoryStatus(childId, 0);
+      this.$confirm(`确定要${action}分类 "${row.name}" 吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: newStatus === 1 ? 'info' : 'warning'
+      }).then(async () => {
+        row.statusLoading = true;
+        try {
+          const res = await updateServiceCategoryStatus(row.id, newStatus);
+          if (res.code === 200) {
+            row.status = newStatus;
+            this.$message.success(res.message);
+          } else {
+            this.$message.error(res.message);
           }
-
-          this.$message.success(`${action}成功`);
-          this.loadCategoryList();
-        } else {
-          this.$message.error(res.message);
+        } catch (error) {
+          this.$message.error('操作失败');
+        } finally {
+          row.statusLoading = false;
         }
-      } catch (error) {
-        this.$message.error('操作失败');
-      } finally {
-        row.statusLoading = false;
-      }
+      }).catch(() => {});
     },
-
     async handleDelete(row) {
-      // 检查是否有子分类
-      const childIds = this.getAllChildIds(row.id, this.categoryList);
-      if (childIds.length > 0) {
-        this.$message.warning(`该分类下存在 ${childIds.length} 个子分类，请先删除子分类`);
-        return;
-      }
-
       this.$confirm(`确定要删除分类 "${row.name}" 吗？删除后无法恢复！`, '警告', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -448,48 +329,11 @@ export default {
         }
       }).catch(() => {});
     },
-
-    handleSearch() {
-      this.page = 1;
-      this.loadCategoryList();
-    },
-
-    handleReset() {
-      this.searchForm = {
-        keyword: '',
-        status: ''
-      };
-      this.page = 1;
-      this.loadCategoryList();
-    },
-
-    handlePageChange(page) {
-      this.page = page;
-      this.loadCategoryList();
-    },
-
-    handleSizeChange(size) {
-      this.pageSize = size;
-      this.page = 1;
-      this.loadCategoryList();
-    },
-
-    handleSelectionChange(rows) {
-      this.selectedRows = rows;
-    },
-
-    formatDate(date) {
-      if (!date) return '';
-      const d = new Date(date);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    },
-
     handleAdd() {
       this.isEdit = false;
       this.currentCategory = {
         id: null,
         name: '',
-        parentId: 0,
         sortOrder: 0,
         status: 1
       };
@@ -500,22 +344,11 @@ export default {
         }
       });
     },
-
     handleEdit(row) {
-      // 如果父分类已禁用，不允许编辑子分类
-      if (row.parentId !== 0) {
-        const parent = this.categoryList.find(item => item.id === row.parentId);
-        if (parent && parent.status !== 1) {
-          this.$message.warning('父分类已禁用，无法编辑子分类，请先启用父分类');
-          return;
-        }
-      }
-
       this.isEdit = true;
       this.currentCategory = {
         id: row.id,
         name: row.name,
-        parentId: row.parentId,
         sortOrder: row.sortOrder,
         status: row.status
       };
@@ -526,7 +359,6 @@ export default {
         }
       });
     },
-
     submitForm() {
       this.$refs.categoryForm.validate(async (valid) => {
         if (!valid) return;
@@ -554,24 +386,8 @@ export default {
         }
       });
     },
-
     async handleBatchDelete() {
       if (this.selectedRows.length === 0) return;
-
-      // 检查是否有子分类
-      let hasChild = false;
-      for (const row of this.selectedRows) {
-        const childIds = this.getAllChildIds(row.id, this.categoryList);
-        if (childIds.length > 0) {
-          hasChild = true;
-          break;
-        }
-      }
-
-      if (hasChild) {
-        this.$message.warning('选中的分类中存在子分类，请先删除子分类');
-        return;
-      }
 
       const ids = this.selectedRows.map(row => row.id).join(',');
       this.$confirm(`确定要删除选中的 ${this.selectedRows.length} 个分类吗？删除后无法恢复！`, '警告', {
@@ -711,19 +527,9 @@ export default {
   padding: 14px 0;
 }
 
-.category-name {
-  display: flex;
-  align-items: center;
-}
-
 .name-text {
   font-weight: 500;
   color: #2c3e50;
-}
-
-.parent-text {
-  color: #909399;
-  font-size: 13px;
 }
 
 .sort-text {

@@ -49,6 +49,31 @@ public class FileUploadController {
         }
     }
 
+    // 添加服务图片上传接口
+    @PostMapping("/service")
+    public Result<Map<String, String>> uploadService(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadServiceImage(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/feedback")
+    public Result<Map<String, String>> uploadFeedback(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadFeedback(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     @PostMapping("/comment")
     public Result<Map<String, String>> uploadComment(@RequestParam("file") MultipartFile file) {
         try {
@@ -86,6 +111,20 @@ public class FileUploadController {
         }
     }
 
+    /**
+     * 通用图片上传（系统设置用）
+     */
+    @PostMapping("/image")
+    public Result<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = FileUploadUtil.uploadSettingsImage(file);
+            Map<String, String> data = new HashMap<>();
+            data.put("url", url);
+            return Result.success("上传成功", data);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 
 }
 

@@ -107,7 +107,7 @@ export function addComment(data) {
     });
 }
 
-// 删除评论
+// 删除评论（用户）
 export function deleteComment(id) {
     return request({
         url: `/community/comment/${id}`,
@@ -188,7 +188,7 @@ export function batchUpdatePostEssence(ids, isEssence) {
     });
 }
 
-// 批量删除
+// 批量删除帖子
 export function batchDeletePosts(ids) {
     return request({
         url: '/admin/community/posts/batch-delete',
@@ -202,5 +202,75 @@ export function adminDeletePost(id) {
     return request({
         url: `/admin/community/post/${id}`,
         method: 'delete'
+    });
+}
+
+// ========== 管理员评论管理接口 ==========
+
+// 获取评论列表（后台）
+export function getAdminCommentList(params) {
+    return request({
+        url: '/admin/community/comments',
+        method: 'get',
+        params
+    });
+}
+
+// 获取评论统计
+export function getCommentStatistics() {
+    return request({
+        url: '/admin/community/comment-statistics',
+        method: 'get'
+    });
+}
+
+// 更新评论状态
+export function updateCommentStatus(id, status) {
+    return request({
+        url: '/admin/community/comment/status',
+        method: 'put',
+        params: { id, status }
+    });
+}
+
+// 管理员删除评论（软删除）
+export function adminDeleteComment(id) {
+    return request({
+        url: `/admin/community/comment/${id}`,
+        method: 'delete'
+    });
+}
+
+// 批量删除评论
+export function batchDeleteComments(ids) {
+    return request({
+        url: '/admin/community/comments/batch-delete',
+        method: 'delete',
+        params: { ids }
+    });
+}
+
+// 恢复评论
+export function restoreComment(id) {
+    return request({
+        url: `/admin/community/comment/restore/${id}`,
+        method: 'put'
+    });
+}
+
+// 批量恢复评论
+export function batchRestoreComments(ids) {
+    return request({
+        url: '/admin/community/comments/batch-restore',
+        method: 'put',
+        params: { ids }
+    });
+}
+
+// 获取评论的回复列表
+export function getCommentReplies(commentId) {
+    return request({
+        url: `/admin/community/comment/${commentId}/replies`,
+        method: 'get'
     });
 }

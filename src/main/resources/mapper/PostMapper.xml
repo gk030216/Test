@@ -222,4 +222,8 @@
         UPDATE post SET is_essence = #{isEssence} WHERE id = #{id}
     </update>
 
+    <select id="countToday" resultType="int">
+        SELECT COUNT(*) FROM post WHERE DATE(create_time) = CURDATE() AND status = 1
+    </select>
+
 </mapper>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ServiceCommentMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.ServiceComment">
+        <id column="id" property="id"/>
+        <result column="appointment_id" property="appointmentId"/>
+        <result column="service_id" property="serviceId"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="rating" property="rating"/>
+        <result column="content" property="content"/>
+        <result column="images" property="images"/>
+        <result column="reply" property="reply"/>
+        <result column="reply_time" property="replyTime"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="service_name" property="serviceName"/>
+        <result column="user_avatar" property="userAvatar"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO service_comment (appointment_id, service_id, user_id, user_name, rating, content, images)
+        VALUES (#{appointmentId}, #{serviceId}, #{userId}, #{userName}, #{rating}, #{content}, #{images})
+    </insert>
+
+    <select id="getByServiceId" resultMap="BaseResultMap">
+        SELECT c.*, u.avatar as user_avatar, s.name as service_name
+        FROM service_comment c
+                 LEFT JOIN user u ON c.user_id = u.id
+                 LEFT JOIN service_item s ON c.service_id = s.id
+        WHERE c.service_id = #{serviceId} AND c.status = 1
+        ORDER BY c.create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countByServiceId" resultType="int">
+        SELECT COUNT(*) FROM service_comment
+        WHERE service_id = #{serviceId} AND status = 1
+    </select>
+
+    <select id="getByAppointmentId" resultMap="BaseResultMap">
+        SELECT * FROM service_comment WHERE appointment_id = #{appointmentId}
+    </select>
+
+    <update id="updateReply">
+        UPDATE service_comment SET reply = #{reply}, reply_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE service_comment SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM service_comment WHERE id = #{id}
+    </delete>
+
+    <select id="getRatingStats" resultType="java.util.HashMap">
+        SELECT
+            ROUND(AVG(rating), 1) as avg_rating,
+            COUNT(*) as total_count,
+            SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as star5,
+            SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as star4,
+            SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as star3,
+            SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as star2,
+            SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as star1
+        FROM service_comment
+        WHERE service_id = #{serviceId} AND status = 1
+    </select>
+
+    <select id="getAdminList" resultMap="BaseResultMap">
+        SELECT c.*, u.avatar as user_avatar, s.name as service_name
+        FROM service_comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN service_item s ON c.service_id = s.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (c.user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR c.content LIKE CONCAT('%', #{keyword}, '%')
+                OR s.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="rating != null">
+                AND c.rating = #{rating}
+            </if>
+            <if test="status != null">
+                AND c.status = #{status}
+            </if>
+        </where>
+        ORDER BY c.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countAdminList" resultType="int">
+        SELECT COUNT(*) FROM service_comment c
+        LEFT JOIN service_item s ON c.service_id = s.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (c.user_name LIKE CONCAT('%', #{keyword}, '%')
+                OR c.content LIKE CONCAT('%', #{keyword}, '%')
+                OR s.name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="rating != null">
+                AND c.rating = #{rating}
+            </if>
+            <if test="status != null">
+                AND c.status = #{status}
+            </if>
+        </where>
+    </select>
+
+
+</mapper>

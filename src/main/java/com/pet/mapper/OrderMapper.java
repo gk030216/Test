@@ -3,6 +3,7 @@ package com.pet.mapper;
 import com.pet.entity.Order;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface OrderMapper {
@@ -38,4 +39,6 @@ public interface OrderMapper {
     int updateOrderStatus(@Param("orderNo") String orderNo, @Param("orderStatus") Integer orderStatus);
 
     int deleteById(@Param("id") Integer id);
+
+    BigDecimal countTodayIncome();
 }

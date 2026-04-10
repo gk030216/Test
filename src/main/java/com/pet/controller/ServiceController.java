@@ -93,13 +93,9 @@ public class ServiceController {
      * 获取热门服务
      */
     @GetMapping("/hot")
-    public Result<List<ServiceItem>> getHotServices() {
-        try {
-            List<ServiceItem> list = itemService.getHotServices();
-            return Result.success(list);
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+    public Result<List<Map<String, Object>>> getHotServices() {
+        List<Map<String, Object>> list = itemService.getHotServices(6);
+        return Result.success(list);
     }
 
     // ========== 预约接口 ==========
@@ -171,6 +167,26 @@ public class ServiceController {
             }
         } catch (Exception e) {
             return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 根据预约编号获取预约详情
+     */
+    @GetMapping("/appointment/no/{appointmentNo}")
+    public Result<Appointment> getAppointmentByNo(@PathVariable String appointmentNo) {
+        System.out.println("========== 查询预约 ==========");
+        System.out.println("接收到的订单号: " + appointmentNo);
+
+        Appointment appointment = appointmentService.getByAppointmentNo(appointmentNo);
+
+        System.out.println("查询结果: " + (appointment != null ? appointment.getId() : "null"));
+        System.out.println("==============================");
+
+        if (appointment != null) {
+            return Result.success(appointment);
+        } else {
+            return Result.error("订单不存在");
         }
     }
 }

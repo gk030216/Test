@@ -7,6 +7,14 @@ import Home from '@/views/Home.vue';
 import AdminLayout from '@/views/admin/AdminLayout.vue';
 import PersonalCenterLayout from '@/views/personal/PersonalCenterLayout.vue';
 
+//维护界面
+import Maintenance from '@/views/Maintenance.vue';
+
+// 导入前台服务页面
+import FrontServiceList from '@/views/service/ServiceList.vue';
+import ServiceDetail from '@/views/service/ServiceDetail.vue';
+import ServiceBooking from '@/views/service/ServiceBooking.vue';
+
 // 商城页面
 import Shop from '@/views/Shop.vue';
 import ProductDetail from '@/views/ProductDetail.vue';
@@ -29,6 +37,8 @@ import MyPosts from '@/views/personal/MyPosts.vue';
 import MyComments from '@/views/personal/MyComments.vue';
 import Security from '@/views/personal/Security.vue';
 import MyPets from '@/views/MyPets.vue';
+import MyAppointments from '@/views/personal/MyAppointments.vue';
+import MyOrders from "@/views/personal/MyOrders.vue";
 
 // 管理员子页面
 import AdminDashboard from '@/views/admin/Dashboard.vue';
@@ -44,7 +54,20 @@ import AdminPetList from '@/views/admin/AdminPetList.vue';
 import AdminPetHealth from '@/views/admin/AdminPetHealth.vue';
 import AdminPetStatistics from '@/views/admin/AdminPetStatistics.vue';
 import ServiceCategory from '@/views/admin/ServiceCategory.vue';
-import ServiceList from '@/views/admin/ServiceList.vue';
+import ServiceCommentManage from "@/views/admin/ServiceCommentManage.vue";
+import Settings from "@/views/admin/Settings.vue";
+
+
+
+// 先导入员工布局组件
+import StaffLayout from '@/views/staff/StaffLayout.vue';
+import StaffDashboard from '@/views/staff/StaffDashboard.vue';
+import StaffAppointmentList from "@/views/staff/StaffAppointmentList.vue";
+import StaffPetList from "@/views/staff/StaffPetList.vue";
+import StaffPetHealth from "@/views/staff/StaffPetHealth.vue";
+
+// 后台服务列表
+import AdminServiceList from '@/views/admin/ServiceList.vue';
 import AppointmentList from '@/views/admin/AppointmentList.vue';
 
 // 社区管理子页面
@@ -55,6 +78,9 @@ import AdminCommentManage from '@/views/admin/AdminCommentManage.vue';
 import KnowledgeManage from '@/views/admin/KnowledgeManage.vue';
 import FaqManage from '@/views/admin/FaqManage.vue';
 import ChatHistory from '@/views/admin/ChatHistory.vue';
+import StaffEvaluations from "@/views/staff/StaffEvaluations.vue";
+import StaffFeedback from "@/views/staff/StaffFeedback.vue";
+import Feedback from "@/views/personal/Feedback.vue";
 
 Vue.use(Router);
 
@@ -86,6 +112,48 @@ const router = new Router({
       component: ForgetPassword,
       meta: { requiresAuth: false }
     },
+    {
+      path: '/maintenance',
+      name: 'Maintenance',
+      component: Maintenance,
+      meta: { requiresAuth: false }
+    },
+
+    // ========== 前台服务路由 ==========
+    {
+      path: '/services',
+      name: 'FrontServiceList',
+      component: FrontServiceList,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/service/:id',
+      name: 'ServiceDetail',
+      component: ServiceDetail,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/service/:id/booking',
+      name: 'ServiceBooking',
+      component: ServiceBooking,
+      meta: { requiresAuth: true }
+    },
+
+    // ========== 员工路由 ==========
+    {
+      path: '/staff',
+      component: StaffLayout,
+      meta: { requiresAuth: true, role: [2] },
+      children: [
+        { path: '', redirect: 'dashboard' },
+        { path: 'dashboard', component: StaffDashboard, meta: { title: '工作台' } },
+        { path: 'appointments', component: StaffAppointmentList, meta: { title: '预约管理' } },
+        { path: 'pet-list', component: StaffPetList, meta: { title: '宠物列表' } },
+        { path: 'pet-health', component: StaffPetHealth, meta: { title: '健康记录' } },
+        { path: 'evaluations', component: StaffEvaluations, meta: { title: '服务评价' } },
+        { path: 'feedback', component: StaffFeedback, meta: { title: '异常反馈' } }
+      ]
+    },
 
     // ========== 个人中心路由 ==========
     {
@@ -95,11 +163,13 @@ const router = new Router({
       children: [
         { path: '', redirect: 'profile' },
         { path: 'profile', component: Profile, meta: { title: '个人资料' } },
-        { path: 'orders', component: Orders, meta: { title: '我的订单' } },
+        { path: 'orders', component: MyOrders, meta: { title: '我的订单' } },
+        { path: 'appointments', component: MyAppointments, meta: { title: '我的预约' } },
         { path: 'address', component: Address, meta: { title: '收货地址' } },
         { path: 'favorites', component: Favorites, meta: { title: '我的收藏' } },
         { path: 'posts', component: MyPosts, meta: { title: '我的帖子' } },
         { path: 'comments', component: MyComments, meta: { title: '我的评论' } },
+        { path: 'feedback', component: Feedback, meta: { title: '意见反馈' } },
         { path: 'security', component: Security, meta: { title: '账号安全' } }
       ]
     },
@@ -189,24 +259,25 @@ const router = new Router({
         { path: 'user-list', component: UserList, meta: { title: '用户列表' } },
         { path: 'staff-list', component: StaffList, meta: { title: '员工列表' } },
         { path: 'service-category', component: ServiceCategory, meta: { title: '服务分类' } },
-        { path: 'service-list', component: ServiceList, meta: { title: '服务列表' } },
+        { path: 'service-list', component: AdminServiceList, meta: { title: '服务列表' } },
         { path: 'appointment-list', component: AppointmentList, meta: { title: '预约管理' } },
+        { path: 'service-comment-list', component: ServiceCommentManage, meta: { title: '服务评价管理' } },
         { path: 'carousel', component: CarouselManage, meta: { title: '轮播图管理' } },
         { path: 'product-list', component: ProductList, meta: { title: '商品列表' } },
         { path: 'order-list', component: OrderList, meta: { title: '订单管理' } },
         { path: 'category-list', component: ProductCategory, meta: { title: '商品分类' } },
         { path: 'comment-list', component: CommentManage, meta: { title: '评价管理' } },
         { path: 'data-analysis', component: DataAnalysis, meta: { title: '数据分析' } },
-        // 社区管理路由
         { path: 'post-manage', component: AdminPostManage, meta: { title: '帖子管理' } },
         { path: 'comment-manage', component: AdminCommentManage, meta: { title: '评论管理' } },
-        // AI管理路由
         { path: 'knowledge-list', component: KnowledgeManage, meta: { title: '知识库管理' } },
         { path: 'faq-list', component: FaqManage, meta: { title: '常见问题管理' } },
         { path: 'chat-history', component: ChatHistory, meta: { title: '对话记录' } },
         { path: 'pet-list', component: AdminPetList, meta: { title: '宠物列表' } },
         { path: 'pet-health', component: AdminPetHealth, meta: { title: '健康记录' } },
-        { path: 'pet-statistics', component: AdminPetStatistics, meta: { title: '宠物数据统计' } }
+        { path: 'pet-statistics', component: AdminPetStatistics, meta: { title: '宠物数据统计' } },
+        { path: 'feedback-manage', component: StaffFeedback, meta: { title: '异常反馈' } },
+        { path: 'settings', component: Settings, meta: { title: '系统设置' } }
       ]
     }
   ]
@@ -227,6 +298,23 @@ router.beforeEach((to, from, next) => {
     }
   }
 
+  // 检查维护模式
+  const settings = localStorage.getItem('systemSettings');
+  if (settings) {
+    try {
+      const basic = JSON.parse(settings).basic;
+      if (basic.maintenanceMode && userRole !== 3) {
+        // 维护模式下只允许管理员访问
+        if (to.path !== '/maintenance' && to.path !== '/login') {
+          next('/maintenance');
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('解析维护模式设置失败', e);
+    }
+  }
+
   if (to.meta.requiresAuth) {
     if (!token) {
       next({
@@ -237,7 +325,14 @@ router.beforeEach((to, from, next) => {
     }
 
     if (to.meta.role && !to.meta.role.includes(userRole)) {
-      next('/');
+      // 根据角色跳转到对应的工作台
+      if (userRole === 2) {
+        next('/staff');
+      } else if (userRole === 3) {
+        next('/admin');
+      } else {
+        next('/');
+      }
       return;
     }
   }

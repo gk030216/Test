@@ -118,4 +118,6 @@ public interface PostMapper {
      * 精华/取消精华
      */
     int updateEssence(@Param("id") Integer id, @Param("isEssence") Integer isEssence);
+
+    int countToday();
 }

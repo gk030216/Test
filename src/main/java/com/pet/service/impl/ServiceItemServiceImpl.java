@@ -16,6 +16,9 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     @Autowired
     private ServiceItemMapper itemMapper;
 
+    @Autowired
+    private ServiceItemMapper serviceItemMapper;
+
     @Override
     public Map<String, Object> getServiceList(Integer page, Integer pageSize,
                                               Integer categoryId, String keyword, String sort) {
@@ -37,8 +40,8 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     }
 
     @Override
-    public List<ServiceItem> getHotServices() {
-        return itemMapper.getHotServices();
+    public List<Map<String, Object>> getHotServices(int limit) {
+        return serviceItemMapper.getHotServices(limit);
     }
 
     @Override
@@ -77,5 +80,28 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     @Override
     public boolean deleteItem(Integer id) {
         return itemMapper.deleteById(id) > 0;
+    }
+
+    @Override
+    public Map<String, Object> getStatistics(String keyword, Integer categoryId, Integer status) {
+        Map<String, Object> stats = new HashMap<>();
+
+        // 总服务数
+        int total = itemMapper.countAdminItem(keyword, categoryId, null);
+        stats.put("total", total);
+
+        // 上架数量
+        int onSale = itemMapper.countAdminItem(keyword, categoryId, 1);
+        stats.put("onSale", onSale);
+
+        // 下架数量
+        int offSale = itemMapper.countAdminItem(keyword, categoryId, 0);
+        stats.put("offSale", offSale);
+
+        // 热门服务数量
+        int hotCount = itemMapper.countHotItems(keyword, categoryId);
+        stats.put("hotCount", hotCount);
+
+        return stats;
     }
 }

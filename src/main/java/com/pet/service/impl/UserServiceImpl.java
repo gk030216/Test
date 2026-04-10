@@ -179,4 +179,72 @@ public class UserServiceImpl implements UserService {
         }
         return userMapper.update(user) > 0;
     }
+
+    // UserServiceImpl.java 中添加
+
+    @Override
+    public boolean updateUserInfo(User user) {
+        // 不允许修改用户名、角色、状态等敏感信息
+        User existingUser = userMapper.findById(user.getId());
+        if (existingUser == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 只更新允许修改的字段
+        existingUser.setNickname(user.getNickname());
+        existingUser.setEmail(user.getEmail());
+        existingUser.setPhone(user.getPhone());
+        existingUser.setAvatar(user.getAvatar());
+
+        return userMapper.update(existingUser) > 0;
+    }
+
+    @Override
+    public boolean changePassword(Integer userId, String oldPassword, String newPassword) {
+        User user = userMapper.findById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 验证原密码
+        if (!MD5Util.verify(oldPassword, user.getPassword())) {
+            throw new RuntimeException("原密码错误");
+        }
+
+        // 加密新密码并更新
+        String encryptedPassword = MD5Util.encrypt(newPassword);
+        return userMapper.updatePassword(user.getEmail(), encryptedPassword) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean updateEmail(Integer userId, String currentEmail, String newEmail, String code) {
+        // 1. 验证验证码（根据当前邮箱查询 type=3 的验证码）
+        VerificationCode validCode = verificationCodeMapper.findLatestValidCode(currentEmail, 3);
+        if (validCode == null || !validCode.getCode().equals(code)) {
+            throw new RuntimeException("验证码错误或已过期");
+        }
+
+        // 2. 检查新邮箱是否已被其他用户使用
+        User existUser = userMapper.findByEmail(newEmail);
+        if (existUser != null && !existUser.getId().equals(userId)) {
+            throw new RuntimeException("该邮箱已被其他用户绑定");
+        }
+
+        // 3. 更新邮箱
+        User user = userMapper.findById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        user.setEmail(newEmail);
+
+        int result = userMapper.update(user);
+        if (result > 0) {
+            // 标记验证码已使用
+            verificationCodeMapper.markAsUsed(validCode.getId());
+            return true;
+        }
+        return false;
+    }
+
 }

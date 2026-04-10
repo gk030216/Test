@@ -32,7 +32,13 @@
           </div>
 
           <div class="product-details">
-            <h1 class="product-name">{{ product.name }}</h1>
+            <div class="product-header">
+              <h1 class="product-name">{{ product.name }}</h1>
+              <div class="favorite-btn" @click="toggleFavorite">
+                <i :class="['el-icon-star-on', { favorited: isFavorited }]"></i>
+                <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
+              </div>
+            </div>
             <div class="product-price">
               <span class="price-label">价格：</span>
               <span class="current-price">¥{{ product.price }}</span>
@@ -43,6 +49,9 @@
               <span>库存：{{ product.stock || 0 }}件</span>
               <span class="rating-info" v-if="product.avgRating">
                 评分：<el-rate v-model="product.avgRating" disabled show-score text-color="#ff9900"></el-rate>
+              </span>
+              <span class="favorite-count" v-if="product.favoriteCount">
+                <i class="el-icon-star-on"></i> {{ product.favoriteCount }}人收藏
               </span>
             </div>
             <div class="product-description">
@@ -76,23 +85,15 @@
             <el-tab-pane label="商品详情" name="detail">
               <div class="detail-content" v-html="product.detailHtml || product.description"></div>
             </el-tab-pane>
-            <el-tab-pane label="规格参数" name="spec">
-              <div class="spec-content">
-                <div class="spec-item" v-for="(value, key) in product.specs" :key="key">
-                  <span class="spec-label">{{ key }}：</span>
-                  <span class="spec-value">{{ value }}</span>
-                </div>
-              </div>
-            </el-tab-pane>
             <!-- 用户评价Tab -->
             <el-tab-pane label="用户评价" name="comment">
               <div class="comment-content">
                 <!-- 评分统计 -->
                 <div class="comment-summary" v-if="ratingStats">
                   <div class="rating-score">
-                    <span class="score">{{ ratingStats.avg_rating }}</span>
+                    <span class="score">{{ ratingStats.avg_rating || 0 }}</span>
                     <el-rate v-model="ratingStats.avg_rating" disabled show-score text-color="#ff9900"></el-rate>
-                    <span class="total">{{ ratingStats.total_count }}条评价</span>
+                    <span class="total">{{ ratingStats.total_count || 0 }}条评价</span>
                   </div>
                   <div class="rating-bars">
                     <div class="rating-bar-item" v-for="i in [5,4,3,2,1]" :key="i">
@@ -141,13 +142,11 @@
                     </div>
                   </div>
 
-                  <!-- 空状态 -->
                   <div class="empty-comment" v-if="!commentLoading && commentList.length === 0">
                     <i class="el-icon-chat-dot-round"></i>
                     <p>暂无评价，快来发表第一条评价吧！</p>
                   </div>
 
-                  <!-- 分页 -->
                   <div class="comment-pagination" v-if="commentTotal > 10">
                     <el-pagination
                         @current-change="handleCommentPageChange"
@@ -164,20 +163,34 @@
           </el-tabs>
         </div>
 
-        <!-- 猜你喜欢 -->
+        <!-- 猜你喜欢（协同过滤推荐） -->
         <div class="recommend-section" v-if="recommendProducts.length">
-          <h3>猜你喜欢</h3>
+          <h3>
+            <i class="el-icon-thumb"></i> 猜你喜欢
+            <span class="recommend-tip">根据你的浏览和收藏推荐</span>
+          </h3>
           <div class="recommend-grid">
             <div
                 v-for="item in recommendProducts"
                 :key="item.id"
                 class="recommend-card"
-                @click="goToDetail(item.id)"
+                @click.stop="goToDetail(item.id)"
             >
-              <img :src="item.image" :alt="item.name">
+              <div class="recommend-image">
+                <img :src="item.image" :alt="item.name">
+                <span class="recommend-score" v-if="item.score > 0">
+                  匹配度 {{ Math.round(item.score * 100) }}%
+                </span>
+              </div>
               <div class="recommend-info">
                 <h4>{{ item.name }}</h4>
-                <span class="price">¥{{ item.price }}</span>
+                <div class="recommend-footer">
+                  <span class="price">¥{{ item.price }}</span>
+                  <span class="sales">已售 {{ item.sales || 0 }}</span>
+                </div>
+                <div class="recommend-reason" v-if="item.reason">
+                  <i class="el-icon-info"></i> {{ item.reason }}
+                </div>
               </div>
             </div>
           </div>
@@ -192,7 +205,8 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getProductById, getHotProducts } from '@/api/product';
+import { getProductById, getHotProducts, addFavorite, removeFavorite, checkFavorite } from '@/api/product';
+import { getRecommendProducts } from '@/api/product';
 import { getProductComments, getProductRatingStats } from '@/api/comment';
 import { addToCart } from '@/api/cart';
 
@@ -208,7 +222,7 @@ export default {
       activeTab: 'detail',
       currentImage: '',
       recommendProducts: [],
-      // 评价相关
+      isFavorited: false,
       commentList: [],
       commentPage: 1,
       commentTotal: 0,
@@ -237,6 +251,7 @@ export default {
   },
   created() {
     this.loadProduct();
+    this.checkFavoriteStatus();
   },
   methods: {
     async loadProduct() {
@@ -257,6 +272,55 @@ export default {
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
+      }
+    },
+
+    async checkFavoriteStatus() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const res = await checkFavorite(this.productId);
+        if (res.code === 200) {
+          this.isFavorited = res.data;
+        }
+      } catch (error) {
+        console.error('检查收藏状态失败', error);
+      }
+    },
+
+    async toggleFavorite() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        });
+        return;
+      }
+
+      try {
+        let res;
+        if (this.isFavorited) {
+          res = await removeFavorite(this.productId);
+        } else {
+          res = await addFavorite(this.productId);
+        }
+
+        if (res.code === 200) {
+          this.isFavorited = !this.isFavorited;
+          this.$message.success(this.isFavorited ? '收藏成功' : '已取消收藏');
+          if (this.product.favoriteCount !== undefined) {
+            this.product.favoriteCount += this.isFavorited ? 1 : -1;
+          }
+        } else {
+          this.$message.error(res.message);
+        }
+      } catch (error) {
+        this.$message.error('操作失败');
       }
     },
 
@@ -298,12 +362,40 @@ export default {
 
     async loadRecommend() {
       try {
-        const res = await getHotProducts();
+        const token = localStorage.getItem('token');
+        let res;
+
+        if (token) {
+          res = await getRecommendProducts({ productId: this.productId, limit: 8 });
+        } else {
+          res = await getHotProducts();
+        }
+
         if (res.code === 200) {
-          this.recommendProducts = res.data.filter(p => p.id !== this.product.id).slice(0, 4);
+          if (token) {
+            this.recommendProducts = res.data.filter(p => p.id !== parseInt(this.productId)).slice(0, 4);
+          } else {
+            this.recommendProducts = res.data.filter(p => p.id !== parseInt(this.productId)).slice(0, 4).map(p => ({
+              ...p,
+              score: 0,
+              reason: '热门推荐'
+            }));
+          }
         }
       } catch (error) {
         console.error('加载推荐失败', error);
+        try {
+          const res = await getHotProducts();
+          if (res.code === 200) {
+            this.recommendProducts = res.data.filter(p => p.id !== parseInt(this.productId)).slice(0, 4).map(p => ({
+              ...p,
+              score: 0,
+              reason: '热门推荐'
+            }));
+          }
+        } catch (e) {
+          console.error('加载热门商品失败', e);
+        }
       }
     },
 
@@ -358,7 +450,14 @@ export default {
     },
 
     goToDetail(id) {
-      this.$router.push(`/product/${id}`);
+      if (id) {
+        if (id == this.productId) {
+          this.loadProduct();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          this.$router.push(`/product/${id}`);
+        }
+      }
     },
 
     formatDate(date) {
@@ -450,11 +549,50 @@ export default {
   padding: 20px 0;
 }
 
+.product-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
 .product-name {
   font-size: 28px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 20px;
+  margin: 0;
+  flex: 1;
+}
+
+.favorite-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #999;
+  background: #f8f9fc;
+  margin-left: 20px;
+}
+
+.favorite-btn:hover {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.favorite-btn i {
+  font-size: 24px;
+}
+
+.favorite-btn i.favorited {
+  color: #f56c6c;
+}
+
+.favorite-btn span {
+  font-size: 12px;
 }
 
 .product-price {
@@ -488,12 +626,24 @@ export default {
   padding: 15px 0;
   border-bottom: 1px solid #f0f0f0;
   color: #666;
+  flex-wrap: wrap;
 }
 
 .rating-info {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.favorite-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f56c6c;
+}
+
+.favorite-count i {
+  font-size: 16px;
 }
 
 .product-description {
@@ -734,6 +884,20 @@ export default {
   font-size: 20px;
   margin-bottom: 20px;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recommend-section h3 i {
+  color: #f56c6c;
+}
+
+.recommend-tip {
+  font-size: 13px;
+  color: #999;
+  font-weight: normal;
+  margin-left: 10px;
 }
 
 .recommend-grid {
@@ -748,6 +912,12 @@ export default {
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
+  position: relative;
+  z-index: 1;
+}
+
+.recommend-card * {
+  pointer-events: none;
 }
 
 .recommend-card:hover {
@@ -755,10 +925,32 @@ export default {
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
 
-.recommend-card img {
-  width: 100%;
+.recommend-image {
+  position: relative;
   height: 180px;
+  overflow: hidden;
+}
+
+.recommend-image img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.recommend-card:hover .recommend-image img {
+  transform: scale(1.05);
+}
+
+.recommend-score {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
 }
 
 .recommend-info {
@@ -773,9 +965,35 @@ export default {
   text-overflow: ellipsis;
 }
 
-.recommend-info .price {
+.recommend-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.recommend-footer .price {
   color: #ff6b6b;
   font-weight: bold;
+}
+
+.recommend-footer .sales {
+  font-size: 12px;
+  color: #999;
+}
+
+.recommend-reason {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #ff9900;
+  background: #fff8e6;
+  padding: 4px 8px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.recommend-reason i {
+  margin-right: 4px;
+  font-size: 12px;
 }
 
 .image-slot {
@@ -818,6 +1036,15 @@ export default {
 
   .rating-bar-item {
     justify-content: center;
+  }
+
+  .product-header {
+    flex-wrap: wrap;
+  }
+
+  .favorite-btn {
+    margin-left: 0;
+    margin-top: 10px;
   }
 }
 </style>

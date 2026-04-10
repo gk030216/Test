@@ -247,4 +247,58 @@ public class PostServiceImpl implements PostService {
     public boolean adminDeletePost(Integer id) {
         return postMapper.deleteById(id) > 0;
     }
+
+    @Override
+    public Map<String, Object> getUserComments(Integer userId, Integer page, Integer pageSize) {
+        int offset = (page - 1) * pageSize;
+        List<PostComment> list = commentMapper.getUserComments(userId, offset, pageSize);
+        int total = commentMapper.countUserComments(userId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword, Integer status) {
+        int offset = (page - 1) * pageSize;
+        List<PostComment> list = commentMapper.getAdminCommentList(offset, pageSize, keyword, status);
+        int total = commentMapper.countAdminCommentList(keyword, status);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
+    @Override
+    public boolean updateCommentStatus(Integer id, Integer status) {
+        return commentMapper.updateStatus(id, status) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean adminDeleteComment(Integer id) {
+        PostComment comment = commentMapper.getById(id);
+        if (comment == null) return false;
+
+        // 真删除
+        int result = commentMapper.deleteById(id);
+
+        // 如果是顶级评论，更新帖子评论数
+        if (result > 0 && comment.getParentId() == 0) {
+            postMapper.updateCommentCount(comment.getPostId(), -1);
+        }
+        return result > 0;
+    }
+
+    @Override
+    public List<PostComment> getCommentReplies(Integer commentId) {
+        return commentMapper.getReplies(commentId);
+    }
 }

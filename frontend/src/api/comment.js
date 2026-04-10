@@ -86,3 +86,4 @@ export function getProductRatingStats(productId) {
         method: 'get'
     });
 }
+

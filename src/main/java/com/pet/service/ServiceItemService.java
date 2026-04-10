@@ -14,7 +14,7 @@ public interface ServiceItemService {
     ServiceItem getById(Integer id);
 
     // 获取热门服务
-    List<ServiceItem> getHotServices();
+    List<Map<String, Object>> getHotServices(int limit);
 
     // 后台：获取服务列表
     Map<String, Object> getAdminItemList(Integer page, Integer pageSize,
@@ -31,4 +31,7 @@ public interface ServiceItemService {
 
     // 删除服务
     boolean deleteItem(Integer id);
+
+    // 获取统计数据
+    Map<String, Object> getStatistics(String keyword, Integer categoryId, Integer status);
 }

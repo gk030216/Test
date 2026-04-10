@@ -306,6 +306,7 @@ public class AdminServiceController {
 
     /**
      * 获取预约列表（后台）
+     * 管理员看全部，员工只看分配给自己的
      */
     @GetMapping("/appointment/list")
     public Result<Map<String, Object>> getAppointmentList(
@@ -318,10 +319,20 @@ public class AdminServiceController {
             HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            Integer userId = getUserId(request);
+
+            // 权限检查：只有员工和管理员能访问
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
-            Map<String, Object> result = appointmentService.getAdminAppointments(page, pageSize, keyword, status, startDate, endDate);
+
+            // 判断是否是员工
+            Boolean isStaff = (role == 2);
+            Integer staffId = isStaff ? userId : null;
+
+            Map<String, Object> result = appointmentService.getAdminAppointments(
+                    page, pageSize, keyword, status, startDate, endDate, staffId, isStaff
+            );
             return Result.success(result);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -335,7 +346,7 @@ public class AdminServiceController {
     public Result<Appointment> getAppointmentDetail(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             Appointment appointment = appointmentService.getByIdForAdmin(id);
@@ -346,16 +357,27 @@ public class AdminServiceController {
     }
 
     /**
-     * 确认预约
+     * 确认预约（支持指定员工）
      */
     @PutMapping("/appointment/confirm/{id}")
-    public Result<?> confirmAppointment(@PathVariable Integer id, HttpServletRequest request) {
+    public Result<?> confirmAppointment(@PathVariable Integer id,
+                                        @RequestBody(required = false) Map<String, Integer> params,
+                                        HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
-            Integer staffId = getUserId(request);
+
+            Integer staffId;
+            if (params != null && params.get("staffId") != null) {
+                // 管理员可以指定员工
+                staffId = params.get("staffId");
+            } else {
+                // 默认分配给当前用户
+                staffId = getUserId(request);
+            }
+
             boolean success = appointmentService.confirmAppointment(id, staffId);
             return success ? Result.success("确认成功") : Result.error("确认失败");
         } catch (Exception e) {
@@ -370,9 +392,19 @@ public class AdminServiceController {
     public Result<?> startAppointment(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
+
+            // 检查是否是分配给自己的预约（员工只能操作自己的）
+            if (role == 2) {
+                Appointment appointment = appointmentService.getByIdForAdmin(id);
+                Integer staffId = getUserId(request);
+                if (appointment.getStaffId() == null || !appointment.getStaffId().equals(staffId)) {
+                    return Result.error("只能操作分配给自己的预约");
+                }
+            }
+
             boolean success = appointmentService.startAppointment(id);
             return success ? Result.success("服务已开始") : Result.error("操作失败");
         } catch (Exception e) {
@@ -387,9 +419,19 @@ public class AdminServiceController {
     public Result<?> completeAppointment(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
+
+            // 员工只能完成自己的预约
+            if (role == 2) {
+                Appointment appointment = appointmentService.getByIdForAdmin(id);
+                Integer staffId = getUserId(request);
+                if (appointment.getStaffId() == null || !appointment.getStaffId().equals(staffId)) {
+                    return Result.error("只能操作分配给自己的预约");
+                }
+            }
+
             boolean success = appointmentService.completeAppointment(id);
             return success ? Result.success("已完成") : Result.error("操作失败");
         } catch (Exception e) {
@@ -404,7 +446,7 @@ public class AdminServiceController {
     public Result<?> rejectAppointment(@PathVariable Integer id, @RequestBody Map<String, String> params, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             String reason = params.get("reason");
@@ -416,13 +458,13 @@ public class AdminServiceController {
     }
 
     /**
-     * 取消预约（管理员）
+     * 取消预约（管理员/员工）
      */
     @PutMapping("/appointment/cancel/{id}")
     public Result<?> cancelAppointment(@PathVariable Integer id, @RequestBody Map<String, String> params, HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
-            if (role != 3) {
+            if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
             String reason = params.get("reason");
@@ -435,15 +477,46 @@ public class AdminServiceController {
 
     /**
      * 获取预约统计
+     * 管理员看全部，员工看自己的
      */
     @GetMapping("/appointment/statistics")
     public Result<Map<String, Object>> getAppointmentStatistics(HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+
+            Map<String, Object> stats;
+            if (role == 2) {
+                // 员工只看自己的统计数据
+                Integer staffId = getUserId(request);
+                stats = appointmentService.getStaffStatistics(staffId);
+            } else {
+                // 管理员看全部
+                stats = appointmentService.getStatistics();
+            }
+            return Result.success(stats);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取服务统计数据（基于筛选条件）
+     */
+    @GetMapping("/item/statistics")
+    public Result<Map<String, Object>> getItemStatistics(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer status,
+            HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
             if (role != 3) {
                 return Result.error(403, "无权限访问");
             }
-            Map<String, Object> stats = appointmentService.getStatistics();
+            Map<String, Object> stats = itemService.getStatistics(keyword, categoryId, status);
             return Result.success(stats);
         } catch (Exception e) {
             return Result.error(e.getMessage());

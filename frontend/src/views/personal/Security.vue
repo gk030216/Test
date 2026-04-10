@@ -1,94 +1,177 @@
 <template>
   <div class="security-page">
-    <h2 class="page-title">账号安全</h2>
+    <div class="page-header">
+      <h2 class="page-title">账号安全</h2>
+      <p class="page-desc">管理你的账号安全设置</p>
+    </div>
 
     <div class="security-section">
+      <!-- 修改密码 -->
       <div class="section-item">
         <div class="item-info">
-          <div class="item-title">修改密码</div>
-          <div class="item-desc">定期更换密码，保护账号安全</div>
+          <div class="item-icon">
+            <i class="el-icon-lock"></i>
+          </div>
+          <div class="item-content">
+            <div class="item-title">登录密码</div>
+            <div class="item-desc">定期更换密码可以保护账号安全</div>
+          </div>
         </div>
-        <el-button type="primary" plain @click="showPasswordDialog = true">修改</el-button>
+        <el-button type="primary" plain size="small" @click="showPasswordDialog = true" class="action-btn">
+          修改
+        </el-button>
       </div>
 
+      <!-- 绑定邮箱 -->
       <div class="section-item">
         <div class="item-info">
-          <div class="item-title">绑定手机</div>
-          <div class="item-desc">{{ userInfo.phone ? '已绑定：' + userInfo.phone : '未绑定' }}</div>
+          <div class="item-icon">
+            <i class="el-icon-message"></i>
+          </div>
+          <div class="item-content">
+            <div class="item-title">绑定邮箱</div>
+            <div class="item-desc">
+              <span v-if="userInfo.email" class="email-text">{{ userInfo.email }}</span>
+              <span v-else class="not-bind">未绑定</span>
+            </div>
+          </div>
         </div>
-        <el-button type="primary" plain @click="showPhoneDialog = true">{{ userInfo.phone ? '更换' : '绑定' }}</el-button>
-      </div>
-
-      <div class="section-item">
-        <div class="item-info">
-          <div class="item-title">绑定邮箱</div>
-          <div class="item-desc">{{ userInfo.email ? '已绑定：' + userInfo.email : '未绑定' }}</div>
-        </div>
-        <el-button type="primary" plain @click="showEmailDialog = true">{{ userInfo.email ? '更换' : '绑定' }}</el-button>
+        <el-button type="primary" plain size="small" @click="showEmailDialog = true" class="action-btn">
+          {{ userInfo.email ? '更换' : '绑定' }}
+        </el-button>
       </div>
     </div>
 
     <!-- 修改密码对话框 -->
-    <el-dialog title="修改密码" :visible.sync="showPasswordDialog" width="450px" center>
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordForm" label-width="80px">
-        <el-form-item label="原密码" prop="oldPassword">
-          <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入原密码"></el-input>
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码"></el-input>
-        </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入新密码"></el-input>
-        </el-form-item>
-      </el-form>
-      <span slot="footer">
+    <el-dialog
+        title="修改密码"
+        :visible.sync="showPasswordDialog"
+        width="450px"
+        center
+        class="security-dialog"
+        :close-on-click-modal="false"
+    >
+      <div class="dialog-content">
+        <el-form :model="passwordForm" :rules="passwordRules" ref="passwordForm" label-width="100px">
+          <el-form-item label="原密码" prop="oldPassword">
+            <el-input
+                v-model="passwordForm.oldPassword"
+                type="password"
+                placeholder="请输入原密码"
+                prefix-icon="el-icon-lock"
+                show-password
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="新密码" prop="newPassword">
+            <el-input
+                v-model="passwordForm.newPassword"
+                type="password"
+                placeholder="请输入新密码（6-20位）"
+                prefix-icon="el-icon-key"
+                show-password
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input
+                v-model="passwordForm.confirmPassword"
+                type="password"
+                placeholder="请再次输入新密码"
+                prefix-icon="el-icon-check"
+                show-password
+            ></el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+      <span slot="footer" class="dialog-footer">
         <el-button @click="showPasswordDialog = false">取消</el-button>
-        <el-button type="primary" @click="updatePassword" :loading="passwordLoading">确定</el-button>
+        <el-button type="primary" @click="handleChangePassword" :loading="passwordLoading">
+          确认修改
+        </el-button>
       </span>
     </el-dialog>
 
-    <!-- 绑定手机对话框 -->
-    <el-dialog title="绑定手机" :visible.sync="showPhoneDialog" width="450px" center>
-      <el-form :model="phoneForm" :rules="phoneRules" ref="phoneForm" label-width="80px">
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="phoneForm.phone" placeholder="请输入手机号"></el-input>
-        </el-form-item>
-        <el-form-item label="验证码" prop="code">
-          <div class="code-wrapper">
-            <el-input v-model="phoneForm.code" placeholder="请输入验证码"></el-input>
-            <el-button :disabled="!canSendCode" @click="sendPhoneCode">{{ codeBtnText }}</el-button>
-          </div>
-        </el-form-item>
-      </el-form>
-      <span slot="footer">
-        <el-button @click="showPhoneDialog = false">取消</el-button>
-        <el-button type="primary" @click="bindPhone" :loading="phoneLoading">确定</el-button>
-      </span>
-    </el-dialog>
+    <!-- 绑定/更换邮箱对话框 -->
+    <el-dialog
+        :title="userInfo.email ? '更换邮箱' : '绑定邮箱'"
+        :visible.sync="showEmailDialog"
+        width="480px"
+        center
+        class="security-dialog"
+        :close-on-click-modal="false"
+        @closed="resetEmailForm"
+    >
+      <div class="dialog-content">
+        <!-- 步骤条 -->
+        <el-steps :active="emailStep" align-center finish-status="success" class="email-steps">
+          <el-step title="验证身份" icon="el-icon-user"></el-step>
+          <el-step title="输入新邮箱" icon="el-icon-message"></el-step>
+        </el-steps>
 
-    <!-- 绑定邮箱对话框 -->
-    <el-dialog title="绑定邮箱" :visible.sync="showEmailDialog" width="450px" center>
-      <el-form :model="emailForm" :rules="emailRules" ref="emailForm" label-width="80px">
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="emailForm.email" placeholder="请输入邮箱"></el-input>
-        </el-form-item>
-        <el-form-item label="验证码" prop="code">
-          <div class="code-wrapper">
-            <el-input v-model="emailForm.code" placeholder="请输入验证码"></el-input>
-            <el-button :disabled="!canSendEmailCode" @click="sendEmailCode">{{ emailCodeBtnText }}</el-button>
+        <!-- 步骤1：验证身份 -->
+        <div v-if="emailStep === 0">
+          <div class="step-desc">
+            <i class="el-icon-info"></i>
+            为了你的账号安全，请先验证当前邮箱
           </div>
-        </el-form-item>
-      </el-form>
-      <span slot="footer">
-        <el-button @click="showEmailDialog = false">取消</el-button>
-        <el-button type="primary" @click="bindEmail" :loading="emailLoading">确定</el-button>
-      </span>
+          <el-form :model="verifyForm" :rules="verifyRules" ref="verifyForm" label-width="80px">
+            <el-form-item label="当前邮箱">
+              <el-input v-model="userInfo.email" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="验证码" prop="code">
+              <div class="code-wrapper">
+                <el-input
+                    v-model="verifyForm.code"
+                    placeholder="请输入验证码"
+                    maxlength="6"
+                ></el-input>
+                <el-button
+                    :disabled="!canSendVerifyCode"
+                    @click="sendVerifyCode"
+                    :loading="verifyCodeSending"
+                    class="code-btn"
+                >
+                  {{ verifyCodeBtnText }}
+                </el-button>
+              </div>
+            </el-form-item>
+          </el-form>
+          <div class="step-actions">
+            <el-button @click="showEmailDialog = false">取消</el-button>
+            <el-button type="primary" @click="nextToNewEmail" :loading="verifyLoading">
+              下一步
+            </el-button>
+          </div>
+        </div>
+
+        <!-- 步骤2：输入新邮箱 -->
+        <div v-if="emailStep === 1">
+          <div class="step-desc">
+            <i class="el-icon-info"></i>
+            请输入新的邮箱地址
+          </div>
+          <el-form :model="emailForm" :rules="emailRules" ref="emailForm" label-width="80px">
+            <el-form-item label="新邮箱" prop="email">
+              <el-input
+                  v-model="emailForm.email"
+                  placeholder="请输入新邮箱"
+                  prefix-icon="el-icon-message"
+              ></el-input>
+            </el-form-item>
+          </el-form>
+          <div class="step-actions">
+            <el-button @click="emailStep = 0">上一步</el-button>
+            <el-button type="primary" @click="handleBindEmail" :loading="emailLoading">
+              确认更换
+            </el-button>
+          </div>
+        </div>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { updatePassword, bindPhone, bindEmail, sendBindCode } from '@/api/user';
+import { changePassword, sendEmailCode, updateEmail } from '@/api/user';
 
 export default {
   name: 'Security',
@@ -106,11 +189,12 @@ export default {
     return {
       userInfo: {},
       showPasswordDialog: false,
-      showPhoneDialog: false,
       showEmailDialog: false,
       passwordLoading: false,
-      phoneLoading: false,
       emailLoading: false,
+      verifyLoading: false,
+      emailStep: 0,
+
       passwordForm: {
         oldPassword: '',
         newPassword: '',
@@ -127,51 +211,39 @@ export default {
           { validator: validateConfirmPassword, trigger: 'blur' }
         ]
       },
-      phoneForm: {
-        phone: '',
+
+      verifyForm: {
         code: ''
       },
-      phoneRules: {
-        phone: [
-          { required: true, message: '请输入手机号', trigger: 'blur' },
-          { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
-        ],
-        code: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+      verifyRules: {
+        code: [
+          { required: true, message: '请输入验证码', trigger: 'blur' },
+          { len: 6, message: '验证码为6位数字', trigger: 'blur' }
+        ]
       },
+
       emailForm: {
-        email: '',
-        code: ''
+        email: ''
       },
       emailRules: {
         email: [
           { required: true, message: '请输入邮箱', trigger: 'blur' },
           { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
-        ],
-        code: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+        ]
       },
-      countdown: 60,
-      timer: null,
-      codeSending: false,
-      emailCountdown: 60,
-      emailTimer: null,
-      emailCodeSending: false
+
+      verifyCountdown: 60,
+      verifyTimer: null,
+      verifyCodeSending: false
     };
   },
   computed: {
-    canSendCode() {
-      return this.phoneForm.phone && !this.codeSending && this.countdown === 60;
+    canSendVerifyCode() {
+      return this.userInfo.email && !this.verifyCodeSending && this.verifyCountdown === 60;
     },
-    codeBtnText() {
-      if (this.countdown < 60) return `${this.countdown}秒后重试`;
-      if (this.codeSending) return '发送中...';
-      return '获取验证码';
-    },
-    canSendEmailCode() {
-      return this.emailForm.email && !this.emailCodeSending && this.emailCountdown === 60;
-    },
-    emailCodeBtnText() {
-      if (this.emailCountdown < 60) return `${this.emailCountdown}秒后重试`;
-      if (this.emailCodeSending) return '发送中...';
+    verifyCodeBtnText() {
+      if (this.verifyCountdown < 60) return `${this.verifyCountdown}秒后重试`;
+      if (this.verifyCodeSending) return '发送中...';
       return '获取验证码';
     }
   },
@@ -179,8 +251,7 @@ export default {
     this.loadUserInfo();
   },
   beforeDestroy() {
-    if (this.timer) clearInterval(this.timer);
-    if (this.emailTimer) clearInterval(this.emailTimer);
+    if (this.verifyTimer) clearInterval(this.verifyTimer);
   },
   methods: {
     loadUserInfo() {
@@ -189,12 +260,19 @@ export default {
         this.userInfo = JSON.parse(info);
       }
     },
-    async updatePassword() {
+
+    // ========== 修改密码 ==========
+    async handleChangePassword() {
       this.$refs.passwordForm.validate(async (valid) => {
         if (!valid) return;
+
         this.passwordLoading = true;
         try {
-          const res = await updatePassword(this.passwordForm);
+          const res = await changePassword({
+            oldPassword: this.passwordForm.oldPassword,
+            newPassword: this.passwordForm.newPassword
+          });
+
           if (res.code === 200) {
             this.$message.success('密码修改成功，请重新登录');
             this.showPasswordDialog = false;
@@ -204,113 +282,111 @@ export default {
               this.$router.push('/login');
             }, 1500);
           } else {
-            this.$message.error(res.message);
+            this.$message.error(res.message || '修改失败');
           }
         } catch (error) {
-          this.$message.error('修改失败');
+          console.error('修改密码失败:', error);
+          this.$message.error('修改失败，请稍后重试');
         } finally {
           this.passwordLoading = false;
         }
       });
     },
-    async sendPhoneCode() {
-      this.codeSending = true;
+
+    async sendVerifyCode() {
+      if (!this.userInfo.email) {
+        this.$message.warning('请先绑定邮箱');
+        return;
+      }
+
+      this.verifyCodeSending = true;
       try {
-        const res = await sendBindCode(this.phoneForm.phone, 'phone');
+        // 使用 sendEmailCode 代替 sendVerifyCode
+        const res = await sendEmailCode(this.userInfo.email);
         if (res.code === 200) {
-          this.$message.success('验证码已发送');
-          this.startCountdown();
+          this.$message.success('验证码已发送，请查收邮件');
+          this.startVerifyCountdown();
         } else {
-          this.$message.error(res.message);
-          this.codeSending = false;
+          this.$message.error(res.message || '发送失败');
+          this.verifyCodeSending = false;
         }
       } catch (error) {
+        console.error('发送验证码失败:', error);
         this.$message.error('发送失败');
-        this.codeSending = false;
+        this.verifyCodeSending = false;
       }
     },
-    startCountdown() {
-      this.countdown = 60;
-      if (this.timer) clearInterval(this.timer);
-      this.timer = setInterval(() => {
-        this.countdown--;
-        if (this.countdown <= 0) {
-          clearInterval(this.timer);
-          this.timer = null;
-          this.countdown = 60;
-          this.codeSending = false;
+
+    startVerifyCountdown() {
+      this.verifyCountdown = 60;
+      if (this.verifyTimer) clearInterval(this.verifyTimer);
+      this.verifyTimer = setInterval(() => {
+        this.verifyCountdown--;
+        if (this.verifyCountdown <= 0) {
+          clearInterval(this.verifyTimer);
+          this.verifyTimer = null;
+          this.verifyCountdown = 60;
+          this.verifyCodeSending = false;
         }
       }, 1000);
     },
-    async bindPhone() {
-      this.$refs.phoneForm.validate(async (valid) => {
+
+    async nextToNewEmail() {
+      this.$refs.verifyForm.validate(async (valid) => {
         if (!valid) return;
-        this.phoneLoading = true;
-        try {
-          const res = await bindPhone(this.phoneForm);
-          if (res.code === 200) {
-            this.$message.success('绑定成功');
-            this.userInfo.phone = this.phoneForm.phone;
-            localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
-            this.showPhoneDialog = false;
-          } else {
-            this.$message.error(res.message);
-          }
-        } catch (error) {
-          this.$message.error('绑定失败');
-        } finally {
-          this.phoneLoading = false;
-        }
+
+        // 直接进入下一步，不在此处验证
+        // 验证码的正确性在最终提交时由后端检查
+        this.emailStep = 1;
       });
     },
-    async sendEmailCode() {
-      this.emailCodeSending = true;
-      try {
-        const res = await sendBindCode(this.emailForm.email, 'email');
-        if (res.code === 200) {
-          this.$message.success('验证码已发送');
-          this.startEmailCountdown();
-        } else {
-          this.$message.error(res.message);
-          this.emailCodeSending = false;
-        }
-      } catch (error) {
-        this.$message.error('发送失败');
-        this.emailCodeSending = false;
-      }
-    },
-    startEmailCountdown() {
-      this.emailCountdown = 60;
-      if (this.emailTimer) clearInterval(this.emailTimer);
-      this.emailTimer = setInterval(() => {
-        this.emailCountdown--;
-        if (this.emailCountdown <= 0) {
-          clearInterval(this.emailTimer);
-          this.emailTimer = null;
-          this.emailCountdown = 60;
-          this.emailCodeSending = false;
-        }
-      }, 1000);
-    },
-    async bindEmail() {
+
+    async handleBindEmail() {
       this.$refs.emailForm.validate(async (valid) => {
         if (!valid) return;
+
+        if (this.emailForm.email === this.userInfo.email) {
+          this.$message.warning('新邮箱不能与当前邮箱相同');
+          return;
+        }
+
         this.emailLoading = true;
         try {
-          const res = await bindEmail(this.emailForm);
+          // 传递正确的参数
+          const res = await updateEmail({
+            currentEmail: this.userInfo.email,  // 当前邮箱（用于验证验证码）
+            newEmail: this.emailForm.email,     // 新邮箱
+            code: this.verifyForm.code          // 验证码
+          });
+
           if (res.code === 200) {
-            this.$message.success('绑定成功');
+            this.$message.success('邮箱更换成功');
             this.userInfo.email = this.emailForm.email;
             localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
             this.showEmailDialog = false;
+            this.resetEmailForm();
           } else {
-            this.$message.error(res.message);
+            this.$message.error(res.message || '操作失败');
           }
         } catch (error) {
-          this.$message.error('绑定失败');
+          console.error('绑定邮箱失败:', error);
+          this.$message.error(error.message || '操作失败，请稍后重试');
         } finally {
           this.emailLoading = false;
         }
+      });
+    },
+
+    resetEmailForm() {
+      this.emailStep = 0;
+      this.verifyForm.code = '';
+      this.emailForm.email = '';
+      this.verifyCountdown = 60;
+      this.verifyCodeSending = false;
+      if (this.verifyTimer) clearInterval(this.verifyTimer);
+      this.$nextTick(() => {
+        if (this.$refs.verifyForm) this.$refs.verifyForm.clearValidate();
+        if (this.$refs.emailForm) this.$refs.emailForm.clearValidate();
       });
     }
   }
@@ -318,40 +394,168 @@ export default {
 </script>
 
 <style scoped>
+.security-page {
+  padding: 0;
+  background: transparent;
+  min-height: 400px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
 .page-title {
-  font-size: 24px;
-  margin-bottom: 30px;
-  color: #333;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f0f0f0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.page-desc {
+  font-size: 13px;
+  color: #999;
+  margin: 0;
 }
 
 .security-section {
-  background: #f8f9fc;
+  background: #fff;
   border-radius: 16px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
 }
 
 .section-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.3s;
 }
 
 .section-item:last-child {
   border-bottom: none;
 }
 
+.section-item:hover {
+  background: #fafbfc;
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.item-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-icon i {
+  font-size: 20px;
+  color: white;
+}
+
+.item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .item-title {
   font-weight: 600;
-  color: #333;
-  margin-bottom: 5px;
+  color: #2c3e50;
+  font-size: 15px;
 }
 
 .item-desc {
   font-size: 13px;
   color: #999;
+}
+
+.email-text {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.not-bind {
+  color: #e6a23c;
+}
+
+.action-btn {
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 13px;
+}
+
+/* 对话框样式 */
+.security-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.security-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.security-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.security-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.security-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+}
+
+.dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.email-steps {
+  margin-bottom: 30px;
+}
+
+.step-desc {
+  background: #f0f7ff;
+  border-left: 4px solid #667eea;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 13px;
+}
+
+.step-desc i {
+  color: #667eea;
+  font-size: 16px;
+}
+
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .code-wrapper {
@@ -363,7 +567,76 @@ export default {
   flex: 1;
 }
 
-.code-wrapper .el-button {
-  width: 100px;
+.code-btn {
+  min-width: 110px;
+}
+
+.security-dialog ::v-deep .el-form-item {
+  margin-bottom: 20px;
+}
+
+.security-dialog ::v-deep .el-form-item__label {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.security-dialog ::v-deep .el-input__inner {
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  transition: all 0.3s;
+}
+
+.security-dialog ::v-deep .el-input__inner:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.dialog-footer {
+  text-align: right;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #eef2f6;
+}
+
+.dialog-footer .el-button {
+  border-radius: 8px;
+  padding: 9px 24px;
+  font-weight: 500;
+}
+
+.dialog-footer .el-button--primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: none;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .section-item {
+    padding: 16px;
+  }
+
+  .item-info {
+    gap: 12px;
+  }
+
+  .item-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .item-icon i {
+    font-size: 16px;
+  }
+
+  .item-title {
+    font-size: 14px;
+  }
+
+  .code-wrapper {
+    flex-direction: column;
+  }
+
+  .code-btn {
+    width: 100%;
+  }
 }
 </style>

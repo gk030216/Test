@@ -166,14 +166,14 @@
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="价格" prop="price">
-                <el-input v-model="serviceForm.price" placeholder="请输入价格" size="medium">
+                <el-input v-model="serviceForm.price" placeholder="请输入价格" size="medium" type="number" step="0.01" min="0">
                   <template slot="prepend">¥</template>
                 </el-input>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="原价">
-                <el-input v-model="serviceForm.originalPrice" placeholder="请输入原价" size="medium">
+                <el-input v-model="serviceForm.originalPrice" placeholder="请输入原价" size="medium" type="number" step="0.01" min="0">
                   <template slot="prepend">¥</template>
                 </el-input>
               </el-form-item>
@@ -219,8 +219,17 @@
 </template>
 
 <script>
-import { getAdminItemList, addItem, updateItem, updateItemStatus, deleteItem, batchDeleteItems, getAdminCategoryList } from '@/api/service';
-import { uploadProductImage } from '@/api/upload';
+import {
+  getAdminItemList,
+  addItem,
+  updateItem,
+  updateItemStatus,
+  deleteItem,
+  batchDeleteItems,
+  getAllServiceCategories,
+  getServiceStatistics
+} from '@/api/service';
+import { uploadServiceImage } from '@/api/upload';
 
 export default {
   name: 'ServiceList',
@@ -257,7 +266,10 @@ export default {
       serviceRules: {
         name: [{ required: true, message: '请输入服务名称', trigger: 'blur' }],
         categoryId: [{ required: true, message: '请选择服务分类', trigger: 'change' }],
-        price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
+        price: [
+          { required: true, message: '请输入价格', trigger: 'blur' },
+          { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入正确的价格格式', trigger: 'blur' }
+        ],
         description: [{ required: true, message: '请输入服务描述', trigger: 'blur' }]
       }
     };
@@ -268,126 +280,260 @@ export default {
   created() {
     this.loadList();
     this.loadCategories();
+    this.loadStatistics();
   },
   methods: {
     async loadList() {
       this.loading = true;
       try {
-        const params = { page: this.page, pageSize: this.pageSize, keyword: this.searchKeyword || undefined, categoryId: this.searchCategoryId || undefined, status: this.searchStatus || undefined };
+        const params = {
+          page: this.page,
+          pageSize: this.pageSize,
+          keyword: this.searchKeyword || undefined,
+          categoryId: this.searchCategoryId || undefined,
+          status: this.searchStatus || undefined
+        };
         const res = await getAdminItemList(params);
         if (res.code === 200) {
           this.serviceList = res.data.list || [];
           this.total = res.data.total || 0;
-          this.updateStatistics();
         }
-      } catch (error) { this.$message.error('加载失败'); }
-      finally { this.loading = false; }
+      } catch (error) {
+        this.$message.error('加载失败');
+      } finally {
+        this.loading = false;
+      }
     },
-    updateStatistics() {
-      this.statistics.total = this.total;
-      this.statistics.onSale = this.serviceList.filter(s => s.status === 1).length;
-      this.statistics.offSale = this.serviceList.filter(s => s.status === 0).length;
-      this.statistics.hotCount = this.serviceList.filter(s => s.isHot === 1).length;
+
+    async loadStatistics() {
+      try {
+        const params = {
+          keyword: this.searchKeyword || undefined,
+          categoryId: this.searchCategoryId || undefined,
+          status: this.searchStatus || undefined
+        };
+        const res = await getServiceStatistics(params);
+        if (res.code === 200) {
+          this.statistics = res.data;
+        }
+      } catch (error) {
+        console.error('加载统计失败', error);
+      }
     },
+
     async loadCategories() {
       try {
-        const res = await getAdminCategoryList({});
-        if (res.code === 200) this.categoryOptions = res.data || [];
-      } catch (error) { console.error('加载分类失败', error); }
+        const res = await getAllServiceCategories();
+        if (res.code === 200) {
+          // 只显示启用的分类
+          this.categoryOptions = (res.data || []).filter(item => item.status === 1);
+        }
+      } catch (error) {
+        console.error('加载分类失败', error);
+      }
     },
-    formatDate(date) { if (!date) return ''; const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; },
-    handleSearch() { this.page = 1; this.loadList(); },
-    handleReset() { this.searchKeyword = ''; this.searchCategoryId = ''; this.searchStatus = ''; this.page = 1; this.loadList(); },
-    handlePageChange(page) { this.page = page; this.loadList(); },
-    handleSizeChange(size) { this.pageSize = size; this.page = 1; this.loadList(); },
-    handleSelectionChange(rows) { this.selectedRows = rows; },
-    triggerMainUpload() { this.$refs.mainImageInput.click(); },
+
+    formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    },
+
+    handleSearch() {
+      this.page = 1;
+      this.loadList();
+      this.loadStatistics();
+    },
+
+    handleReset() {
+      this.searchKeyword = '';
+      this.searchCategoryId = '';
+      this.searchStatus = '';
+      this.page = 1;
+      this.loadList();
+      this.loadStatistics();
+    },
+
+    handlePageChange(page) {
+      this.page = page;
+      this.loadList();
+    },
+
+    handleSizeChange(size) {
+      this.pageSize = size;
+      this.page = 1;
+      this.loadList();
+    },
+
+    handleSelectionChange(rows) {
+      this.selectedRows = rows;
+    },
+
+    triggerMainUpload() {
+      this.$refs.mainImageInput.click();
+    },
+
     async handleMainUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
-      if (!file.type.startsWith('image/')) { this.$message.error('只支持图片格式'); return; }
-      if (file.size > 2 * 1024 * 1024) { this.$message.error('图片不能超过2MB'); return; }
-      const formData = new FormData(); formData.append('file', file);
+      if (!file.type.startsWith('image/')) {
+        this.$message.error('只支持图片格式');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        this.$message.error('图片不能超过2MB');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', file);
       try {
-        const res = await uploadProductImage(formData);
-        if (res.code === 200) { this.mainImagePreview = res.data.url; this.serviceForm.image = res.data.url; this.$message.success('上传成功'); }
-      } catch (error) { this.$message.error('上传失败'); }
+        const res = await uploadServiceImage(formData);
+        if (res.code === 200) {
+          this.mainImagePreview = res.data.url;
+          this.serviceForm.image = res.data.url;
+          this.$message.success('上传成功');
+        }
+      } catch (error) {
+        this.$message.error('上传失败');
+      }
       event.target.value = '';
     },
+
     async handleStatusChange(row, val) {
       const newStatus = val ? 1 : 0;
       try {
         await updateItemStatus(row.id, newStatus);
         row.status = newStatus;
         this.$message.success(newStatus === 1 ? '上架成功' : '下架成功');
-        this.updateStatistics();
-      } catch (error) { this.$message.error('操作失败'); }
+        this.loadList();
+        this.loadStatistics();
+      } catch (error) {
+        this.$message.error('操作失败');
+      }
     },
+
     async handleHotChange(row, val) {
       const newHot = val ? 1 : 0;
       try {
         await updateItem({ ...row, isHot: newHot });
         row.isHot = newHot;
         this.$message.success(newHot === 1 ? '设为热门成功' : '取消热门成功');
-        this.updateStatistics();
-      } catch (error) { this.$message.error('操作失败'); }
+        this.loadList();
+        this.loadStatistics();
+      } catch (error) {
+        this.$message.error('操作失败');
+      }
     },
+
     handleAdd() {
-      this.isEdit = false; this.editId = null;
-      this.serviceForm = { name: '', categoryId: null, description: '', price: null, originalPrice: null, duration: 30, image: '', suitableFor: 'all', isHot: 0, status: 1 };
+      this.isEdit = false;
+      this.editId = null;
+      this.serviceForm = {
+        name: '',
+        categoryId: null,
+        description: '',
+        price: null,
+        originalPrice: null,
+        duration: 30,
+        image: '',
+        suitableFor: 'all',
+        isHot: 0,
+        status: 1
+      };
       this.mainImagePreview = '';
       this.showDialog = true;
-      this.$nextTick(() => { if (this.$refs.serviceForm) this.$refs.serviceForm.clearValidate(); });
+      this.$nextTick(() => {
+        if (this.$refs.serviceForm) this.$refs.serviceForm.clearValidate();
+      });
     },
+
     handleEdit(row) {
-      this.isEdit = true; this.editId = row.id;
+      this.isEdit = true;
+      this.editId = row.id;
       this.serviceForm = {
-        name: row.name, categoryId: row.categoryId, description: row.description || '', price: row.price,
-        originalPrice: row.originalPrice, duration: row.duration, image: row.image, suitableFor: row.suitableFor || 'all',
-        isHot: row.isHot || 0, status: row.status
+        name: row.name,
+        categoryId: row.categoryId,
+        description: row.description || '',
+        price: row.price,
+        originalPrice: row.originalPrice,
+        duration: row.duration,
+        image: row.image,
+        suitableFor: row.suitableFor || 'all',
+        isHot: row.isHot || 0,
+        status: row.status
       };
       this.mainImagePreview = row.image;
       this.showDialog = true;
-      this.$nextTick(() => { if (this.$refs.serviceForm) this.$refs.serviceForm.clearValidate(); });
+      this.$nextTick(() => {
+        if (this.$refs.serviceForm) this.$refs.serviceForm.clearValidate();
+      });
     },
+
     async handleDelete(row) {
       this.$confirm(`确定删除服务 "${row.name}" 吗？`, '提示', { type: 'warning' }).then(async () => {
         await deleteItem(row.id);
         this.$message.success('删除成功');
         this.loadList();
+        this.loadStatistics();
       }).catch(() => {});
     },
+
     async handleBatchStatus(status) {
-      const ids = this.selectedRows.map(r => r.id).join(',');
-      this.$confirm(`确定${status === 1 ? '上架' : '下架'}选中的 ${this.selectedRows.length} 个服务吗？`, '提示', { type: 'warning' }).then(async () => {
-        let successCount = 0;
-        for (const row of this.selectedRows) {
-          try { await updateItemStatus(row.id, status); successCount++; } catch (e) {}
-        }
-        this.$message.success(`操作完成，成功：${successCount}个`);
-        this.loadList();
-      }).catch(() => {});
+      if (this.selectedRows.length === 0) return;
+      this.$confirm(`确定${status === 1 ? '上架' : '下架'}选中的 ${this.selectedRows.length} 个服务吗？`, '提示', { type: 'warning' })
+          .then(async () => {
+            let successCount = 0;
+            for (const row of this.selectedRows) {
+              try {
+                await updateItemStatus(row.id, status);
+                successCount++;
+              } catch (e) {}
+            }
+            this.$message.success(`操作完成，成功：${successCount}个`);
+            this.loadList();
+            this.loadStatistics();
+          }).catch(() => {});
     },
+
     async handleBatchDelete() {
+      if (this.selectedRows.length === 0) return;
       const ids = this.selectedRows.map(r => r.id).join(',');
-      this.$confirm(`确定删除选中的 ${this.selectedRows.length} 个服务吗？`, '提示', { type: 'warning' }).then(async () => {
-        await batchDeleteItems(ids);
-        this.$message.success('删除成功');
-        this.selectedRows = [];
-        this.loadList();
-      }).catch(() => {});
+      this.$confirm(`确定删除选中的 ${this.selectedRows.length} 个服务吗？`, '提示', { type: 'warning' })
+          .then(async () => {
+            await batchDeleteItems(ids);
+            this.$message.success('删除成功');
+            this.selectedRows = [];
+            this.loadList();
+            this.loadStatistics();
+          }).catch(() => {});
     },
+
     async submitForm() {
       this.$refs.serviceForm.validate(async (valid) => {
         if (!valid) return;
         this.submitLoading = true;
         try {
-          if (this.isEdit) { await updateItem({ ...this.serviceForm, id: this.editId }); this.$message.success('更新成功'); }
-          else { await addItem(this.serviceForm); this.$message.success('添加成功'); }
+          const submitData = {
+            ...this.serviceForm,
+            price: parseFloat(this.serviceForm.price),
+            originalPrice: this.serviceForm.originalPrice ? parseFloat(this.serviceForm.originalPrice) : null
+          };
+          if (this.isEdit) {
+            await updateItem({ ...submitData, id: this.editId });
+            this.$message.success('更新成功');
+          } else {
+            await addItem(submitData);
+            this.$message.success('添加成功');
+          }
           this.showDialog = false;
           this.loadList();
-        } catch (error) { this.$message.error(error.message || (this.isEdit ? '更新失败' : '添加失败')); }
-        finally { this.submitLoading = false; }
+          this.loadStatistics();
+        } catch (error) {
+          console.error('提交失败:', error);
+          this.$message.error(error.message || (this.isEdit ? '更新失败' : '添加失败'));
+        } finally {
+          this.submitLoading = false;
+        }
       });
     }
   }

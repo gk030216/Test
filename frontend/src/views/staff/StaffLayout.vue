@@ -31,10 +31,20 @@
           <span slot="title">预约管理</span>
         </el-menu-item>
 
-        <el-menu-item index="pet-files">
-          <i class="el-icon-s-custom"></i>
-          <span slot="title">宠物档案</span>
-        </el-menu-item>
+        <el-submenu index="pet">
+          <template slot="title">
+            <i class="el-icon-s-custom"></i>
+            <span slot="title">宠物管理</span>
+          </template>
+          <el-menu-item index="pet-list">
+            <i class="el-icon-menu"></i>
+            <span slot="title">宠物列表</span>
+          </el-menu-item>
+          <el-menu-item index="pet-health">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">健康记录</span>
+          </el-menu-item>
+        </el-submenu>
 
         <el-menu-item index="evaluations">
           <i class="el-icon-star-on"></i>
@@ -124,7 +134,8 @@ export default {
       const titles = {
         'dashboard': '工作台',
         'appointments': '预约管理',
-        'pet-files': '宠物档案',
+        'pet-list': '宠物列表',
+        'pet-health': '健康记录',
         'evaluations': '服务评价',
         'feedback': '异常反馈'
       };
@@ -139,7 +150,8 @@ export default {
         const titles = {
           'dashboard': '工作台',
           'appointments': '预约管理',
-          'pet-files': '宠物档案',
+          'pet-list': '宠物列表',
+          'pet-health': '健康记录',
           'evaluations': '服务评价',
           'feedback': '异常反馈'
         };
@@ -148,7 +160,7 @@ export default {
     },
     handleUserCommand(command) {
       if (command === 'profile') {
-        this.$message.info('个人中心功能开发中');
+        this.$router.push('/personal/profile');
       } else if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
           confirmButtonText: '确定',
@@ -230,6 +242,10 @@ export default {
   overflow-y: auto;
 }
 
+.sidebar-menu ::v-deep .el-submenu .el-menu-item {
+  padding-left: 50px !important;
+}
+
 .staff-main {
   flex: 1;
   display: flex;
@@ -278,6 +294,7 @@ export default {
   overflow-y: auto;
 }
 
+/* 滚动条样式 */
 .staff-sidebar::-webkit-scrollbar {
   width: 6px;
 }
@@ -302,5 +319,9 @@ export default {
 .staff-content::-webkit-scrollbar-thumb {
   background: #c0c4cc;
   border-radius: 4px;
+}
+
+.staff-content::-webkit-scrollbar-thumb:hover {
+  background: #909399;
 }
 </style>

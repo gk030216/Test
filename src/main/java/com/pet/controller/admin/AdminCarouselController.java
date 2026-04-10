@@ -64,8 +64,10 @@ public class AdminCarouselController {
             } else {
                 return Result.error("添加失败");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("添加失败");
         }
     }
 
@@ -98,14 +100,13 @@ public class AdminCarouselController {
             } else {
                 return Result.error("操作失败");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("操作失败");
         }
     }
 
-    /**
-     * 批量更新状态
-     */
     @PutMapping("/batch-status")
     public Result<?> batchUpdateStatus(@RequestParam String ids, @RequestParam Integer status) {
         try {
@@ -118,8 +119,10 @@ public class AdminCarouselController {
             } else {
                 return Result.error("操作失败");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("操作失败");
         }
     }
 

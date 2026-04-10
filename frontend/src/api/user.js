@@ -89,7 +89,7 @@ export function changePassword(data) {
   });
 }
 
-// 修改邮箱（发送验证码）
+// 发送修改邮箱验证码
 export function sendEmailCode(email) {
   return request({
     url: '/code/change-email',
@@ -174,6 +174,14 @@ export function batchDeleteUsers(ids) {
 export function getUserAvatar(userId) {
   return request({
     url: `/user/avatar/${userId}`,
+    method: 'get'
+  });
+}
+
+//
+export function getAllStaff() {
+  return request({
+    url: '/admin/user/staff/all',
     method: 'get'
   });
 }

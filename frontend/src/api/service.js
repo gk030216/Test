@@ -190,6 +190,15 @@ export function batchDeleteItems(ids) {
     });
 }
 
+// 获取服务统计数据（新增）
+export function getServiceStatistics(params) {
+    return request({
+        url: '/admin/service/item/statistics',
+        method: 'get',
+        params
+    });
+}
+
 // ===== 预约管理 =====
 
 // 获取预约列表（后台）
@@ -213,10 +222,12 @@ export function getAppointmentDetailForAdmin(id) {
 export function confirmAppointment(id) {
     return request({
         url: `/admin/service/appointment/confirm/${id}`,
-        method: 'put'
+        method: 'put',
+        headers: {
+            'Content-Type': 'application/json'
+        }
     });
 }
-
 // 开始服务
 export function startAppointment(id) {
     return request({
@@ -229,7 +240,10 @@ export function startAppointment(id) {
 export function completeAppointment(id) {
     return request({
         url: `/admin/service/appointment/complete/${id}`,
-        method: 'put'
+        method: 'put',
+        headers: {
+            'Content-Type': 'application/json'
+        }
     });
 }
 
@@ -255,6 +269,94 @@ export function cancelAppointmentByAdmin(id, reason) {
 export function getAppointmentStatistics() {
     return request({
         url: '/admin/service/appointment/statistics',
+        method: 'get'
+    });
+}
+
+// ========== 服务评价接口 ==========
+
+// 添加服务评价
+export function addServiceComment(data) {
+    return request({ url: '/service/comment/add', method: 'post', data });
+}
+
+// 根据预约ID获取评价
+export function getServiceCommentByAppointment(appointmentId) {
+    return request({ url: `/service/comment/appointment/${appointmentId}`, method: 'get' });
+}
+
+// 获取服务的评价列表
+export function getServiceComments(serviceId, page = 1, pageSize = 10) {
+    return request({
+        url: `/service/comment/service/${serviceId}`,
+        method: 'get',
+        params: { page, pageSize }
+    });
+}
+
+// 获取服务评分统计
+export function getServiceRatingStats(serviceId) {
+    return request({ url: `/service/comment/service/${serviceId}/stats`, method: 'get' });
+}
+
+// ========== 后台服务评价管理 ==========
+
+// 获取服务评价列表（后台）
+export function getServiceCommentList(params) {
+    return request({
+        url: '/service/comment/admin/list',
+        method: 'get',
+        params
+    });
+}
+
+// 获取服务评价统计
+export function getServiceCommentStatistics() {
+    return request({
+        url: '/service/comment/admin/statistics',
+        method: 'get'
+    });
+}
+
+// 更新评价状态
+export function updateServiceCommentStatus(id, status) {
+    return request({
+        url: '/service/comment/admin/status',
+        method: 'put',
+        params: { id, status }
+    });
+}
+
+// 回复评价
+export function replyServiceComment(id, reply) {
+    return request({
+        url: '/service/comment/admin/reply',
+        method: 'put',
+        data: { id, reply }
+    });
+}
+
+// 删除评价
+export function deleteServiceComment(id) {
+    return request({
+        url: `/service/comment/admin/delete/${id}`,
+        method: 'delete'
+    });
+}
+
+// 批量删除评价
+export function batchDeleteServiceComments(ids) {
+    return request({
+        url: '/service/comment/admin/batch-delete',
+        method: 'delete',
+        params: { ids }
+    });
+}
+
+// 根据预约编号获取预约详情
+export function getAppointmentDetailByNo(appointmentNo) {
+    return request({
+        url: `/service/appointment/no/${appointmentNo}`,
         method: 'get'
     });
 }

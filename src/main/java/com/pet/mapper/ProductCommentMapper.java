@@ -1,5 +1,6 @@
 package com.pet.mapper;
 
+import com.pet.entity.PostComment;
 import com.pet.entity.ProductComment;
 import org.apache.ibatis.annotations.Param;
 
@@ -50,4 +51,16 @@ public interface ProductCommentMapper {
 
     // 获取近7天评价趋势
     List<Map<String, Object>> getCommentTrend();
+
+    /**
+     * 获取用户评论列表
+     */
+    List<PostComment> getUserComments(@Param("userId") Integer userId,
+                                      @Param("offset") Integer offset,
+                                      @Param("limit") Integer limit);
+
+    /**
+     * 统计用户评论数量
+     */
+    int countUserComments(@Param("userId") Integer userId);
 }

@@ -22,6 +22,13 @@ public class Appointment {
     private String cancelReason;
     private Date createTime;
     private Date updateTime;
+    private Integer payStatus;      // 支付状态 0-未支付 1-已支付
+    private Date payTime;           // 支付时间
+    private String tradeNo;
+
+    private String serviceImage;
+     // 支付宝交易号
+
 
     // getter/setter
     public Integer getId() { return id; }
@@ -60,4 +67,18 @@ public class Appointment {
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
+    public String getServiceImage() {
+        return serviceImage;
+    }
+
+    public void setServiceImage(String serviceImage) {
+        this.serviceImage = serviceImage;
+    }
+    public Integer getPayStatus() { return payStatus; }
+    public void setPayStatus(Integer payStatus) { this.payStatus = payStatus; }
+    public Date getPayTime() { return payTime; }
+    public void setPayTime(Date payTime) { this.payTime = payTime; }
+
+    public String getTradeNo() { return tradeNo; }
+    public void setTradeNo(String tradeNo) { this.tradeNo = tradeNo; }
 }

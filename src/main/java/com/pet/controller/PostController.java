@@ -251,4 +251,22 @@ public class PostController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 获取用户评论列表
+     */
+    @GetMapping("/user/comments")
+    public Result<Map<String, Object>> getUserComments(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
+        try {
+            Integer userId = getUserId(request);
+            Map<String, Object> result = postService.getUserComments(userId, page, pageSize);
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
 }

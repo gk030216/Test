@@ -3,6 +3,7 @@ package com.pet.controller;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.pet.config.AlipayConfig;
+import com.pet.mapper.AppointmentMapper;
 import com.pet.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,10 +25,12 @@ public class AlipayNotifyController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private AppointmentMapper appointmentMapper;
+
     @PostMapping("/notify")
     public String notify(HttpServletRequest request) {
         try {
-            // 获取支付宝POST过来的反馈信息
             Map<String, String> params = new HashMap<>();
             Map<String, String[]> requestParams = request.getParameterMap();
             for (String name : requestParams.keySet()) {
@@ -40,9 +44,7 @@ public class AlipayNotifyController {
 
             System.out.println("========== 支付宝回调开始 ==========");
             System.out.println("回调参数: " + params);
-            System.out.println("回调IP: " + request.getRemoteAddr());
 
-            // 验证签名
             boolean signVerified = AlipaySignature.rsaCheckV1(
                     params,
                     alipayConfig.getAlipayPublicKey(),
@@ -53,22 +55,28 @@ public class AlipayNotifyController {
             System.out.println("签名验证结果: " + signVerified);
 
             if (signVerified) {
-                // 商户订单号
                 String outTradeNo = params.get("out_trade_no");
-                // 支付宝交易号
                 String tradeNo = params.get("trade_no");
-                // 交易状态
                 String tradeStatus = params.get("trade_status");
 
                 System.out.println("订单号: " + outTradeNo + ", 交易号: " + tradeNo + ", 状态: " + tradeStatus);
 
                 if ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus)) {
-                    // 处理支付成功
-                    boolean result = orderService.handlePayCallback(outTradeNo, tradeNo);
-                    System.out.println("支付回调处理结果: " + (result ? "成功" : "失败"));
-                    if (result) {
-                        return "success";
+                    boolean result;
+
+                    // 根据订单号前缀判断类型
+                    if (outTradeNo.startsWith("AP")) {
+                        // 服务预约：更新预约支付状态
+                        int updateResult = appointmentMapper.updatePayStatus(outTradeNo, 1, tradeNo, new Date());
+                        result = updateResult > 0;
+                        System.out.println("预约支付回调处理结果: " + (result ? "成功" : "失败"));
+                    } else {
+                        // 商品订单：调用订单服务处理
+                        result = orderService.handlePayCallback(outTradeNo, tradeNo);
+                        System.out.println("商品订单支付回调处理结果: " + (result ? "成功" : "失败"));
                     }
+
+                    return result ? "success" : "failure";
                 }
                 return "failure";
             } else {

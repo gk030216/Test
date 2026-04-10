@@ -20,7 +20,8 @@ public interface AppointmentService {
     // 后台：获取预约列表
     Map<String, Object> getAdminAppointments(Integer page, Integer pageSize,
                                              String keyword, Integer status,
-                                             String startDate, String endDate);
+                                             String startDate, String endDate,
+                                             Integer staffId, Boolean isStaff);
 
     // 获取预约详情（后台）
     Appointment getByIdForAdmin(Integer id);
@@ -40,6 +41,12 @@ public interface AppointmentService {
     // 取消预约（管理员）
     boolean cancelAppointmentByAdmin(Integer id, String reason);
 
-    // 获取统计数据
+    // 获取统计数据（管理员）
     Map<String, Object> getStatistics();
+
+    // 获取员工统计数据
+    Map<String, Object> getStaffStatistics(Integer staffId);
+
+    // 根据预约编号获取预约详情
+    Appointment getByAppointmentNo(String appointmentNo);
 }

@@ -1,5 +1,6 @@
 package com.pet.service.impl;
 
+import com.pet.entity.User;
 import com.pet.entity.VerificationCode;
 import com.pet.mapper.UserMapper;
 import com.pet.mapper.VerificationCodeMapper;
@@ -71,5 +72,18 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
 
         // 发送邮件
         return emailUtil.sendVerificationCode(email, code, typeStr);
+    }
+
+    @Override
+    @Transactional
+    public boolean sendChangeEmailCode(String email, boolean checkExist) {
+        if (checkExist) {
+            // 只有在需要检查时才检查邮箱是否已被使用
+            User existUser = userMapper.findByEmail(email);
+            if (existUser != null) {
+                throw new RuntimeException("该邮箱已被其他用户绑定");
+            }
+        }
+        return sendCode(email, "change_email", 3);
     }
 }

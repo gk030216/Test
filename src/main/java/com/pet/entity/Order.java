@@ -21,6 +21,7 @@ public class Order {
     private Date createTime;
     private Date payTime;
     private Date updateTime;
+    private String orderType;
 
     // 非数据库字段，用于关联订单详情
     private List<OrderItem> items;
@@ -86,4 +87,7 @@ public class Order {
 
     public String getPayStatusName() { return payStatusName; }
     public void setPayStatusName(String payStatusName) { this.payStatusName = payStatusName; }
+
+    public String getOrderType() { return orderType; }
+    public void setOrderType(String orderType) { this.orderType = orderType; }
 }

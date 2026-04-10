@@ -60,10 +60,46 @@ export function uploadPostImage(data) {
     });
 }
 
+// 上传反馈图片
+export function uploadFeedbackImage(data) {
+    return request({
+        url: '/upload/feedback',
+        method: 'post',
+        data,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+}
+
 // 上传宠物头像
 export function uploadPetAvatar(data) {
     return request({
         url: '/upload/pet',
+        method: 'post',
+        data,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+}
+
+// 添加服务图片上传
+export function uploadServiceImage(data) {
+    return request({
+        url: '/upload/service',
+        method: 'post',
+        data,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+}
+
+// 通用图片上传（用于系统设置Logo等）
+export function uploadImage(data) {
+    return request({
+        url: '/upload/image',
         method: 'post',
         data,
         headers: {

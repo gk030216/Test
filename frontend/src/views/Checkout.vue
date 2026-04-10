@@ -11,9 +11,13 @@
           <div class="address-section">
             <div class="section-header">
               <span>收货地址</span>
-              <el-button type="text" @click="showAddressDialog = true">+ 新增地址</el-button>
+              <el-button type="text" @click="goToAddressManage">
+                <i class="el-icon-setting"></i> 管理地址
+              </el-button>
             </div>
-            <div class="address-list">
+
+            <!-- 有地址时显示地址列表 -->
+            <div class="address-list" v-if="addressList.length > 0">
               <div
                   v-for="addr in addressList"
                   :key="addr.id"
@@ -30,11 +34,15 @@
                     {{ addr.province }}{{ addr.city }}{{ addr.district }}{{ addr.detailAddress }}
                   </div>
                 </div>
+                <i class="el-icon-check" v-if="selectedAddressId === addr.id"></i>
               </div>
-              <div class="add-address" @click="showAddressDialog = true">
-                <i class="el-icon-plus"></i>
-                <span>新增地址</span>
-              </div>
+            </div>
+
+            <!-- 无地址时显示提示 -->
+            <div class="no-address" v-else>
+              <i class="el-icon-location-outline"></i>
+              <p>还没有收货地址</p>
+              <el-button type="primary" size="small" @click="goToAddressManage">去添加地址</el-button>
             </div>
           </div>
 
@@ -42,6 +50,7 @@
           <div class="product-section">
             <div class="section-header">
               <span>商品清单</span>
+              <span class="item-count">共 {{ checkoutItems.length }} 件商品</span>
             </div>
             <div class="product-list">
               <div class="product-item" v-for="item in checkoutItems" :key="item.productId">
@@ -62,10 +71,6 @@
               <span>商品总价</span>
               <span>¥{{ totalAmount.toFixed(2) }}</span>
             </div>
-            <div class="info-row">
-              <span>运费</span>
-              <span>¥0.00</span>
-            </div>
             <div class="info-row total-row">
               <span>实付金额</span>
               <span class="total-price">¥{{ totalAmount.toFixed(2) }}</span>
@@ -78,51 +83,16 @@
                 type="primary"
                 size="large"
                 class="submit-btn"
-                :disabled="!selectedAddressId || checkoutItems.length === 0"
+                :disabled="!canSubmit"
                 @click="createOrder"
                 :loading="submitting"
             >
-              提交订单
+              {{ submitBtnText }}
             </el-button>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 新增地址对话框 -->
-    <el-dialog title="新增地址" :visible.sync="showAddressDialog" width="500px">
-      <el-form :model="newAddress" :rules="addressRules" ref="addressForm" label-width="80px">
-        <el-form-item label="收货人" prop="receiverName">
-          <el-input v-model="newAddress.receiverName" placeholder="请输入收货人姓名"></el-input>
-        </el-form-item>
-        <el-form-item label="手机号" prop="receiverPhone">
-          <el-input v-model="newAddress.receiverPhone" placeholder="请输入手机号"></el-input>
-        </el-form-item>
-        <el-form-item label="地区" prop="province">
-          <el-row :gutter="10">
-            <el-col :span="8">
-              <el-input v-model="newAddress.province" placeholder="省"></el-input>
-            </el-col>
-            <el-col :span="8">
-              <el-input v-model="newAddress.city" placeholder="市"></el-input>
-            </el-col>
-            <el-col :span="8">
-              <el-input v-model="newAddress.district" placeholder="区/县"></el-input>
-            </el-col>
-          </el-row>
-        </el-form-item>
-        <el-form-item label="详细地址" prop="detailAddress">
-          <el-input v-model="newAddress.detailAddress" type="textarea" rows="2" placeholder="街道、门牌号等"></el-input>
-        </el-form-item>
-        <el-form-item label="设为默认">
-          <el-switch v-model="newAddress.isDefault" :active-value="1" :inactive-value="0"></el-switch>
-        </el-form-item>
-      </el-form>
-      <span slot="footer">
-        <el-button @click="showAddressDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitAddress" :loading="addressSubmitting">确定</el-button>
-      </span>
-    </el-dialog>
 
     <Footer />
   </div>
@@ -131,7 +101,7 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getAddressList, addAddress } from '@/api/address';
+import { getAddressList } from '@/api/address';
 import { createOrder } from '@/api/order';
 import { getCartList } from '@/api/cart';
 
@@ -142,36 +112,23 @@ export default {
     return {
       loading: false,
       submitting: false,
-      addressSubmitting: false,
       addressList: [],
       selectedAddressId: null,
-      checkoutItems: [],
-      showAddressDialog: false,
-      newAddress: {
-        receiverName: '',
-        receiverPhone: '',
-        province: '',
-        city: '',
-        district: '',
-        detailAddress: '',
-        isDefault: 0
-      },
-      addressRules: {
-        receiverName: [{ required: true, message: '请输入收货人姓名', trigger: 'blur' }],
-        receiverPhone: [
-          { required: true, message: '请输入手机号', trigger: 'blur' },
-          { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-        ],
-        province: [{ required: true, message: '请输入省份', trigger: 'blur' }],
-        city: [{ required: true, message: '请输入城市', trigger: 'blur' }],
-        district: [{ required: true, message: '请输入区县', trigger: 'blur' }],
-        detailAddress: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
-      }
+      checkoutItems: []
     };
   },
   computed: {
     totalAmount() {
       return this.checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    },
+    canSubmit() {
+      return this.selectedAddressId && this.checkoutItems.length > 0;
+    },
+    submitBtnText() {
+      if (this.addressList.length === 0) return '请先添加收货地址';
+      if (!this.selectedAddressId) return '请选择收货地址';
+      if (this.checkoutItems.length === 0) return '请选择商品';
+      return '提交订单';
     }
   },
   created() {
@@ -184,13 +141,10 @@ export default {
         // 获取结算商品
         const items = localStorage.getItem('checkoutItems');
         if (items) {
-          // 从立即购买来的数据
           this.checkoutItems = JSON.parse(items);
         } else {
-          // 从购物车来的数据 - 获取购物车中选中的商品
           const cartRes = await getCartList();
           if (cartRes.code === 200) {
-            // 筛选出选中的商品 (selected === 1)
             this.checkoutItems = cartRes.data.filter(item => item.selected === 1);
           }
         }
@@ -202,14 +156,7 @@ export default {
         }
 
         // 获取地址列表
-        const addressRes = await getAddressList();
-        if (addressRes.code === 200) {
-          this.addressList = addressRes.data;
-          const defaultAddr = this.addressList.find(addr => addr.isDefault === 1);
-          if (defaultAddr) {
-            this.selectedAddressId = defaultAddr.id;
-          }
-        }
+        await this.loadAddressList();
       } catch (error) {
         console.error('加载数据失败', error);
         this.$message.error('加载失败');
@@ -217,34 +164,30 @@ export default {
         this.loading = false;
       }
     },
-    async submitAddress() {
-      this.$refs.addressForm.validate(async (valid) => {
-        if (!valid) return;
-        this.addressSubmitting = true;
-        try {
-          const res = await addAddress(this.newAddress);
-          if (res.code === 200) {
-            this.$message.success('添加成功');
-            this.showAddressDialog = false;
-            // 重新加载地址列表
-            const addressRes = await getAddressList();
-            if (addressRes.code === 200) {
-              this.addressList = addressRes.data;
-              const defaultAddr = this.addressList.find(addr => addr.isDefault === 1);
-              if (defaultAddr) {
-                this.selectedAddressId = defaultAddr.id;
-              }
-            }
-          } else {
-            this.$message.error(res.message);
+
+    async loadAddressList() {
+      try {
+        const res = await getAddressList();
+        if (res.code === 200) {
+          this.addressList = res.data || [];
+          // 自动选中默认地址
+          const defaultAddr = this.addressList.find(addr => addr.isDefault === 1);
+          if (defaultAddr) {
+            this.selectedAddressId = defaultAddr.id;
+          } else if (this.addressList.length > 0) {
+            this.selectedAddressId = this.addressList[0].id;
           }
-        } catch (error) {
-          this.$message.error('添加失败');
-        } finally {
-          this.addressSubmitting = false;
         }
-      });
+      } catch (error) {
+        console.error('加载地址失败', error);
+      }
     },
+
+    goToAddressManage() {
+      // 保存当前状态，添加地址后返回
+      this.$router.push('/personal/address');
+    },
+
     async createOrder() {
       if (!this.selectedAddressId) {
         this.$message.warning('请选择收货地址');
@@ -258,7 +201,6 @@ export default {
 
       this.submitting = true;
       try {
-        // 构建订单商品数据
         const orderItems = this.checkoutItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity
@@ -271,12 +213,11 @@ export default {
         });
 
         if (res.code === 200) {
-          // 清除localStorage中的结算商品
           localStorage.removeItem('checkoutItems');
-          // 跳转到支付页面
+          this.$message.success('订单创建成功，即将跳转支付');
           this.$router.push(`/pay/${res.data.orderNo}`);
         } else {
-          this.$message.error(res.message);
+          this.$message.error(res.message || '创建订单失败');
         }
       } catch (error) {
         console.error('创建订单失败', error);
@@ -314,11 +255,14 @@ export default {
   color: #333;
 }
 
-.address-section, .product-section, .order-info {
+.address-section,
+.product-section,
+.order-info {
   background: white;
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
 .section-header {
@@ -327,17 +271,26 @@ export default {
   align-items: center;
   margin-bottom: 20px;
   font-weight: 500;
+  font-size: 16px;
+}
+
+.item-count {
+  font-size: 13px;
+  color: #999;
+  font-weight: normal;
 }
 
 .address-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .address-item {
-  width: 280px;
-  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   cursor: pointer;
@@ -346,12 +299,22 @@ export default {
 
 .address-item:hover {
   border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102,126,234,0.1);
+  background: #f8f9ff;
 }
 
 .address-item.active {
   border-color: #667eea;
   background: #f8f9ff;
+}
+
+.address-item .el-icon-check {
+  color: #667eea;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.address-info {
+  flex: 1;
 }
 
 .address-name {
@@ -363,7 +326,7 @@ export default {
   margin-left: 12px;
   color: #999;
   font-weight: normal;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .default-tag {
@@ -381,27 +344,21 @@ export default {
   line-height: 1.5;
 }
 
-.add-address {
-  width: 280px;
-  height: 100px;
-  border: 1px dashed #e0e0e0;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
+.no-address {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
 }
 
-.add-address:hover {
-  border-color: #667eea;
-  color: #667eea;
+.no-address i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #ddd;
 }
 
-.add-address i {
-  font-size: 24px;
-  margin-bottom: 8px;
+.no-address p {
+  margin-bottom: 20px;
+  font-size: 14px;
 }
 
 .product-item {
@@ -430,6 +387,7 @@ export default {
 .product-info h4 {
   margin-bottom: 8px;
   font-size: 14px;
+  color: #333;
 }
 
 .product-price {
@@ -461,12 +419,17 @@ export default {
   color: #666;
 }
 
+.free-shipping {
+  color: #67c23a;
+}
+
 .total-row {
   padding-top: 15px;
   margin-top: 10px;
   border-top: 1px solid #e0e0e0;
   font-size: 18px;
   font-weight: bold;
+  color: #333;
 }
 
 .total-price {
@@ -484,20 +447,37 @@ export default {
   border: none;
   padding: 14px 60px;
   font-size: 18px;
+  border-radius: 40px;
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-  .address-item, .add-address {
-    width: 100%;
+  .address-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .address-item .el-icon-check {
+    align-self: flex-end;
   }
 
   .product-item {
     flex-wrap: wrap;
   }
 
-  .product-quantity, .product-total {
+  .product-quantity,
+  .product-total {
     width: auto;
     margin-top: 10px;
+  }
+
+  .submit-btn {
+    width: 100%;
   }
 }
 </style>

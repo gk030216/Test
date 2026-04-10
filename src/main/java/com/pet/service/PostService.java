@@ -2,6 +2,8 @@ package com.pet.service;
 
 import com.pet.entity.Post;
 import com.pet.entity.PostComment;
+
+import java.util.List;
 import java.util.Map;
 
 public interface PostService {
@@ -76,6 +78,11 @@ public interface PostService {
      */
     boolean toggleCommentLike(Integer commentId, Integer userId);
 
+    /**
+     * 获取用户评论列表
+     */
+    Map<String, Object> getUserComments(Integer userId, Integer page, Integer pageSize);
+
     // ========== 管理员接口 ==========
 
     /**
@@ -103,4 +110,13 @@ public interface PostService {
      * 管理员删除帖子
      */
     boolean adminDeletePost(Integer id);
+
+    boolean updateCommentStatus(Integer id, Integer status);
+    boolean adminDeleteComment(Integer id);
+    List<PostComment> getCommentReplies(Integer commentId);
+
+    /**
+     * 获取评论列表（后台）
+     */
+    Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword, Integer status);
 }

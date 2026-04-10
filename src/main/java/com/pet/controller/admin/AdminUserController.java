@@ -321,4 +321,23 @@ public class AdminUserController {
         if (role == 3) return "管理员";
         return "未知";
     }
+
+    /**
+     * 获取所有员工列表（用于下拉选择）
+     */
+    @GetMapping("/staff/all")
+    public Result<List<User>> getAllStaff(HttpServletRequest request) {
+        try {
+            Integer role = (Integer) request.getAttribute("role");
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            // 查询 role=2 的员工
+            Map<String, Object> result = userService.getUserList(1, 100, null, 2, 1);
+            List<User> staffList = (List<User>) result.get("list");
+            return Result.success(staffList);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

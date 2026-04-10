@@ -2,14 +2,17 @@ package com.pet.controller;
 
 import com.pet.dto.CreateOrderRequest;
 import com.pet.dto.PayRequest;
+import com.pet.entity.Appointment;
 import com.pet.entity.Order;
 import com.pet.service.AlipayService;
+import com.pet.service.AppointmentService;
 import com.pet.service.OrderService;
 import com.pet.util.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -22,6 +25,9 @@ public class OrderController {
 
     @Autowired
     private AlipayService alipayService;
+
+    @Autowired
+    private AppointmentService appointmentService;
 
     private Integer getUserId(HttpServletRequest request) {
         Integer userId = (Integer) request.getAttribute("userId");
@@ -122,15 +128,33 @@ public class OrderController {
     public Result<String> pay(@RequestBody PayRequest request, HttpServletRequest req) {
         try {
             Integer userId = getUserId(req);
-            Order order = orderService.getOrderByNo(request.getOrderNo());
-            if (order == null || !order.getUserId().equals(userId)) {
-                return Result.error("订单不存在");
-            }
-            if (order.getPayStatus() == 1) {
-                return Result.error("订单已支付");
+            String orderNo = request.getOrderNo();
+            BigDecimal amount;
+
+            // 根据订单号前缀判断类型
+            if (orderNo.startsWith("AP")) {
+                // 服务预约
+                Appointment appointment = appointmentService.getByAppointmentNo(orderNo);
+                if (appointment == null || !appointment.getUserId().equals(userId)) {
+                    return Result.error("预约不存在");
+                }
+                if (appointment.getPayStatus() == 1) {
+                    return Result.error("预约已支付");
+                }
+                amount = appointment.getServicePrice();
+            } else {
+                // 商品订单
+                Order order = orderService.getOrderByNo(orderNo);
+                if (order == null || !order.getUserId().equals(userId)) {
+                    return Result.error("订单不存在");
+                }
+                if (order.getPayStatus() == 1) {
+                    return Result.error("订单已支付");
+                }
+                amount = order.getPayAmount();
             }
 
-            String payForm = alipayService.createPay(request.getOrderNo(), order.getPayAmount());
+            String payForm = alipayService.createPay(orderNo, amount);
             return Result.success(payForm);
         } catch (Exception e) {
             return Result.error(e.getMessage());
