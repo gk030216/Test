@@ -30,7 +30,18 @@
                       <i v-else class="el-icon-plus logo-uploader-icon"></i>
                     </div>
                   </el-upload>
-                  <div class="upload-tip">建议尺寸：200x60px，支持PNG、JPG格式</div>
+                  <div class="upload-actions">
+                    <div class="upload-tip">建议尺寸：200x60px，支持PNG、JPG格式</div>
+                    <el-button
+                        v-if="basicForm.siteLogo"
+                        type="danger"
+                        size="small"
+                        plain
+                        @click="removeLogo"
+                        class="remove-logo-btn">
+                      <i class="el-icon-delete"></i> 删除Logo
+                    </el-button>
+                  </div>
                 </div>
               </el-form-item>
 
@@ -387,7 +398,7 @@ export default {
       }
     },
 
-    // 上传Logo
+// 上传Logo
     beforeLogoUpload(file) {
       const isImage = file.type.startsWith('image/');
       const isLt2M = file.size / 1024 / 1024 < 2;
@@ -420,16 +431,22 @@ export default {
       }
     },
 
+    // 删除Logo
+    removeLogo() {
+      this.basicForm.siteLogo = '';
+      this.$message.success('已删除Logo');
+    },
+
     // 保存基础设置
     async saveBasic() {
       this.$refs.basicForm.validate(async (valid) => {
         if (!valid) return;
         this.basicLoading = true;
         try {
+          // siteLogo 可以为空，不需要额外验证
           const res = await saveBasicSettings(this.basicForm);
           if (res.code === 200) {
             this.$message.success('保存成功');
-            // 刷新系统设置缓存
             await this.refreshSettings();
           } else {
             this.$message.error(res.message || '保存失败');
@@ -668,6 +685,13 @@ export default {
   display: flex;
   align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .logo-upload {
@@ -682,6 +706,7 @@ export default {
   transition: border-color 0.3s;
   overflow: hidden;
   background: #fafafa;
+  flex-shrink: 0;
 }
 
 .logo-upload:hover {
@@ -716,11 +741,15 @@ export default {
   color: #8c939d;
 }
 
+.remove-logo-btn {
+  width: fit-content;
+  margin-top: 0;
+}
+
 .upload-tip {
   font-size: 12px;
   color: #999;
   line-height: 1.5;
-  padding-top: 8px;
 }
 
 /* 响应式 */
@@ -740,6 +769,12 @@ export default {
   .upload-wrapper {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .upload-actions {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
   }
 }
 </style>

@@ -45,6 +45,11 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     }
 
     @Override
+    public List<ServiceItem> getHotServiceItems(int limit) {
+        return serviceItemMapper.getHotServiceItems(limit);
+    }
+
+    @Override
     public Map<String, Object> getAdminItemList(Integer page, Integer pageSize,
                                                 String keyword, Integer categoryId, Integer status) {
         int offset = (page - 1) * pageSize;

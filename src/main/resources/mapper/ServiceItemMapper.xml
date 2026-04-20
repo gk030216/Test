@@ -175,4 +175,30 @@
             LIMIT #{limit}
     </select>
 
+    <!-- 新增方法：返回完整的服务信息 -->
+    <select id="getHotServiceItems" resultType="com.pet.entity.ServiceItem">
+        SELECT
+            s.id,
+            s.category_id as categoryId,
+            s.name,
+            s.description,
+            s.price,
+            s.original_price as originalPrice,
+            s.duration,
+            s.image,
+            s.images,
+            s.suitable_for as suitableFor,
+            s.is_hot as isHot,
+            s.status,
+            s.sales,
+            s.create_time as createTime,
+            s.update_time as updateTime,
+            (SELECT COUNT(*) FROM appointment WHERE service_id = s.id AND status = 3) as appointmentCount
+        FROM service_item s
+        WHERE s.status = 1
+        ORDER BY s.is_hot DESC, s.sales DESC, s.create_time DESC
+            LIMIT #{limit}
+    </select>
+
+
 </mapper>

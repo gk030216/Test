@@ -5,67 +5,28 @@
       <div class="gradient-orb orb-1"></div>
       <div class="gradient-orb orb-2"></div>
       <div class="gradient-orb orb-3"></div>
-      <div class="particles">
-        <span v-for="i in 20" :key="i" :style="getParticleStyle()"></span>
-      </div>
-    </div>
-
-    <!-- 漂浮的宠物元素 -->
-    <div class="floating-pets">
-      <div class="pet pet-dog">🐕</div>
-      <div class="pet pet-cat">🐈</div>
-      <div class="pet pet-bunny">🐇</div>
-      <div class="pet pet-bird">🐦</div>
-      <div class="pet pet-fish">🐟</div>
-      <div class="pet pet-paw">🐾</div>
     </div>
 
     <!-- 主内容区 -->
     <div class="maintenance-card">
       <div class="card-inner">
-        <!-- 齿轮动画 -->
-        <div class="gear-wrapper">
-          <div class="gear gear-1">
-            <i class="el-icon-setting"></i>
-          </div>
-          <div class="gear gear-2">
-            <i class="el-icon-setting"></i>
-          </div>
-          <div class="gear gear-3">
-            <i class="el-icon-setting"></i>
-          </div>
-        </div>
-
         <!-- 主图标 -->
         <div class="main-icon">
           <div class="icon-ring"></div>
           <div class="icon-ring ring-2"></div>
           <div class="icon-ring ring-3"></div>
-          <span class="icon-emoji">🔧</span>
+          <i class="el-icon-setting icon-emoji"></i>
         </div>
 
         <!-- 标题 -->
-        <h1 class="main-title">
-          <span class="title-word">系</span>
-          <span class="title-word">统</span>
-          <span class="title-word">升</span>
-          <span class="title-word">级</span>
-          <span class="title-word">中</span>
-        </h1>
+        <h1 class="main-title">系统维护中</h1>
 
-        <p class="main-subtitle">汪汪队正在努力搬砖，马上就好！</p>
+        <p class="main-subtitle">为了给您提供更好的服务，系统正在进行升级维护</p>
 
-        <!-- 进度条动画 -->
+        <!-- 进度条 -->
         <div class="progress-wrapper">
           <div class="progress-bar">
-            <div class="progress-fill"></div>
-          </div>
-          <div class="progress-pets">
-            <span class="progress-pet" :class="{ active: progress >= 20 }">🐕</span>
-            <span class="progress-pet" :class="{ active: progress >= 40 }">🐈</span>
-            <span class="progress-pet" :class="{ active: progress >= 60 }">🐇</span>
-            <span class="progress-pet" :class="{ active: progress >= 80 }">🐦</span>
-            <span class="progress-pet" :class="{ active: progress >= 100 }">🎉</span>
+            <div class="progress-fill" :style="{ width: progress + '%' }"></div>
           </div>
           <p class="progress-text">{{ progress }}%</p>
         </div>
@@ -74,11 +35,11 @@
         <div class="info-cards">
           <div class="info-card">
             <i class="el-icon-time"></i>
-            <span>预计 30 分钟</span>
+            <span>预计维护时间：30分钟</span>
           </div>
           <div class="info-card">
             <i class="el-icon-phone-outline"></i>
-            <span>{{ servicePhone }}</span>
+            <span>客服热线：{{ servicePhone }}</span>
           </div>
         </div>
 
@@ -88,7 +49,6 @@
           <el-button
               v-if="!isLoggedIn"
               type="primary"
-              round
               @click="goToLogin"
               class="login-btn"
           >
@@ -99,7 +59,6 @@
           <el-button
               v-else-if="isAdmin"
               type="primary"
-              round
               @click="goToAdmin"
               class="login-btn"
           >
@@ -110,42 +69,27 @@
           <el-button
               v-else
               type="info"
-              round
               disabled
               class="login-btn"
           >
             <i class="el-icon-lock"></i> 暂无访问权限
           </el-button>
 
-          <el-button round plain @click="refresh" class="refresh-btn">
+          <el-button plain @click="refresh" class="refresh-btn">
             <i class="el-icon-refresh"></i> 刷新页面
           </el-button>
         </div>
 
         <!-- 底部提示 -->
         <p class="footer-tip" v-if="!isAdmin">
-          <i class="el-icon-chat-dot-round"></i>
-          {{ isLoggedIn ? '系统维护中，请稍后再试' : '铲屎官别着急，我们在给服务器做 Spa ~' }}
+          <i class="el-icon-info"></i>
+          {{ isLoggedIn ? '系统维护中，请稍后再试' : '系统升级中，请稍后访问' }}
         </p>
         <p class="footer-tip" v-else>
-          <i class="el-icon-chat-dot-round"></i>
-          管理员，你可以正常访问后台
+          <i class="el-icon-info"></i>
+          管理员，您可正常访问后台
         </p>
       </div>
-    </div>
-
-    <!-- 角落装饰 -->
-    <div class="corner-decoration corner-tl">
-      <span>🐾</span><span>🐾</span>
-    </div>
-    <div class="corner-decoration corner-tr">
-      <span>🐾</span><span>🐾</span>
-    </div>
-    <div class="corner-decoration corner-bl">
-      <span>🐾</span><span>🐾</span>
-    </div>
-    <div class="corner-decoration corner-br">
-      <span>🐾</span><span>🐾</span>
     </div>
   </div>
 </template>
@@ -195,21 +139,6 @@ export default {
         }
       }
     },
-    getParticleStyle() {
-      const size = Math.random() * 8 + 3;
-      const left = Math.random() * 100;
-      const top = Math.random() * 100;
-      const duration = Math.random() * 10 + 10;
-      const delay = Math.random() * 5;
-      return {
-        width: size + 'px',
-        height: size + 'px',
-        left: left + '%',
-        top: top + '%',
-        animationDuration: duration + 's',
-        animationDelay: delay + 's'
-      };
-    },
     startProgress() {
       this.progressTimer = setInterval(() => {
         if (this.progress < 100) {
@@ -252,7 +181,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   position: relative;
   overflow: hidden;
   font-family: 'Microsoft YaHei', sans-serif;
@@ -271,7 +200,7 @@ export default {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.5;
+  opacity: 0.4;
   animation: floatOrb 15s ease-in-out infinite;
 }
 
@@ -308,118 +237,41 @@ export default {
   66% { transform: translate(-50px, 50px) scale(0.9); }
 }
 
-/* 粒子效果 */
-.particles {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-
-.particles span {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  animation: particleFloat 10s linear infinite;
-}
-
-@keyframes particleFloat {
-  0% { transform: translateY(100vh); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(-100px); opacity: 0; }
-}
-
-/* 漂浮的宠物 */
-.floating-pets {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.pet {
-  position: absolute;
-  font-size: 40px;
-  opacity: 0.3;
-  animation: petFloat 8s ease-in-out infinite;
-}
-
-.pet-dog { top: 15%; left: 10%; animation-delay: 0s; }
-.pet-cat { top: 70%; left: 15%; animation-delay: -2s; font-size: 50px; }
-.pet-bunny { top: 20%; right: 15%; animation-delay: -4s; font-size: 35px; }
-.pet-bird { top: 60%; right: 10%; animation-delay: -6s; font-size: 45px; }
-.pet-fish { bottom: 20%; left: 20%; animation-delay: -3s; }
-.pet-paw { bottom: 15%; right: 25%; animation-delay: -5s; font-size: 50px; }
-
-@keyframes petFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-30px) rotate(10deg); }
-}
-
 /* 主卡片 */
 .maintenance-card {
   position: relative;
   z-index: 10;
-  width: 550px;
+  width: 520px;
   max-width: 90%;
-  perspective: 1000px;
 }
 
 .card-inner {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border-radius: 40px;
-  padding: 45px 40px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 40px 32px;
   text-align: center;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  animation: cardAppear 0.8s ease-out;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: cardAppear 0.5s ease-out;
 }
 
 @keyframes cardAppear {
-  0% { opacity: 0; transform: rotateX(-15deg) translateY(30px); }
-  100% { opacity: 1; transform: rotateX(0) translateY(0); }
-}
-
-/* 齿轮动画 */
-.gear-wrapper {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 20px;
-}
-
-.gear {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 20px;
-  animation: spin 4s linear infinite;
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.gear-1 { animation-duration: 3s; }
-.gear-2 { animation-duration: 4s; animation-direction: reverse; }
-.gear-3 { animation-duration: 5s; }
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 主图标 */
 .main-icon {
   position: relative;
-  width: 120px;
-  height: 120px;
-  margin: 20px auto 30px;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 24px;
 }
 
 .icon-ring {
@@ -428,24 +280,24 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  border: 3px solid rgba(102, 126, 234, 0.3);
+  border: 2px solid rgba(102, 126, 234, 0.2);
   border-radius: 50%;
   animation: pulse 2s ease-out infinite;
 }
 
 .ring-2 {
   animation-delay: 0.5s;
-  border-color: rgba(240, 147, 251, 0.3);
+  border-color: rgba(102, 126, 234, 0.15);
 }
 
 .ring-3 {
   animation-delay: 1s;
-  border-color: rgba(79, 172, 254, 0.3);
+  border-color: rgba(102, 126, 234, 0.1);
 }
 
 @keyframes pulse {
   0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.3); opacity: 0; }
 }
 
 .icon-emoji {
@@ -453,56 +305,23 @@ export default {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 60px;
-  animation: wobble 3s ease-in-out infinite;
-}
-
-@keyframes wobble {
-  0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
-  25% { transform: translate(-50%, -50%) rotate(-15deg); }
-  75% { transform: translate(-50%, -50%) rotate(15deg); }
+  font-size: 48px;
+  color: #667eea;
 }
 
 /* 标题 */
 .main-title {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 15px;
-}
-
-.title-word {
-  font-size: 36px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  animation: titleBounce 0.6s ease-out forwards;
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.title-word:nth-child(1) { animation-delay: 0.1s; }
-.title-word:nth-child(2) { animation-delay: 0.2s; }
-.title-word:nth-child(3) { animation-delay: 0.3s; }
-.title-word:nth-child(4) { animation-delay: 0.4s; }
-.title-word:nth-child(5) { animation-delay: 0.5s; }
-
-@keyframes titleBounce {
-  0% { opacity: 0; transform: translateY(20px); }
-  60% { opacity: 1; transform: translateY(-5px); }
-  100% { opacity: 1; transform: translateY(0); }
+  font-size: 28px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
 }
 
 .main-subtitle {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 35px;
-  animation: fadeIn 1s ease-out 0.8s both;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 30px;
+  line-height: 1.6;
 }
 
 /* 进度条 */
@@ -511,189 +330,138 @@ export default {
 }
 
 .progress-bar {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
+  height: 6px;
+  background: #e8eaef;
+  border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
-  border-radius: 20px;
-  width: 0%;
-  animation: progressFill 20s ease-out forwards;
-  box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
-}
-
-@keyframes progressFill {
-  0% { width: 0%; }
-  100% { width: 100%; }
-}
-
-.progress-pets {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 10px;
-}
-
-.progress-pet {
-  font-size: 24px;
-  opacity: 0.3;
-  transition: all 0.3s;
-}
-
-.progress-pet.active {
-  opacity: 1;
-  transform: scale(1.2);
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .progress-text {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 16px;
-  font-weight: 600;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* 信息卡片 */
 .info-cards {
   display: flex;
   justify-content: center;
-  gap: 30px;
+  gap: 20px;
   margin-bottom: 30px;
+  flex-wrap: wrap;
 }
 
 .info-card {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 40px;
-  color: white;
-  font-size: 14px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  background: #f5f7fa;
+  border-radius: 20px;
+  color: #606266;
+  font-size: 13px;
 }
 
 .info-card i {
-  font-size: 18px;
-  color: #f093fb;
+  font-size: 16px;
+  color: #667eea;
 }
 
 /* 按钮 */
 .action-buttons {
   display: flex;
-  gap: 15px;
+  gap: 12px;
   justify-content: center;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .login-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   border: none;
   color: white;
-  padding: 12px 30px;
-  font-size: 16px;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  padding: 10px 24px;
+  font-size: 14px;
+  border-radius: 8px;
+  transition: all 0.3s;
 }
 
 .login-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 25px rgba(102, 126, 234, 0.5);
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+.login-btn:disabled {
+  background: #a0cfff;
+  cursor: not-allowed;
 }
 
 .refresh-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 12px 30px;
-  font-size: 16px;
+  background: white;
+  border: 1px solid #dcdfe6;
+  color: #606266;
+  padding: 10px 24px;
+  font-size: 14px;
+  border-radius: 8px;
+  transition: all 0.3s;
 }
 
 .refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #f5f7fa;
+  border-color: #c0c4cc;
 }
 
 /* 底部提示 */
 .footer-tip {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eef2f6;
 }
 
 .footer-tip i {
-  color: #f093fb;
-}
-
-/* 角落装饰 */
-.corner-decoration {
-  position: absolute;
-  display: flex;
-  gap: 5px;
-  opacity: 0.4;
-  z-index: 5;
-}
-
-.corner-decoration span {
-  font-size: 30px;
-  animation: pawBounce 2s ease-in-out infinite;
-}
-
-.corner-decoration span:nth-child(2) {
-  animation-delay: 0.3s;
-}
-
-.corner-tl { top: 20px; left: 20px; }
-.corner-tr { top: 20px; right: 20px; }
-.corner-bl { bottom: 20px; left: 20px; }
-.corner-br { bottom: 20px; right: 20px; }
-
-@keyframes pawBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  color: #909399;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
   .card-inner {
-    padding: 35px 25px;
+    padding: 30px 20px;
   }
 
   .main-title {
-    gap: 5px;
-  }
-
-  .title-word {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .main-subtitle {
-    font-size: 16px;
+    font-size: 13px;
   }
 
   .info-cards {
     flex-direction: column;
-    gap: 10px;
+    align-items: center;
   }
 
   .action-buttons {
     flex-direction: column;
   }
 
-  .gear-wrapper {
-    top: -15px;
-  }
-
-  .gear {
-    width: 30px;
-    height: 30px;
-    font-size: 16px;
+  .login-btn,
+  .refresh-btn {
+    width: 100%;
   }
 }
 </style>

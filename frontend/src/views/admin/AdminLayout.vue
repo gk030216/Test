@@ -156,6 +156,11 @@
           <span slot="title">轮播图管理</span>
         </el-menu-item>
 
+        <el-menu-item index="notice-manage">
+          <i class="el-icon-bell"></i>
+          <span slot="title">咨询公告</span>
+        </el-menu-item>
+
         <el-submenu index="ai">
           <template slot="title">
             <i class="el-icon-cpu"></i>

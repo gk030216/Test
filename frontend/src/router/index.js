@@ -83,7 +83,7 @@ import FaqManage from '@/views/admin/FaqManage.vue';
 import ChatHistory from '@/views/admin/ChatHistory.vue';
 import StaffEvaluations from "@/views/staff/StaffEvaluations.vue";
 import StaffFeedback from "@/views/staff/StaffFeedback.vue";
-import Feedback from "@/views/personal/Feedback.vue";
+import Feedback from "@/views/Feedback.vue";
 import VaccineStock from "@/views/admin/VaccineStock.vue";
 import ProductStock from "@/views/admin/ProductStock.vue";
 import ProductCommentAnalysis from "@/views/admin/ProductCommentAnalysis.vue";
@@ -128,6 +128,11 @@ const router = new Router({
       name: 'Maintenance',
       component: Maintenance,
       meta: { requiresAuth: false }
+    },
+    {
+      path: '/notices',
+      name: 'Notices',
+      component: () => import('@/views/Notices.vue')
     },
 
     // ========== 前台服务路由 ==========
@@ -366,6 +371,12 @@ const router = new Router({
           name: 'ServiceAnalysis',
           component: () => import('@/views/admin/ServiceAnalysis.vue'),
           meta: { title: '服务数据分析' }
+        },
+        {
+          path: 'notice-manage',
+          name: 'AdminNoticeManage',
+          component: () => import('@/views/admin/AdminNoticeManage.vue'),
+          meta: { title: '咨询公告' }
         }
       ]
     }

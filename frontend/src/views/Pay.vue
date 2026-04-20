@@ -4,9 +4,19 @@
 
     <div class="pay-content">
       <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="top-nav">
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/cart' }">购物车</el-breadcrumb-item>
+            <el-breadcrumb-item>订单支付</el-breadcrumb-item>
+          </el-breadcrumb>
+          <el-button icon="el-icon-arrow-left" size="small" @click="$router.back()" class="back-btn">返回</el-button>
+        </div>
+
         <div class="pay-card" v-loading="loading">
           <div class="pay-header">
-            <i class="el-icon-success" v-if="payStatus === 'success'"></i>
+            <i class="el-icon-circle-check" v-if="payStatus === 'success'"></i>
             <i class="el-icon-warning" v-else-if="payStatus === 'failed'"></i>
             <i class="el-icon-time" v-else></i>
             <h2>{{ payTitle }}</h2>
@@ -16,19 +26,19 @@
           <!-- 商品订单信息 -->
           <div class="pay-info" v-if="orderType === 'product' && order">
             <div class="info-item">
-              <span>订单号：</span>
+              <span>订单号</span>
               <span>{{ order.orderNo }}</span>
             </div>
             <div class="info-item">
-              <span>商品名称：</span>
+              <span>商品名称</span>
               <span>{{ getProductNames() }}</span>
             </div>
             <div class="info-item">
-              <span>支付金额：</span>
+              <span>支付金额</span>
               <span class="amount">¥{{ order.payAmount }}</span>
             </div>
             <div class="info-item">
-              <span>订单类型：</span>
+              <span>订单类型</span>
               <el-tag type="primary" size="small">商品订单</el-tag>
             </div>
           </div>
@@ -36,27 +46,27 @@
           <!-- 服务预约信息 -->
           <div class="pay-info" v-if="orderType === 'service' && appointment">
             <div class="info-item">
-              <span>预约编号：</span>
+              <span>预约编号</span>
               <span>{{ appointment.appointmentNo }}</span>
             </div>
             <div class="info-item">
-              <span>服务名称：</span>
+              <span>服务名称</span>
               <span>{{ appointment.serviceName }}</span>
             </div>
             <div class="info-item">
-              <span>预约宠物：</span>
+              <span>预约宠物</span>
               <span>{{ appointment.petName || '未指定' }}</span>
             </div>
             <div class="info-item">
-              <span>预约时间：</span>
+              <span>预约时间</span>
               <span>{{ formatDate(appointment.appointmentDate) }} {{ appointment.appointmentTime }}</span>
             </div>
             <div class="info-item">
-              <span>支付金额：</span>
+              <span>支付金额</span>
               <span class="amount">¥{{ appointment.servicePrice }}</span>
             </div>
             <div class="info-item">
-              <span>订单类型：</span>
+              <span>订单类型</span>
               <el-tag type="success" size="small">服务预约</el-tag>
             </div>
           </div>
@@ -70,7 +80,7 @@
                   @click="payType = 1"
               >
                 <i class="el-icon-ali-pay"></i>
-                <span>支付宝支付</span>
+                <span>支付宝</span>
               </div>
             </div>
           </div>
@@ -85,14 +95,14 @@
             >
               立即支付
             </el-button>
-            <el-button size="large" @click="cancelOrder">取消订单</el-button>
+            <el-button size="large" plain @click="cancelOrder">取消订单</el-button>
           </div>
 
           <div class="pay-actions" v-else-if="payStatus === 'success'">
             <el-button type="primary" size="large" @click="goToOrders">
               {{ orderType === 'service' ? '查看预约' : '查看订单' }}
             </el-button>
-            <el-button size="large" @click="goToHome">
+            <el-button plain size="large" @click="goToHome">
               {{ orderType === 'service' ? '继续预约' : '继续购物' }}
             </el-button>
           </div>
@@ -101,7 +111,7 @@
             <el-button type="primary" size="large" @click="retryPay">
               重新支付
             </el-button>
-            <el-button size="large" @click="goToOrders">
+            <el-button plain size="large" @click="goToOrders">
               {{ orderType === 'service' ? '查看预约' : '查看订单' }}
             </el-button>
           </div>
@@ -153,7 +163,6 @@ export default {
   },
   methods: {
     detectOrderType() {
-      // 根据订单号前缀判断类型
       if (this.orderNo && this.orderNo.startsWith('AP')) {
         this.orderType = 'service';
       } else {
@@ -220,7 +229,6 @@ export default {
           this.payTitle = '预约已取消';
           this.payMessage = '预约已取消，如需预约请重新下单';
         } else {
-          // 待支付状态，正常显示
           this.payStatus = 'pending';
         }
       } else {
@@ -261,20 +269,17 @@ export default {
         if (res.code === 200) {
           const payForm = res.data;
 
-          // 创建隐藏的iframe或div
           const div = document.createElement('div');
           div.style.cssText = 'display:none;';
           div.innerHTML = payForm;
           document.body.appendChild(div);
 
-          // 等待DOM渲染
           setTimeout(() => {
             const form = div.querySelector('form');
             if (form) {
               form.submit();
               console.log('表单已提交');
             }
-            // 5秒后移除
             setTimeout(() => {
               document.body.removeChild(div);
             }, 5000);
@@ -325,7 +330,6 @@ export default {
                 ? '您的预约已支付成功，请等待商家确认'
                 : '您的订单已支付成功，我们将尽快为您发货';
 
-            // 3秒后自动跳转
             setTimeout(() => {
               if (this.orderType === 'service') {
                 this.$router.push('/personal/appointments');
@@ -334,7 +338,6 @@ export default {
               }
             }, 3000);
           } else if (count >= 20) {
-            // 轮询超时
             this.clearPolling();
             console.log('轮询超时');
             this.$message.warning('支付处理中，请稍后查看状态');
@@ -410,12 +413,12 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .pay-content {
   flex: 1;
-  padding: 60px 0;
+  padding: 30px 0 60px;
 }
 
 .container {
@@ -424,20 +427,52 @@ export default {
   padding: 0 20px;
 }
 
+/* 顶部导航栏 */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  flex: 1;
+}
+
+.back-btn {
+  border-radius: 8px;
+  color: #606266;
+  background: white;
+  border: 1px solid #eef2f6;
+  padding: 8px 16px;
+  font-size: 13px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.back-btn:hover {
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
+}
+
+/* 支付卡片 */
 .pay-card {
   background: white;
-  border-radius: 24px;
-  padding: 40px;
+  border-radius: 12px;
+  padding: 30px;
   text-align: center;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
 }
 
 .pay-header i {
-  font-size: 80px;
-  margin-bottom: 20px;
+  font-size: 64px;
+  margin-bottom: 16px;
 }
 
-.pay-header .el-icon-success {
+.pay-header .el-icon-circle-check {
   color: #67c23a;
 }
 
@@ -450,91 +485,169 @@ export default {
 }
 
 .pay-header h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
-  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3e50;
 }
 
 .pay-header p {
-  color: #999;
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
 }
 
+/* 订单信息 */
 .pay-info {
-  background: #f8f9fc;
-  border-radius: 16px;
-  padding: 20px;
-  margin: 30px 0;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 24px 0;
   text-align: left;
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 8px 0;
-  color: #666;
+  color: #606266;
+  font-size: 14px;
 }
 
 .info-item .amount {
-  color: #ff6b6b;
-  font-size: 20px;
+  color: #f56c6c;
+  font-size: 18px;
   font-weight: bold;
 }
 
+/* 支付方式 */
 .pay-methods {
-  margin: 30px 0;
+  margin: 24px 0;
   text-align: left;
 }
 
 .method-title {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   font-weight: 500;
-  color: #333;
+  color: #2c3e50;
+  font-size: 14px;
 }
 
 .method-list {
   display: flex;
-  gap: 15px;
+  gap: 12px;
 }
 
 .method-item {
-  width: 120px;
+  width: 110px;
   padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
+  border: 1px solid #eef2f6;
+  border-radius: 8px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
+  background: white;
 }
 
 .method-item i {
-  font-size: 32px;
-  margin-bottom: 8px;
+  font-size: 28px;
+  margin-bottom: 6px;
   display: block;
+  color: #909399;
+}
+
+.method-item span {
+  font-size: 13px;
+  color: #606266;
+}
+
+.method-item:hover {
+  border-color: #409EFF;
 }
 
 .method-item.active {
-  border-color: #667eea;
-  background: #f8f9ff;
+  border-color: #409EFF;
+  background: #ecf5ff;
 }
 
+.method-item.active i {
+  color: #409EFF;
+}
+
+.method-item.active span {
+  color: #409EFF;
+}
+
+/* 按钮区域 */
 .pay-actions {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 24px;
+}
+
+.pay-actions .el-button {
+  padding: 10px 30px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
 }
 
 .pay-btn {
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  background: #409EFF;
   border: none;
-  padding: 12px 50px;
-  font-size: 16px;
 }
 
+.pay-btn:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+.pay-actions .el-button--primary {
+  background: #409EFF;
+  border: none;
+}
+
+.pay-actions .el-button--primary:hover {
+  background: #66b1ff;
+}
+
+.pay-actions .el-button--plain {
+  border-color: #eef2f6;
+  color: #606266;
+}
+
+.pay-actions .el-button--plain:hover {
+  border-color: #409EFF;
+  color: #409EFF;
+}
+
+/* 响应式 */
 @media (max-width: 768px) {
+  .pay-content {
+    padding: 20px 0 40px;
+  }
+
+  .top-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .back-btn {
+    margin-left: 0;
+    padding: 6px 12px;
+  }
+
   .pay-card {
-    padding: 30px 20px;
+    padding: 20px;
+  }
+
+  .pay-header i {
+    font-size: 48px;
+  }
+
+  .pay-header h2 {
+    font-size: 18px;
   }
 
   .method-list {
@@ -547,6 +660,10 @@ export default {
 
   .pay-actions {
     flex-direction: column;
+  }
+
+  .pay-actions .el-button {
+    width: 100%;
   }
 }
 </style>

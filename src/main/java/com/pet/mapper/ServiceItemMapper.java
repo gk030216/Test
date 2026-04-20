@@ -55,4 +55,6 @@ public interface ServiceItemMapper {
                       @Param("categoryId") Integer categoryId);
 
     List<Map<String, Object>> getHotServices(@Param("limit") int limit);
+
+    List<ServiceItem> getHotServiceItems(@Param("limit") int limit);
 }

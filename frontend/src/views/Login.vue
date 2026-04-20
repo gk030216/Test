@@ -141,11 +141,15 @@ export default {
               if (res.code === 200) {
                 this.loginSuccess(res.data);
               } else {
+                // 显示后端返回的错误信息（包括"账号已被禁用"）
                 this.$message.error(res.message || '登录失败');
               }
             })
-            .catch(() => {
+            .catch(error => {
               this.loading = false;
+              // 处理网络错误或后端异常
+              const message = error.response?.data?.message || error.message || '登录失败，请稍后重试';
+              this.$message.error(message);
             });
       });
     },

@@ -812,16 +812,31 @@ export default {
 /* 空状态 */
 .empty-state {
   text-align: center;
-  padding: 60px;
+  padding: 60px 20px;
   background: white;
   border-radius: 12px;
   color: #909399;
+  border: 1px solid #eef2f6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  grid-column: 1 / -1;
 }
 
 .empty-state i {
   font-size: 64px;
   margin-bottom: 16px;
   color: #c0c4cc;
+}
+
+.empty-state p {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.empty-state .el-button {
+  margin-top: 0;
 }
 
 /* 疫苗提醒卡片 */

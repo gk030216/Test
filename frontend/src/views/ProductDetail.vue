@@ -94,9 +94,6 @@
         <!-- 商品详情Tab -->
         <div class="product-tabs">
           <el-tabs v-model="activeTab">
-            <el-tab-pane label="商品详情" name="detail">
-              <div class="detail-content" v-html="product.detailHtml || product.description"></div>
-            </el-tab-pane>
             <!-- 用户评价Tab -->
             <el-tab-pane label="用户评价" name="comment">
               <div class="comment-content">
@@ -453,7 +450,6 @@ export default {
     },
 
     // 购物车操作：如果已在购物车则删除，否则添加
-// 购物车操作：如果已在购物车则删除，否则添加
     async handleCartAction() {
       const token = localStorage.getItem('token');
       if (!token) {

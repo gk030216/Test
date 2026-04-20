@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.ConsultationNoticeMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.pet.entity.ConsultationNotice">
+        <id column="id" property="id" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="type" property="type" />
+        <result column="status" property="status" />
+        <result column="is_top" property="isTop" />
+        <result column="sort_order" property="sortOrder" />
+        <result column="view_count" property="viewCount" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <!-- 插入公告 -->
+    <insert id="insert" parameterType="com.pet.entity.ConsultationNotice" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO consultation_notice (
+            title, content, type, status, is_top, sort_order, view_count, create_time, update_time
+        ) VALUES (
+                     #{title}, #{content}, #{type}, #{status}, #{isTop}, #{sortOrder},
+                     IFNULL(#{viewCount}, 0), NOW(), NOW()
+                 )
+    </insert>
+
+    <!-- 根据ID删除 -->
+    <delete id="deleteById">
+        DELETE FROM consultation_notice WHERE id = #{id}
+    </delete>
+
+    <!-- 更新公告 -->
+    <update id="updateById" parameterType="com.pet.entity.ConsultationNotice">
+        UPDATE consultation_notice
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isTop != null">is_top = #{isTop},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice
+        ORDER BY is_top DESC, sort_order ASC, create_time DESC
+    </select>
+
+    <!-- 分页查询 -->
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice
+        ORDER BY is_top DESC, sort_order ASC, create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 查询总数 -->
+    <select id="selectCount" resultType="int">
+        SELECT COUNT(*) FROM consultation_notice
+    </select>
+
+    <!-- 获取启用的公告 -->
+    <select id="selectActiveNotices" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice
+        WHERE status = 1
+        ORDER BY is_top DESC, sort_order ASC, create_time DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 获取置顶公告 -->
+    <select id="selectTopNotices" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice
+        WHERE status = 1 AND is_top = 1
+        ORDER BY sort_order ASC, create_time DESC
+            LIMIT 5
+    </select>
+
+    <!-- 增加浏览次数 -->
+    <update id="incrementViewCount">
+        UPDATE consultation_notice SET view_count = IFNULL(view_count, 0) + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 根据类型获取公告 -->
+    <select id="selectByType" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice
+        WHERE status = 1 AND type = #{type}
+        ORDER BY is_top DESC, sort_order ASC, create_time DESC
+    </select>
+
+    <!-- 条件分页查询 -->
+    <select id="selectPageByCondition" resultMap="BaseResultMap">
+        SELECT * FROM consultation_notice
+        <where>
+            <if test="type != null">AND type = #{type}</if>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%')
+                OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY is_top DESC, sort_order ASC, create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 条件查询总数 -->
+    <select id="selectCountByCondition" resultType="int">
+        SELECT COUNT(*) FROM consultation_notice
+        <where>
+            <if test="type != null">AND type = #{type}</if>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%')
+                OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+
+</mapper>

@@ -203,16 +203,23 @@ export default {
       cartTotal: 0,
       flyingItems: [],
       nextFlyId: 1,
-      // 购物车中的商品ID和对应购物车项ID的映射
-      cartProductMap: new Map(), // key: productId, value: cartItemId
-      // 正在操作的商品ID，用于按钮loading状态
+      cartProductMap: new Map(),
       addingProductId: null
     };
   },
+  computed: {
+    // 判断是否登录
+    isLoggedIn() {
+      return !!localStorage.getItem('token');
+    }
+  },
   created() {
     this.loadCategories();
-    this.loadCartSummary();
-    this.loadCartList();
+    // ✅ 只有登录后才加载购物车相关数据
+    if (this.isLoggedIn) {
+      this.loadCartSummary();
+      this.loadCartList();
+    }
     this.$bus.$on('cart-updated', this.refreshCartData);
   },
   beforeDestroy() {
@@ -225,43 +232,42 @@ export default {
       return text.substring(0, length) + '...';
     },
 
-    // 判断商品是否已在购物车
     isInCart(productId) {
       return this.cartProductMap.has(productId);
     },
 
-    // 获取购物车项ID
     getCartItemId(productId) {
       return this.cartProductMap.get(productId);
     },
 
-    // 获取购物车按钮提示文字
     getCartButtonTooltip(product) {
+      // ✅ 未登录时显示请先登录
+      if (!this.isLoggedIn) return '请先登录';
       if (product.stock <= 0) return '库存不足';
       if (this.isInCart(product.id)) return '移出购物车';
       return '加入购物车';
     },
 
-    // 获取购物车按钮类型
     getCartButtonType(product) {
+      // ✅ 未登录时按钮为灰色
+      if (!this.isLoggedIn) return 'info';
       if (this.isInCart(product.id)) return 'danger';
       if (product.stock <= 0) return 'info';
       return 'primary';
     },
 
-    // 获取购物车按钮图标
     getCartButtonIcon(product) {
+      // ✅ 未登录时显示用户图标
+      if (!this.isLoggedIn) return 'el-icon-user';
       if (this.isInCart(product.id)) return 'el-icon-delete';
       if (product.stock <= 0) return 'el-icon-close';
       return 'el-icon-shopping-cart-2';
     },
 
-    // 加载购物车列表
     async loadCartList() {
+      // ✅ 未登录不调用
+      if (!this.isLoggedIn) return;
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
         const res = await getCartList();
         if (res.code === 200) {
           this.cartProductMap.clear();
@@ -274,11 +280,11 @@ export default {
       }
     },
 
-    // 刷新购物车相关数据
     async refreshCartData() {
+      // ✅ 未登录不调用
+      if (!this.isLoggedIn) return;
       await this.loadCartSummary();
       await this.loadCartList();
-      // 刷新商品列表（更新购物车按钮状态）
       await this.loadProducts();
     },
 
@@ -296,21 +302,21 @@ export default {
     },
 
     async loadCartSummary() {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await getCartSummary();
-          if (res.code === 200) {
-            this.cartCount = res.data.totalCount || 0;
-            this.cartTotal = res.data.totalAmount || 0;
-          }
-        } catch (error) {
-          console.error('加载购物车数量失败', error);
-        }
-      } else {
+      // ✅ 未登录时不调用接口，使用本地存储
+      if (!this.isLoggedIn) {
         const cart = JSON.parse(localStorage.getItem('cart') || '[]');
         this.cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
         this.cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        return;
+      }
+      try {
+        const res = await getCartSummary();
+        if (res.code === 200) {
+          this.cartCount = res.data.totalCount || 0;
+          this.cartTotal = res.data.totalAmount || 0;
+        }
+      } catch (error) {
+        console.error('加载购物车数量失败', error);
       }
     },
 
@@ -324,7 +330,7 @@ export default {
       } else if (this.currentCategory !== null && this.currentCategory !== undefined) {
         return this.currentCategory;
       }
-      return null; // 返回 null 而不是 undefined
+      return null;
     },
 
     async loadProducts() {
@@ -337,7 +343,8 @@ export default {
           keyword: this.keyword || undefined,
         };
 
-        // 只有当 categoryId 不为 null 时才添加到参数中
+        console.log('请求商品列表参数:', params);  // ✅ 移到对象外面
+
         if (categoryId !== null && categoryId !== undefined) {
           params.categoryId = categoryId;
         }
@@ -347,9 +354,10 @@ export default {
         if (this.sortType === 'sales') params.sort = 'sales';
 
         const res = await getProductList(params);
+        console.log('商品列表返回:', res);  // ✅ 移到正确位置
+
         if (res.code === 200) {
-          // 前端再次过滤，确保只显示有库存的商品
-          this.productList = (res.data.list || []).filter(p => p.stock > 0);
+          this.productList = res.data.list || [];
           this.total = res.data.total || 0;
         }
       } catch (error) {
@@ -361,7 +369,6 @@ export default {
     },
 
     handleCategoryChange(categoryId) {
-      // 如果 categoryId 为 null，保持为 null
       this.currentCategory = categoryId !== undefined ? categoryId : null;
       this.currentSubCategory = null;
       if (categoryId !== null && categoryId !== undefined) {
@@ -400,14 +407,24 @@ export default {
     },
 
     goToCart() {
+      // ✅ 未登录时提示登录
+      if (!this.isLoggedIn) {
+        this.$confirm('请先登录，查看购物车', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        });
+        return;
+      }
       this.$router.push('/cart');
     },
 
-    // 统一的购物车操作：添加或移出
     async handleCartAction(event, product) {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        this.$confirm('请先登录', '提示', {
+      // ✅ 未登录时提示登录
+      if (!this.isLoggedIn) {
+        this.$confirm('请先登录，加入购物车', '提示', {
           confirmButtonText: '去登录',
           cancelButtonText: '取消',
           type: 'warning'
@@ -417,7 +434,11 @@ export default {
         return;
       }
 
-      // 移出购物车时不需要检查库存
+      if (product.stock <= 0) {
+        this.$message.warning('商品库存不足');
+        return;
+      }
+
       if (!this.isInCart(product.id) && product.stock <= 0) {
         this.$message.warning('商品库存不足，无法加入购物车');
         return;
@@ -427,7 +448,6 @@ export default {
 
       try {
         if (this.isInCart(product.id)) {
-          // 已在购物车，执行删除操作
           const cartItemId = this.getCartItemId(product.id);
           if (!cartItemId) {
             this.$message.error('购物车信息异常，请刷新页面重试');
@@ -440,7 +460,6 @@ export default {
             this.cartProductMap.delete(product.id);
             this.$message.success('已从购物车移出');
 
-            // 添加移出动画效果 - 添加安全判断
             if (event && event.currentTarget) {
               const btn = event.currentTarget;
               btn.classList.add('btn-removed');
@@ -452,14 +471,13 @@ export default {
             }
 
             await this.loadCartSummary();
-            await this.loadCartList(); // 重新加载购物车列表
-            await this.loadProducts(); // 刷新商品列表更新按钮状态
+            await this.loadCartList();
+            await this.loadProducts();
             this.$bus.$emit('cart-updated');
           } else {
             this.$message.error(res.message || '移出失败');
           }
         } else {
-          // 不在购物车，执行添加操作 - 带飞行动画
           this.addToCartWithAnimation(event, product);
         }
       } catch (error) {
@@ -470,33 +488,26 @@ export default {
       }
     },
 
-    // 带动画的加入购物车
     addToCartWithAnimation(event, product) {
-      // 获取点击按钮的位置 - 添加安全判断
       if (!event || !event.currentTarget) {
-        // 如果没有事件对象，直接添加购物车
         this.addToCart(product);
         return;
       }
 
-      const btnRect = event.currentTarget.getBoundingClientRect();
       const cartIcon = this.$refs.floatingCart;
       if (!cartIcon) {
         this.addToCart(product);
         return;
       }
 
+      const btnRect = event.currentTarget.getBoundingClientRect();
       const cartRect = cartIcon.getBoundingClientRect();
 
-      // 计算起始位置（按钮中心）
       const startX = btnRect.left + btnRect.width / 2 - 20;
       const startY = btnRect.top + btnRect.height / 2 - 20;
-
-      // 计算结束位置（购物车图标中心）
       const endX = cartRect.left + cartRect.width / 2 - 20;
       const endY = cartRect.top + cartRect.height / 2 - 20;
 
-      // 创建飞行元素
       const flyId = this.nextFlyId++;
       this.flyingItems.push({
         id: flyId,
@@ -508,17 +519,14 @@ export default {
         name: product.name
       });
 
-      // 移除动画元素
       setTimeout(() => {
         this.flyingItems = this.flyingItems.filter(item => item.id !== flyId);
       }, 500);
 
-      // 执行加入购物车请求
       this.addToCart(product);
     },
 
     async addToCart(product) {
-      // 再次检查是否已在购物车
       if (this.isInCart(product.id)) {
         this.$message.info('该商品已在购物车中');
         return;
@@ -527,7 +535,6 @@ export default {
       try {
         const res = await addToCart(product.id);
         if (res.code === 200) {
-          // 加入成功后需要重新获取购物车列表以获取 cartItemId
           const cartRes = await getCartList();
           if (cartRes.code === 200) {
             this.cartProductMap.clear();
@@ -540,7 +547,6 @@ export default {
           await this.loadCartSummary();
           this.$bus.$emit('cart-updated');
 
-          // 添加购物车跳动效果
           const cartIcon = this.$refs.floatingCart;
           if (cartIcon) {
             cartIcon.classList.add('cart-bounce');

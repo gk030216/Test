@@ -299,6 +299,7 @@ export default {
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s;
+  background: #f5f7fa;
   color: #606266;
   font-size: 13px;
 }

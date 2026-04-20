@@ -35,6 +35,9 @@ public class ServiceController {
     @Autowired
     private AppointmentMapper appointmentMapper;
 
+    @Autowired
+    private ServiceItemService serviceItemService;
+
     private Integer getUserId(HttpServletRequest request) {
         Integer userId = (Integer) request.getAttribute("userId");
         if (userId == null) {
@@ -102,6 +105,16 @@ public class ServiceController {
     public Result<List<Map<String, Object>>> getHotServices() {
         List<Map<String, Object>> list = itemService.getHotServices(6);
         return Result.success(list);
+    }
+
+    @GetMapping("/hot/list")
+    public Result getHotServiceList(@RequestParam(defaultValue = "4") int limit) {
+        try {
+            List<ServiceItem> list = serviceItemService.getHotServiceItems(limit);
+            return Result.success(list);
+        } catch (Exception e) {
+            return Result.error("获取热门服务失败：" + e.getMessage());
+        }
     }
 
     // ========== 预约接口 ==========

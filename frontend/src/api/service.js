@@ -487,3 +487,11 @@ export function getStaffServiceCommentStatistics() {
         method: 'get'
     });
 }
+
+// 新增接口 - 获取完整的热门服务信息
+export function getHotServiceList() {
+    return request({
+        url: '/service/hot/list',
+        method: 'get'
+    });
+}

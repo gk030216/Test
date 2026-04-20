@@ -92,6 +92,88 @@
             </div>
           </div>
         </div>
+
+        <!-- 服务详情Tab -->
+        <div class="service-tabs">
+          <el-tabs v-model="activeTab">
+
+            <!-- 用户评价Tab -->
+            <el-tab-pane label="用户评价" name="comment">
+              <div class="comment-content">
+                <!-- 评分统计 -->
+                <div class="comment-summary" v-if="ratingStats">
+                  <div class="rating-score">
+                    <span class="score">{{ ratingStats.avg_rating || 0 }}</span>
+                    <el-rate v-model="ratingStats.avg_rating" disabled show-score text-color="#ff9900"></el-rate>
+                    <span class="total">{{ ratingStats.total_count || 0 }}条评价</span>
+                  </div>
+                  <div class="rating-bars">
+                    <div class="rating-bar-item" v-for="i in [5,4,3,2,1]" :key="i">
+                      <span class="star-label">{{ i }}星</span>
+                      <div class="bar">
+                        <div class="bar-fill" :style="{ width: getPercent(i) + '%' }"></div>
+                      </div>
+                      <span class="count">{{ ratingStats['star' + i] || 0 }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 评价列表 -->
+                <div class="comment-list" v-loading="commentLoading">
+                  <div class="comment-item" v-for="comment in commentList" :key="comment.id">
+                    <div class="comment-header">
+                      <el-avatar :size="40" :src="comment.userAvatar" class="comment-avatar">
+                        {{ comment.userName ? comment.userName.charAt(0).toUpperCase() : 'U' }}
+                      </el-avatar>
+                      <div class="comment-info">
+                        <div class="user-info">
+                          <span class="user-name">{{ comment.userName }}</span>
+                          <el-rate v-model="comment.rating" disabled show-score text-color="#ff9900"></el-rate>
+                        </div>
+                        <div class="comment-time">{{ formatDate(comment.createTime) }}</div>
+                      </div>
+                    </div>
+                    <div class="comment-content">{{ comment.content }}</div>
+                    <div class="comment-images" v-if="comment.images">
+                      <el-image
+                          v-for="(img, idx) in comment.images.split(',')"
+                          :key="idx"
+                          :src="img"
+                          :preview-src-list="comment.images.split(',')"
+                          fit="cover"
+                          class="comment-img"
+                      ></el-image>
+                    </div>
+                    <div class="comment-reply" v-if="comment.reply">
+                      <div class="reply-header">
+                        <i class="el-icon-chat-dot-round"></i>
+                        <span>商家回复：</span>
+                      </div>
+                      <div class="reply-content">{{ comment.reply }}</div>
+                      <div class="reply-time">{{ formatDate(comment.replyTime) }}</div>
+                    </div>
+                  </div>
+
+                  <div class="empty-comment" v-if="!commentLoading && commentList.length === 0">
+                    <i class="el-icon-chat-dot-round"></i>
+                    <p>暂无评价，快来发表第一条评价吧！</p>
+                  </div>
+
+                  <div class="comment-pagination" v-if="commentTotal > 10">
+                    <el-pagination
+                        @current-change="handleCommentPageChange"
+                        :current-page="commentPage"
+                        :page-size="10"
+                        layout="prev, pager, next"
+                        :total="commentTotal"
+                        small
+                    ></el-pagination>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
       </div>
     </div>
 
@@ -104,6 +186,7 @@ import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getServiceDetail, getHotServices } from '@/api/service';
 import { addServiceFavorite, removeServiceFavorite, checkServiceFavorite } from '@/api/service';
+import { getServiceComments, getServiceRatingStats } from '@/api/service';
 
 export default {
   name: 'ServiceDetail',
@@ -114,7 +197,14 @@ export default {
       service: {},
       currentImage: '',
       recommendServices: [],
-      isFavorited: false
+      isFavorited: false,
+      // 评价相关
+      commentLoading: false,
+      commentList: [],
+      commentPage: 1,
+      commentTotal: 0,
+      ratingStats: null,
+      activeTab: 'detail',
     };
   },
   computed: {
@@ -141,12 +231,15 @@ export default {
     this.loadService();
     this.loadRecommend();
     this.checkFavoriteStatus();
+    this.loadComments();
+    this.loadRatingStats();
   },
   methods: {
     async loadService() {
       this.loading = true;
       try {
         const res = await getServiceDetail(this.serviceId);
+        console.log('服务详情数据:', res.data);
         if (res.code === 200) {
           this.service = res.data;
           this.currentImage = this.service.image;
@@ -161,6 +254,46 @@ export default {
       }
     },
 
+    // 加载评价列表
+    async loadComments() {
+      this.commentLoading = true;
+      try {
+        const res = await getServiceComments(this.serviceId, this.commentPage);
+        if (res.code === 200) {
+          this.commentList = res.data.list || [];
+          this.commentTotal = res.data.total || 0;
+        }
+      } catch (error) {
+        console.error('加载评价失败', error);
+      } finally {
+        this.commentLoading = false;
+      }
+    },
+
+// 加载评分统计
+    async loadRatingStats() {
+      try {
+        const res = await getServiceRatingStats(this.serviceId);
+        if (res.code === 200) {
+          this.ratingStats = res.data;
+        }
+      } catch (error) {
+        console.error('加载评分统计失败', error);
+      }
+    },
+
+// 计算百分比
+    getPercent(star) {
+      if (!this.ratingStats || this.ratingStats.total_count === 0) return 0;
+      return (this.ratingStats['star' + star] / this.ratingStats.total_count) * 100;
+    },
+
+// 分页切换
+    handleCommentPageChange(page) {
+      this.commentPage = page;
+      this.loadComments();
+    },
+
     async loadRecommend() {
       try {
         const res = await getHotServices();
@@ -170,6 +303,20 @@ export default {
       } catch (error) {
         console.error('加载推荐失败', error);
       }
+    },
+
+    formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      const now = new Date();
+      const diff = now - d;
+
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+      if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     },
 
     async checkFavoriteStatus() {
@@ -624,5 +771,214 @@ export default {
   .recommend-img {
     height: 120px;
   }
+}
+
+/* 服务详情Tab */
+.service-tabs {
+  margin-top: 20px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #eef2f6;
+}
+
+.service-tabs ::v-deep .el-tabs__header {
+  margin-bottom: 16px;
+}
+
+.service-tabs ::v-deep .el-tabs__item {
+  font-size: 14px;
+}
+
+.service-tabs ::v-deep .el-tabs__item.is-active {
+  color: #409EFF;
+}
+
+.service-tabs ::v-deep .el-tabs__active-bar {
+  background-color: #409EFF;
+}
+
+.service-full-description {
+  color: #606266;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+/* 评价区域样式 */
+.comment-summary {
+  display: flex;
+  gap: 30px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.rating-score {
+  text-align: center;
+  min-width: 130px;
+}
+
+.score {
+  font-size: 40px;
+  font-weight: bold;
+  color: #ff9900;
+}
+
+.rating-bars {
+  flex: 1;
+}
+
+.rating-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.star-label {
+  width: 35px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.bar {
+  flex: 1;
+  height: 6px;
+  background: #e8eaef;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: #ff9900;
+  border-radius: 3px;
+}
+
+.count {
+  width: 35px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.comment-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.comment-item {
+  padding: 16px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.comment-avatar {
+  background: #409EFF;
+  color: white;
+  flex-shrink: 0;
+}
+
+.comment-info {
+  flex: 1;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 13px;
+}
+
+.comment-time {
+  font-size: 11px;
+  color: #909399;
+}
+
+.comment-content {
+  color: #606266;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.comment-images {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.comment-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.comment-reply {
+  background: #f5f7fa;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border-left: 2px solid #67c23a;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #67c23a;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.reply-content {
+  color: #606266;
+  line-height: 1.5;
+  font-size: 12px;
+}
+
+.reply-time {
+  font-size: 10px;
+  color: #c0c4cc;
+  margin-top: 4px;
+}
+
+.empty-comment {
+  text-align: center;
+  padding: 40px;
+  color: #909399;
+}
+
+.empty-comment i {
+  font-size: 48px;
+  margin-bottom: 12px;
+  color: #c0c4cc;
+}
+
+.comment-pagination {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
 }
 </style>

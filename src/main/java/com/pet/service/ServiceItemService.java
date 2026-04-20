@@ -16,6 +16,9 @@ public interface ServiceItemService {
     // 获取热门服务
     List<Map<String, Object>> getHotServices(int limit);
 
+    // 新增方法 - 获取热门服务完整信息
+    List<ServiceItem> getHotServiceItems(int limit);
+
     // 后台：获取服务列表
     Map<String, Object> getAdminItemList(Integer page, Integer pageSize,
                                          String keyword, Integer categoryId, Integer status);

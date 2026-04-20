@@ -4,6 +4,15 @@
 
     <div class="return-content">
       <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="top-nav">
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/cart' }">购物车</el-breadcrumb-item>
+            <el-breadcrumb-item>支付结果</el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+
         <div class="return-card" v-loading="loading">
           <div v-if="loading" class="loading-state">
             <i class="el-icon-loading"></i>
@@ -12,20 +21,20 @@
           </div>
 
           <div v-else-if="success" class="success-state">
-            <i class="el-icon-success"></i>
+            <i class="el-icon-circle-check"></i>
             <h2>支付成功</h2>
             <p>{{ successMessage }}</p>
             <div class="order-info" v-if="orderInfo">
               <div class="info-item">
-                <span>{{ orderType === 'service' ? '预约编号：' : '订单号：' }}</span>
+                <span>{{ orderType === 'service' ? '预约编号' : '订单号' }}</span>
                 <span>{{ orderInfo.appointmentNo || orderInfo.orderNo }}</span>
               </div>
               <div class="info-item">
-                <span>支付金额：</span>
+                <span>支付金额</span>
                 <span class="amount">¥{{ orderInfo.servicePrice || orderInfo.payAmount }}</span>
               </div>
               <div class="info-item">
-                <span>支付时间：</span>
+                <span>支付时间</span>
                 <span>{{ orderInfo.payTime ? formatDateTime(orderInfo.payTime) : '刚刚' }}</span>
               </div>
             </div>
@@ -33,7 +42,7 @@
               <el-button type="primary" @click="goToOrders">
                 {{ orderType === 'service' ? '查看预约' : '查看订单' }}
               </el-button>
-              <el-button @click="goToHome">
+              <el-button plain @click="goToHome">
                 {{ orderType === 'service' ? '继续预约' : '继续购物' }}
               </el-button>
             </div>
@@ -45,11 +54,11 @@
             <p>{{ errorMessage || '支付已提交，正在处理中，请稍后查看订单状态' }}</p>
             <div class="order-info" v-if="orderInfo">
               <div class="info-item">
-                <span>{{ orderType === 'service' ? '预约编号：' : '订单号：' }}</span>
+                <span>{{ orderType === 'service' ? '预约编号' : '订单号' }}</span>
                 <span>{{ orderInfo.appointmentNo || orderInfo.orderNo }}</span>
               </div>
               <div class="info-item">
-                <span>支付金额：</span>
+                <span>支付金额</span>
                 <span class="amount">¥{{ orderInfo.servicePrice || orderInfo.payAmount }}</span>
               </div>
             </div>
@@ -57,7 +66,7 @@
               <el-button type="primary" @click="retryQuery" :loading="retrying">
                 <i class="el-icon-refresh"></i> 重新查询
               </el-button>
-              <el-button @click="goToOrders">
+              <el-button plain @click="goToOrders">
                 {{ orderType === 'service' ? '查看预约' : '查看订单' }}
               </el-button>
             </div>
@@ -130,10 +139,8 @@ export default {
         return;
       }
 
-      // 保存订单号到 localStorage，供后续查询使用
       localStorage.setItem('lastOrderNo', this.orderNo);
 
-      // 判断订单类型
       if (this.orderNo.startsWith('AP')) {
         this.orderType = 'service';
         this.successMessage = '您的预约已支付成功，请等待商家确认';
@@ -159,7 +166,6 @@ export default {
         if (res.code === 200 && res.data) {
           this.orderInfo = res.data;
 
-          // 检查支付状态
           if (res.data.payStatus === 1) {
             this.success = true;
             this.loading = false;
@@ -168,7 +174,6 @@ export default {
             return;
           }
 
-          // 检查预约状态是否为已取消或已拒绝
           if (res.data.status === 4 || res.data.status === 5) {
             this.loading = false;
             this.success = false;
@@ -178,7 +183,6 @@ export default {
           }
         }
 
-        // 未支付成功，尝试重试
         this.retryCount++;
         if (this.retryCount < this.maxRetry) {
           const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
@@ -187,7 +191,6 @@ export default {
             this.doCheckAppointmentResult();
           }, delay);
         } else {
-          // 重试次数用尽，显示处理中状态
           this.loading = false;
           this.success = false;
           this.errorMessage = '支付处理中，请稍后查看订单状态';
@@ -349,12 +352,12 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .return-content {
   flex: 1;
-  padding: 60px 0;
+  padding: 30px 0 60px;
 }
 
 .container {
@@ -363,19 +366,51 @@ export default {
   padding: 0 20px;
 }
 
+/* 顶部导航栏 */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  flex: 1;
+}
+
+.back-btn {
+  border-radius: 8px;
+  color: #606266;
+  background: white;
+  border: 1px solid #eef2f6;
+  padding: 8px 16px;
+  font-size: 13px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.back-btn:hover {
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
+}
+
+/* 返回卡片 */
 .return-card {
   background: white;
-  border-radius: 24px;
-  padding: 60px 40px;
+  border-radius: 12px;
+  padding: 40px;
   text-align: center;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
 }
 
 .loading-state i,
 .success-state i,
 .failed-state i {
-  font-size: 80px;
-  margin-bottom: 20px;
+  font-size: 64px;
+  margin-bottom: 16px;
 }
 
 .loading-state i {
@@ -397,26 +432,29 @@ export default {
 }
 
 .loading-tip {
-  font-size: 13px;
-  color: #999;
+  font-size: 12px;
+  color: #909399;
   margin-top: 8px;
 }
 
 .return-card h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
-  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3e50;
 }
 
 .return-card p {
-  color: #666;
-  margin-bottom: 30px;
+  color: #606266;
+  font-size: 14px;
+  margin-bottom: 24px;
 }
 
+/* 订单信息 */
 .order-info {
-  background: #f8f9fc;
-  border-radius: 16px;
-  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px 20px;
   margin: 20px 0;
   text-align: left;
 }
@@ -424,39 +462,99 @@ export default {
 .info-item {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 8px 0;
+  color: #606266;
+  font-size: 14px;
 }
 
 .info-item .amount {
-  color: #ff6b6b;
+  color: #f56c6c;
   font-size: 18px;
   font-weight: bold;
 }
 
+/* 按钮区域 */
 .actions {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   justify-content: center;
   margin-top: 20px;
 }
 
+.actions .el-button {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+.actions .el-button--primary {
+  background: #409EFF;
+  border: none;
+}
+
+.actions .el-button--primary:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+.actions .el-button--plain {
+  border-color: #eef2f6;
+  color: #606266;
+}
+
+.actions .el-button--plain:hover {
+  border-color: #409EFF;
+  color: #409EFF;
+}
+
 .tip-text {
   margin-top: 20px;
-  font-size: 13px;
-  color: #999;
+  font-size: 12px;
+  color: #909399;
 }
 
 .tip-text i {
   margin-right: 4px;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
+  .return-content {
+    padding: 20px 0 40px;
+  }
+
+  .top-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .back-btn {
+    margin-left: 0;
+    padding: 6px 12px;
+  }
+
   .return-card {
-    padding: 40px 20px;
+    padding: 30px 20px;
+  }
+
+  .loading-state i,
+  .success-state i,
+  .failed-state i {
+    font-size: 48px;
+  }
+
+  .return-card h2 {
+    font-size: 18px;
   }
 
   .actions {
     flex-direction: column;
+  }
+
+  .actions .el-button {
+    width: 100%;
   }
 }
 </style>

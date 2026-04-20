@@ -19,81 +19,149 @@ public class JwtInterceptor implements HandlerInterceptor {
 
         String requestUri = request.getRequestURI();
 
-        // 放行 AI 相关接口
+        // ========== 1. AI相关接口 ==========
         if (requestUri.startsWith("/api/ai/")) {
             return true;
         }
 
-        // 放行系统设置接口（不需要登录）
+        // ========== 2. 系统设置接口 ==========
         if (requestUri.equals("/api/admin/settings")) {
             return true;
         }
 
-        // 放行轮播图接口（不需要登录）
+        // ========== 3. 轮播图接口 ==========
         if (requestUri.equals("/api/carousel/list")) {
             return true;
         }
 
-        // 放行服务分类接口（前台不需要登录）
+        // ========== 4. 服务相关接口 ==========
         if (requestUri.equals("/api/service/category/list")) {
             return true;
         }
-
-        // 放行服务列表接口（前台不需要登录）
-        if (requestUri.startsWith("/api/service/list") || requestUri.matches("/api/service/\\d+")) {
+        if (requestUri.startsWith("/api/service/list")) {
+            return true;
+        }
+        if (requestUri.matches("/api/service/\\d+")) {
+            return true;
+        }
+        if (requestUri.equals("/api/service/hot") || requestUri.equals("/api/service/hot/list")) {
             return true;
         }
 
-        // 放行热门服务接口（前台不需要登录）
-        if (requestUri.equals("/api/service/hot")) {
+        // 服务评价列表
+        if (requestUri.matches("/api/service/comment/service/\\d+")) {
+            return true;
+        }
+        // 服务评价统计
+        if (requestUri.matches("/api/service/comment/service/\\d+/stats")) {
             return true;
         }
 
-        // 放行商品相关接口（前台不需要登录）
-        if (requestUri.startsWith("/api/product/list") ||
-                requestUri.matches("/api/product/\\d+") ||
-                requestUri.equals("/api/product/hot") ||
-                requestUri.equals("/api/product/new")) {
+        // ========== 5. 商品相关接口（商城） ==========
+        // 商品列表
+        if (requestUri.equals("/api/product/list") || requestUri.startsWith("/api/product/list")) {
+            return true;
+        }
+        // 商品分页
+        if (requestUri.equals("/api/product/page") || requestUri.startsWith("/api/product/page")) {
+            return true;
+        }
+        // 商品详情 /api/product/123
+        if (requestUri.matches("/api/product/\\d+")) {
+            return true;
+        }
+        // 热门商品
+        if (requestUri.equals("/api/product/hot")) {
+            return true;
+        }
+        // 新品商品
+        if (requestUri.equals("/api/product/new")) {
+            return true;
+        }
+        // 商品分类列表
+        if (requestUri.equals("/api/admin/category/all") || requestUri.equals("/api/category/all")) {
+            return true;
+        }
+        // 商品分类列表
+        if (requestUri.equals("/api/product/category/list")) {
+            return true;
+        }
+        // 商品分类详情
+        if (requestUri.matches("/api/product/category/\\d+")) {
+            return true;
+        }
+        // 商品搜索
+        if (requestUri.startsWith("/api/product/search")) {
             return true;
         }
 
-        // 放行社区帖子列表（不需要登录）
-        if (requestUri.equals("/api/community/posts")) {
+        // 商品评价接口
+        if (requestUri.matches("/api/comment/product/\\d+")) {
             return true;
         }
 
-        // 放行登录注册等接口
+        if (requestUri.matches("/api/comment/product/\\d+/stats")) {
+            return true;
+        }
+
+        // ========== 6. 社区相关接口 ==========
+        if (requestUri.equals("/api/community/posts") || requestUri.equals("/api/community/post/list")) {
+            return true;
+        }
+        if (requestUri.matches("/api/community/post/\\d+")) {
+            return true;
+        }
+
+        // ========== 7. 公告相关接口 ==========
+        if (requestUri.equals("/api/consultation-notice/home")) {
+            return true;
+        }
+        if (requestUri.equals("/api/consultation-notice/list")) {
+            return true;
+        }
+        if (requestUri.matches("/api/consultation-notice/\\d+")) {
+            return true;
+        }
+        if (requestUri.equals("/api/consultation-notice/top")) {
+            return true;
+        }
+
+        // ========== 8. 用户认证相关接口 ==========
         if (requestUri.equals("/api/user/login") ||
                 requestUri.equals("/api/user/register") ||
                 requestUri.equals("/api/user/reset-password") ||
                 requestUri.equals("/api/user/check-username") ||
-                requestUri.equals("/api/user/check-email") ||
-                requestUri.startsWith("/api/code/") ||
-                requestUri.equals("/api/pay/alipay/notify")) {
+                requestUri.equals("/api/user/check-email")) {
             return true;
         }
 
-        // 获取请求头中的 token
+        // ========== 9. 验证码接口 ==========
+        if (requestUri.startsWith("/api/code/")) {
+            return true;
+        }
+
+        // ========== 10. 支付回调接口 ==========
+        if (requestUri.equals("/api/pay/alipay/notify")) {
+            return true;
+        }
+
+        // ========== 需要登录验证的接口 ==========
         String token = request.getHeader("Authorization");
 
-        // 检查 token 是否存在
         if (token == null || token.isEmpty()) {
             sendErrorResponse(response, 401, "未登录，请先登录");
             return false;
         }
 
-        // 移除 Bearer 前缀（如果有）
         if (token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
 
-        // 验证 token
         if (!JwtUtil.validateToken(token)) {
             sendErrorResponse(response, 401, "Token无效或已过期，请重新登录");
             return false;
         }
 
-        // 将用户信息存入请求属性中
         Integer userId = JwtUtil.getUserIdFromToken(token);
         String username = JwtUtil.getUsernameFromToken(token);
         Integer role = JwtUtil.getRoleFromToken(token);

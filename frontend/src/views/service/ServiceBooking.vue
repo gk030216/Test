@@ -4,7 +4,7 @@
 
     <div class="booking-content">
       <div class="container">
-        <!-- 顶部导航栏：面包屑 + 返回按钮同一行 -->
+        <!-- 顶部导航栏 -->
         <div class="top-nav">
           <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
@@ -29,14 +29,13 @@
             </div>
           </div>
 
-          <!-- 选择宠物 - 只显示默认宠物 + 切换按钮 -->
+          <!-- 选择宠物 -->
           <div class="form-card">
             <div class="form-title">
               <i class="el-icon-s-custom"></i>
               <span>选择宠物</span>
             </div>
 
-            <!-- 显示当前选中的宠物 -->
             <div class="selected-pet" v-if="currentSelectedPet">
               <div class="selected-pet-info">
                 <el-avatar :size="50" :src="currentSelectedPet.avatar" class="pet-avatar">
@@ -52,7 +51,6 @@
               </el-button>
             </div>
 
-            <!-- 无宠物提示 -->
             <div class="empty-pets" v-else>
               <i class="el-icon-warning"></i>
               <p>暂无宠物信息，请先添加宠物</p>
@@ -67,11 +65,10 @@
               <span>选择时间</span>
             </div>
             <div class="date-section">
-              <div class="date-label">预约日期</div>
               <el-date-picker
                   v-model="bookingDate"
                   type="date"
-                  placeholder="请选择日期"
+                  placeholder="请选择预约日期"
                   :disabled-date="disabledDate"
                   format="yyyy年MM月dd日"
                   value-format="yyyy-MM-dd"
@@ -81,24 +78,27 @@
               <div class="date-tip">可预约未来15天内的服务</div>
             </div>
             <div class="time-section">
-              <div class="time-label">预约时段</div>
-              <div class="time-list">
+              <div class="time-list" v-loading="timeLoading">
                 <div
                     v-for="time in timeSlots"
                     :key="time.value"
                     :class="['time-item', {
                       active: selectedTime === time.value,
                       disabled: isTimeDisabled(time.value),
-                      conflict: timeConflict === time.value
+                      conflict: timeConflictMap[time.value],
+                      loading: loadingTimes.includes(time.value)
                     }]"
                     @click="selectTime(time.value)"
                 >
-                  {{ time.label }}
-                  <span v-if="timeConflict === time.value" class="conflict-tag">已预约</span>
+                  <span class="time-label-text">{{ time.label }}</span>
+                  <span v-if="loadingTimes.includes(time.value)" class="time-loading">
+                    <i class="el-icon-loading"></i>
+                  </span>
+                  <span v-else-if="timeConflictMap[time.value]" class="conflict-tag">已预约</span>
                 </div>
               </div>
-              <div v-if="timeConflict" class="conflict-warning">
-                <i class="el-icon-warning"></i> 您在该时间段已有其他预约，请选择其他时间
+              <div v-if="hasAnyConflict" class="conflict-warning">
+                <i class="el-icon-warning"></i> 部分时段已被预约，请选择其他时间
               </div>
             </div>
           </div>
@@ -208,17 +208,19 @@ export default {
     return {
       loading: false,
       submitting: false,
+      timeLoading: false,
       service: {},
-      allPetList: [],           // 所有宠物列表
-      currentSelectedPet: null, // 当前选中的宠物
+      allPetList: [],
+      currentSelectedPet: null,
       selectedPetId: null,
       bookingDate: '',
       selectedTime: '',
       remark: '',
-      timeConflict: null,
-      // 宠物对话框
+      loadingTimes: [],
       petDialogVisible: false,
       tempSelectedPetId: null,
+      // 冲突状态映射表
+      timeConflictMap: {},
       timeSlots: [
         { label: '09:00-10:00', value: '09:00-10:00' },
         { label: '10:00-11:00', value: '10:00-11:00' },
@@ -227,7 +229,8 @@ export default {
         { label: '14:00-15:00', value: '14:00-15:00' },
         { label: '15:00-16:00', value: '15:00-16:00' },
         { label: '16:00-17:00', value: '16:00-17:00' }
-      ]
+      ],
+      conflictCache: new Map()
     };
   },
   computed: {
@@ -235,12 +238,25 @@ export default {
       return this.$route.params.id;
     },
     canSubmit() {
-      return this.selectedPetId && this.bookingDate && this.selectedTime && this.timeConflict !== this.selectedTime;
+      return this.selectedPetId && this.bookingDate && this.selectedTime && !this.timeConflictMap[this.selectedTime];
+    },
+    // 是否有任何冲突时段
+    hasAnyConflict() {
+      return Object.values(this.timeConflictMap).some(v => v === true);
     }
   },
   created() {
     this.loadService();
     this.loadPets();
+  },
+  watch: {
+    bookingDate(newDate, oldDate) {
+      if (newDate !== oldDate) {
+        this.selectedTime = '';
+        this.timeConflictMap = {};
+        this.conflictCache.clear();
+      }
+    }
   },
   methods: {
     async loadService() {
@@ -266,13 +282,11 @@ export default {
         if (res.code === 200) {
           this.allPetList = res.data || [];
           if (this.allPetList.length > 0) {
-            // 默认选中默认宠物
             const defaultPet = this.allPetList.find(p => p.isDefault === 1);
             if (defaultPet) {
               this.currentSelectedPet = defaultPet;
               this.selectedPetId = defaultPet.id;
             } else {
-              // 没有默认宠物，选中第一个
               this.currentSelectedPet = this.allPetList[0];
               this.selectedPetId = this.allPetList[0].id;
             }
@@ -283,13 +297,11 @@ export default {
       }
     },
 
-    // 打开宠物选择对话框
     openPetDialog() {
       this.tempSelectedPetId = this.selectedPetId;
       this.petDialogVisible = true;
     },
 
-    // 确认选择宠物
     confirmPetSelect() {
       const selected = this.allPetList.find(pet => pet.id === this.tempSelectedPetId);
       if (selected) {
@@ -304,22 +316,30 @@ export default {
     disabledDate(time) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       const maxDate = new Date();
       maxDate.setDate(maxDate.getDate() + 15);
       maxDate.setHours(23, 59, 59, 999);
-
       return time.getTime() < today.getTime() || time.getTime() > maxDate.getTime();
     },
 
+    // 日期变化时自动批量检查所有时间段冲突
     handleDateChange() {
       this.selectedTime = '';
-      this.timeConflict = null;
+      this.timeConflictMap = {};
+      this.conflictCache.clear();
+
+      if (this.bookingDate) {
+        this.checkAllTimeConflicts();
+      }
     },
 
-    async checkTimeConflict(timeValue) {
-      if (!this.bookingDate) {
-        return false;
+    // 检查单个时间段的冲突（带缓存）
+    async checkSingleTimeConflict(timeValue) {
+      if (!this.bookingDate) return false;
+
+      const cacheKey = `${this.bookingDate}_${timeValue}`;
+      if (this.conflictCache.has(cacheKey)) {
+        return this.conflictCache.get(cacheKey);
       }
 
       try {
@@ -327,37 +347,90 @@ export default {
           appointmentDate: this.bookingDate,
           appointmentTime: timeValue
         });
-
-        if (res.code === 200) {
-          return res.data.hasConflict === true;
-        }
-        return false;
+        const hasConflict = res.code === 200 && res.data.hasConflict === true;
+        this.conflictCache.set(cacheKey, hasConflict);
+        return hasConflict;
       } catch (error) {
         console.error('检查时间冲突失败', error);
         return false;
       }
     },
 
+    // 批量检查所有时间段冲突
+    async checkAllTimeConflicts() {
+      if (!this.bookingDate) return;
+
+      this.timeLoading = true;
+      this.loadingTimes = this.timeSlots.map(t => t.value);
+
+      try {
+        const promises = this.timeSlots.map(time =>
+            this.checkSingleTimeConflict(time.value)
+        );
+        const results = await Promise.all(promises);
+
+        // 更新冲突状态映射表
+        const newConflictMap = {};
+        for (let i = 0; i < this.timeSlots.length; i++) {
+          const timeValue = this.timeSlots[i].value;
+          newConflictMap[timeValue] = results[i];
+        }
+        this.timeConflictMap = newConflictMap;
+      } catch (error) {
+        console.error('批量检查时间冲突失败', error);
+      } finally {
+        this.timeLoading = false;
+        this.loadingTimes = [];
+      }
+    },
+
+    // 选择时间
     async selectTime(time) {
+      // 先判断是否禁用（过去日期或当天已过时段）
       if (this.isTimeDisabled(time)) {
+        const selectedDate = new Date(this.bookingDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + 15);
+        maxDate.setHours(23, 59, 59, 999);
+
+        if (selectedDate < today) {
+          this.$message.warning('选择的日期已过期，请重新选择日期');
+        } else if (selectedDate > maxDate) {
+          this.$message.warning('只能预约未来15天内的服务，请重新选择日期');
+        } else {
+          this.$message.warning('该时段已过，请选择其他时间');
+        }
         return;
       }
 
-      const hasConflict = await this.checkTimeConflict(time);
-
-      if (hasConflict) {
-        this.timeConflict = time;
-        this.$message.warning('您在该时间段已有其他预约，请选择其他时间');
+      // 检查是否已被预约
+      if (this.timeConflictMap[time]) {
+        this.$message.warning('该时段已被预约，请选择其他时间');
         return;
       }
 
-      this.timeConflict = null;
       this.selectedTime = time;
     },
 
+    // 判断时间段是否禁用（过去日期/未来15天外/当天已过时段）
     isTimeDisabled(time) {
-      if (!this.bookingDate) return false;
-      if (this.bookingDate === this.formatDate(new Date())) {
+      if (!this.bookingDate) return true;
+
+      const selectedDate = new Date(this.bookingDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + 15);
+      maxDate.setHours(23, 59, 59, 999);
+
+      // 过去日期：所有时间段禁用
+      if (selectedDate < today) return true;
+      // 未来15天之外：所有时间段禁用
+      if (selectedDate > maxDate) return true;
+      // 当天：只禁用已过时段
+      if (selectedDate.getTime() === today.getTime()) {
         const hour = parseInt(time.split(':')[0]);
         const currentHour = new Date().getHours();
         return hour <= currentHour;
@@ -377,7 +450,10 @@ export default {
 
     async submitBooking() {
       if (!this.canSubmit) {
-        this.$message.warning('请完整填写预约信息');
+        if (!this.selectedPetId) this.$message.warning('请选择宠物');
+        else if (!this.bookingDate) this.$message.warning('请选择预约日期');
+        else if (!this.selectedTime) this.$message.warning('请选择预约时段');
+        else if (this.timeConflictMap[this.selectedTime]) this.$message.warning('该时段已被预约，请选择其他时间');
         return;
       }
 
@@ -568,6 +644,162 @@ export default {
   border-radius: 8px;
 }
 
+/* 日期和时段 */
+.date-section, .time-section {
+  margin-bottom: 20px;
+}
+
+.date-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 6px;
+}
+
+/* 时间列表 */
+.time-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.time-item {
+  position: relative;
+  padding: 8px 20px;
+  border: 1px solid #eef2f6;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  color: #606266;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fafbfc;
+}
+
+.time-item:hover:not(.disabled):not(.conflict) {
+  border-color: #409EFF;
+  color: #409EFF;
+  background: #ecf5ff;
+}
+
+.time-item.active {
+  background: #409EFF;
+  border-color: #409EFF;
+  color: white;
+}
+
+.time-item.disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+  background: #f5f7fa;
+}
+
+.time-item.conflict {
+  background: #fef0f0;
+  border-color: #f56c6c;
+  color: #f56c6c;
+  cursor: not-allowed;
+}
+
+.time-loading i {
+  font-size: 12px;
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.conflict-tag {
+  font-size: 10px;
+  background: #f56c6c;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.conflict-warning {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fef0f0;
+  border-radius: 8px;
+  color: #f56c6c;
+  font-size: 13px;
+}
+
+.conflict-warning i {
+  margin-right: 6px;
+}
+
+/* 订单卡片 */
+.order-card {
+  background: #f5f7fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #eef2f6;
+}
+
+.order-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  color: #606266;
+}
+
+.order-row.total {
+  padding-top: 15px;
+  margin-top: 10px;
+  border-top: 1px solid #eef2f6;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.total-price {
+  color: #f56c6c;
+  font-size: 24px;
+}
+
+/* 提交按钮 */
+.submit-section {
+  text-align: center;
+}
+
+.submit-btn {
+  background: #409EFF;
+  border: none;
+  padding: 12px 0;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
+  width: 100%;
+  transition: all 0.3s;
+}
+
+.submit-btn:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  background: #a0cfff;
+  opacity: 0.7;
+  transform: none;
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  color: #c0c4cc;
+  font-size: 24px;
+}
+
 /* 宠物对话框 */
 .pet-dialog ::v-deep .el-dialog {
   border-radius: 16px;
@@ -583,10 +815,6 @@ export default {
 .pet-dialog ::v-deep .el-dialog__title {
   color: white;
   font-weight: 500;
-}
-
-.pet-dialog ::v-deep .el-dialog__close {
-  color: white;
 }
 
 .pet-dialog-content {
@@ -670,160 +898,6 @@ export default {
   text-align: right;
   padding-top: 16px;
   border-top: 1px solid #eef2f6;
-}
-
-/* 时间选择 */
-.date-section, .time-section {
-  margin-bottom: 20px;
-}
-
-.date-label, .time-label {
-  font-size: 14px;
-  color: #606266;
-  margin-bottom: 10px;
-  font-weight: 500;
-}
-
-.date-tip {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 8px;
-}
-
-.time-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.time-item {
-  padding: 8px 20px;
-  border: 1px solid #eef2f6;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 14px;
-  color: #606266;
-}
-
-.time-item:hover {
-  border-color: #409EFF;
-  color: #409EFF;
-}
-
-.time-item.active {
-  background: #409EFF;
-  border-color: #409EFF;
-  color: white;
-}
-
-.time-item.disabled {
-  color: #c0c4cc;
-  cursor: not-allowed;
-  background: #f5f7fa;
-}
-
-.time-item.disabled:hover {
-  border-color: #eef2f6;
-  color: #c0c4cc;
-}
-
-/* 订单卡片 */
-.order-card {
-  background: #f5f7fa;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  border: 1px solid #eef2f6;
-}
-
-.order-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  color: #606266;
-}
-
-.order-row.total {
-  padding-top: 15px;
-  margin-top: 10px;
-  border-top: 1px solid #eef2f6;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.total-price {
-  color: #f56c6c;
-  font-size: 24px;
-}
-
-/* 提交按钮 */
-.submit-section {
-  text-align: center;
-}
-
-.submit-btn {
-  background: #409EFF;
-  border: none;
-  padding: 12px 0;
-  font-size: 16px;
-  font-weight: 500;
-  border-radius: 8px;
-  width: 100%;
-  transition: all 0.3s;
-}
-
-.submit-btn:hover {
-  background: #66b1ff;
-  transform: translateY(-1px);
-}
-
-.submit-btn:disabled {
-  background: #a0cfff;
-  opacity: 0.7;
-  transform: none;
-}
-
-.image-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  background: #f5f7fa;
-  color: #c0c4cc;
-  font-size: 24px;
-}
-
-/* 冲突样式 */
-.time-item.conflict {
-  background: #fef0f0;
-  border-color: #f56c6c;
-  color: #f56c6c;
-  cursor: not-allowed;
-  position: relative;
-}
-
-.conflict-tag {
-  font-size: 10px;
-  margin-left: 4px;
-  background: #f56c6c;
-  color: white;
-  padding: 2px 4px;
-  border-radius: 4px;
-}
-
-.conflict-warning {
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #fef0f0;
-  border-radius: 8px;
-  color: #f56c6c;
-  font-size: 13px;
-}
-
-.conflict-warning i {
-  margin-right: 6px;
 }
 
 /* 响应式 */

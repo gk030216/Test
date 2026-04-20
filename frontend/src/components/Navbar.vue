@@ -14,6 +14,10 @@
           <i class="el-icon-s-home"></i>
           <span>首页</span>
         </div>
+        <div class="nav-item" @click="goToNotices">
+          <i class="el-icon-megaphone"></i>
+          <span>公告消息</span>
+        </div>
         <div class="nav-item" @click="goToServices">
           <i class="el-icon-service"></i>
           <span>服务预约</span>
@@ -39,7 +43,7 @@
       <!-- 右侧用户区域 -->
       <div class="user-area">
         <!-- 消息提醒图标 -->
-        <div class="notification-icon" @click="goToNotifications">
+        <div class="notification-icon" @click="goToNotifications" v-if="isLoggedIn">
           <i class="el-icon-bell"></i>
           <span class="notification-badge" v-if="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
         </div>
@@ -63,7 +67,7 @@
             <el-dropdown-item command="profile">
               <i class="el-icon-user"></i> 个人中心
             </el-dropdown-item>
-            <el-dropdown-item command="notifications" divided>
+            <el-dropdown-item v-if="isLoggedIn" command="notifications" divided>
               <i class="el-icon-bell"></i> 消息通知
               <span v-if="unreadCount > 0" class="dropdown-badge">{{ unreadCount }}</span>
             </el-dropdown-item>
@@ -123,6 +127,7 @@
 
 <script>
 import { getUnreadCount, getNotificationList, markAsRead, markAllAsRead } from '@/api/notification';
+import { getSettings } from '@/api/settings';
 
 export default {
   name: 'Navbar',
@@ -215,6 +220,7 @@ export default {
   },
   methods: {
     loadSettings() {
+      // 先尝试从缓存读取
       const settings = localStorage.getItem('systemSettings');
       if (settings) {
         try {
@@ -224,6 +230,24 @@ export default {
         } catch (e) {
           console.error('解析系统设置失败', e);
         }
+      }
+
+      // 从后端获取最新设置
+      this.fetchSettings();
+    },
+
+// 新增方法
+    async fetchSettings() {
+      try {
+        const res = await getSettings();
+        if (res.code === 200) {
+          localStorage.setItem('systemSettings', JSON.stringify(res.data));
+          const basic = res.data.basic;
+          this.siteName = basic.siteName || '宠物服务系统';
+          this.siteLogo = basic.siteLogo || '';
+        }
+      } catch (error) {
+        console.error('获取系统设置失败', error);
       }
     },
 
@@ -370,6 +394,9 @@ export default {
     goToHome() {
       this.$router.push('/');
     },
+    goToNotices() {
+      this.$router.push('/notices');
+    },
     goToServices() {
       this.$router.push('/services');
     },
@@ -405,6 +432,17 @@ export default {
       this.$router.push('/my-pets');
     },
     goToAIChat() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录，才能使用AI智能咨询', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        }).catch(() => {});
+        return;
+      }
       this.$router.push('/ai-chat');
     },
 
