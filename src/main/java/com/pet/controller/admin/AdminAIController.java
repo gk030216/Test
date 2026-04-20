@@ -112,15 +112,31 @@ public class AdminAIController {
         }
     }
 
+    /**
+     * 获取有对话记录的用户列表
+     */
+    @GetMapping("/history/users")
+    public Result<List<Map<String, Object>>> getUserListWithHistory(
+            @RequestParam(required = false) String keyword) {
+        try {
+            List<Map<String, Object>> userList = aiService.getUserListWithHistory(keyword);
+            return Result.success(userList);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     // ============= 常见问题管理 =============
 
     @GetMapping("/faq/list")
     public Result<Map<String, Object>> getFaqList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Integer status) {
         try {
-            Map<String, Object> result = aiService.getFaqList(page, pageSize, keyword);
+            Map<String, Object> result = aiService.getFaqList(page, pageSize, keyword, category, status);
             return Result.success(result);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -321,4 +337,70 @@ public class AdminAIController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * AI生成内容（根据标题）
+     */
+    @PostMapping("/generate-content")
+    public Result<Map<String, String>> generateContent(@RequestBody Map<String, String> params) {
+        try {
+            String title = params.get("title");
+            String category = params.get("category");
+
+            if (title == null || title.trim().isEmpty()) {
+                return Result.error("标题不能为空");
+            }
+
+            // 调用AI服务生成内容
+            String content = aiService.generateContent(title, category);
+
+            Map<String, String> result = new HashMap<>();
+            result.put("content", content);
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("AI生成失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 知识库转为常见问题
+     */
+    @PostMapping("/knowledge/convert-to-faq")
+    public Result<?> convertKnowledgeToFaq(@RequestBody Map<String, Object> params) {
+        try {
+            Integer knowledgeId = (Integer) params.get("id");
+            String title = (String) params.get("title");
+            String content = (String) params.get("content");
+            String category = (String) params.get("category");
+
+            if (title == null || title.isEmpty()) {
+                return Result.error("标题不能为空");
+            }
+
+            // ✅ 检查是否已存在相同问题的常见问题
+            Map<String, Object> existingFaq = aiService.checkFaqExists(title);
+            if (existingFaq != null) {
+                return Result.error("该问题已存在于常见问题中，无法重复转换");
+            }
+
+            Map<String, Object> faq = new HashMap<>();
+            faq.put("question", title);
+            faq.put("answer", content);
+            faq.put("category", category != null ? category : "other");
+            faq.put("sortOrder", 0);
+            faq.put("status", 1);
+
+            boolean success = aiService.addFaq(faq);
+
+            if (success) {
+                return Result.success("转换成功");
+            } else {
+                return Result.error("转换失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
 }

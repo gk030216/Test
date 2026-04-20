@@ -193,3 +193,12 @@ export function batchConvertToKnowledge(data) {
         data
     });
 }
+
+// 知识库转为常见问题
+export function convertKnowledgeToFaq(data) {
+    return request({
+        url: '/admin/ai/knowledge/convert-to-faq',
+        method: 'post',
+        data
+    });
+}

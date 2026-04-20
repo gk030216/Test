@@ -30,7 +30,7 @@ public interface OrderService {
     /**
      * 取消订单
      */
-    boolean cancelOrder(String orderNo, Integer userId);
+    boolean cancelOrder(String orderNo, Integer userId, String reason);
 
     /**
      * 支付成功回调
@@ -46,4 +46,7 @@ public interface OrderService {
      * 删除订单
      */
     boolean deleteOrder(Integer id);
+
+    boolean confirmReceipt(String orderNo, Integer userId);
+
 }

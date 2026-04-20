@@ -12,6 +12,8 @@ public interface ServiceCategoryService {
     // 后台：获取所有分类（用于父分类下拉）
     List<ServiceCategory> getAllCategories();
 
+    List<ServiceCategory> getAllCategories(String keyword);
+
     // 后台：获取分类列表（分页）
     Map<String, Object> getCategoryList(Integer page, Integer pageSize, String keyword, Integer status);
 
@@ -29,4 +31,6 @@ public interface ServiceCategoryService {
 
     // 删除
     boolean deleteCategory(Integer id);
+
+    void batchUpdateSort(List<Map<String, Integer>> sortList);
 }

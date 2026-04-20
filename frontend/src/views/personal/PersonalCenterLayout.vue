@@ -4,11 +4,6 @@
 
     <div class="center-content">
       <div class="container">
-        <!-- 页面标题 -->
-        <div class="page-header">
-          <h2 class="page-title">个人中心</h2>
-          <p class="page-desc">管理你的个人信息和内容</p>
-        </div>
 
         <div class="center-layout">
           <!-- 左侧菜单 -->
@@ -55,6 +50,11 @@
               <el-menu-item index="/personal/orders">
                 <i class="el-icon-s-order"></i>
                 <span>我的订单</span>
+              </el-menu-item>
+              <el-menu-item index="/personal/notifications">
+                <i class="el-icon-bell"></i>
+                <span>消息通知</span>
+                <span class="notification-badge" v-if="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
               </el-menu-item>
               <el-menu-item index="/personal/feedback">
                 <i class="el-icon-warning"></i>
@@ -126,7 +126,8 @@ export default {
       showAvatarUpload: false,
       avatarPreview: '',
       newAvatar: null,
-      avatarLoading: false
+      avatarLoading: false,
+      unreadCount: 0
     };
   },
   computed: {

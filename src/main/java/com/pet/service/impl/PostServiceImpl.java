@@ -181,7 +181,7 @@ public class PostServiceImpl implements PostService {
     public boolean addComment(PostComment comment, Integer userId, String userName) {
         comment.setUserId(userId);
         comment.setStatus(1);
-        comment.setLikeCount(0);
+        // ❌ 删除 comment.setLikeCount(0);
         int result = commentMapper.insert(comment);
 
         if (result > 0) {
@@ -204,21 +204,15 @@ public class PostServiceImpl implements PostService {
         return result > 0;
     }
 
-    @Override
-    @Transactional
-    public boolean toggleCommentLike(Integer commentId, Integer userId) {
-        // 简化实现，实际可创建单独的评论点赞表
-        return true;
-    }
-
     // ========== 管理员接口 ==========
 
     @Override
-    public Map<String, Object> getAdminPostList(Integer page, Integer pageSize, String keyword,
+    public Map<String, Object> getAdminPostList(Integer page, Integer pageSize,
+                                                String keyword, String category,
                                                 Integer status, Integer isTop, Integer isEssence) {
         int offset = (page - 1) * pageSize;
-        List<Post> list = postMapper.getAdminPostList(offset, pageSize, keyword, status, isTop, isEssence);
-        int total = postMapper.countAdminPost(keyword, status, isTop, isEssence);
+        List<Post> list = postMapper.getAdminPostList(offset, pageSize, keyword, category, status, isTop, isEssence);
+        int total = postMapper.countAdminPost(keyword, category, status, isTop, isEssence);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -227,7 +221,6 @@ public class PostServiceImpl implements PostService {
         result.put("pageSize", pageSize);
         return result;
     }
-
     @Override
     public boolean updatePostStatus(Integer id, Integer status) {
         return postMapper.updateStatus(id, status) > 0;
@@ -244,7 +237,13 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional
     public boolean adminDeletePost(Integer id) {
+        // 获取帖子下的所有评论
+        List<PostComment> comments = commentMapper.getByPostId(id);
+        for (PostComment comment : comments) {
+            commentMapper.deleteById(comment.getId());  // 删除评论
+        }
         return postMapper.deleteById(id) > 0;
     }
 
@@ -287,18 +286,104 @@ public class PostServiceImpl implements PostService {
         PostComment comment = commentMapper.getById(id);
         if (comment == null) return false;
 
-        // 真删除
+        // 递归删除所有子评论，并统计删除数量
+        int childCount = deleteChildCommentsAndCount(id);
+
+        // 删除当前评论
         int result = commentMapper.deleteById(id);
 
-        // 如果是顶级评论，更新帖子评论数
+        // 如果是顶级评论，更新帖子的评论数（删除数量 = 当前评论1 + 子评论数量）
         if (result > 0 && comment.getParentId() == 0) {
-            postMapper.updateCommentCount(comment.getPostId(), -1);
+            postMapper.updateCommentCount(comment.getPostId(), -(1 + childCount));
         }
+
         return result > 0;
+    }
+
+    /**
+     * 递归删除子评论并返回删除数量
+     */
+    private int deleteChildCommentsAndCount(Integer parentId) {
+        int count = 0;
+        List<PostComment> children = commentMapper.getReplies(parentId);
+        if (children != null && !children.isEmpty()) {
+            for (PostComment child : children) {
+                count += deleteChildCommentsAndCount(child.getId());
+                commentMapper.deleteById(child.getId());
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 递归删除评论及其所有子评论
+     * @param commentId 评论ID
+     * @return 删除的评论总数（包括自身和所有子评论）
+     */
+    private int deleteCommentAndChildren(Integer commentId) {
+        int count = 1; // 当前评论计数
+
+        // 1. 获取该评论的所有子评论
+        List<PostComment> children = commentMapper.getReplies(commentId);
+
+        // 2. 递归删除每个子评论
+        if (children != null && !children.isEmpty()) {
+            for (PostComment child : children) {
+                count += deleteCommentAndChildren(child.getId());
+            }
+        }
+
+        // 3. 删除当前评论
+        commentMapper.deleteById(commentId);
+
+        return count;
     }
 
     @Override
     public List<PostComment> getCommentReplies(Integer commentId) {
         return commentMapper.getReplies(commentId);
     }
+
+    @Override
+    public Map<String, Object> getPostStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+
+        // 总帖子数 - 需要传5个参数
+        int totalPosts = postMapper.countAdminPost(null, null, null, null, null);
+        stats.put("totalPosts", totalPosts);
+
+        // 总评论数
+        int totalComments = commentMapper.countAdminCommentList(null, null);
+        stats.put("totalComments", totalComments);
+
+        // 今日新增帖子数
+        int todayPosts = postMapper.countToday();
+        stats.put("todayPosts", todayPosts);
+
+        // 总浏览量
+        Integer totalViews = postMapper.sumViewCount();
+        stats.put("totalViews", totalViews != null ? totalViews : 0);
+
+        return stats;
+    }
+
+    @Override
+    public boolean softDeletePost(Integer id) {
+        // 软删除：设置 status = 0
+        return postMapper.updateStatus(id, 0) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean physicallyDeletePost(Integer id) {
+        // 1. 先删除帖子下的所有评论
+        List<PostComment> comments = commentMapper.getByPostId(id);
+        for (PostComment comment : comments) {
+            commentMapper.deleteById(comment.getId());
+        }
+        // 2. 再物理删除帖子
+        return postMapper.physicallyDeleteById(id) > 0;
+    }
+
 }

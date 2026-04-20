@@ -67,4 +67,9 @@ public interface PetProfileMapper {
 
     // 近7天趋势
     List<Map<String, Object>> getWeeklyTrend();
+
+    /**
+     * 按性别统计宠物数量
+     */
+    Map<String, Object> countByGender();
 }

@@ -37,10 +37,9 @@
             class="status-select"
             @change="handleSearch"
         >
-          <el-option label="饮食" value="diet"></el-option>
-          <el-option label="健康" value="health"></el-option>
-          <el-option label="训练" value="training"></el-option>
-          <el-option label="行为" value="behavior"></el-option>
+          <el-option label="服务咨询" value="service"></el-option>
+          <el-option label="宠物知识" value="pet_knowledge"></el-option>
+          <el-option label="宠物用品" value="pet_product"></el-option>
           <el-option label="其他" value="other"></el-option>
         </el-select>
         <el-select
@@ -133,9 +132,20 @@
           {{ formatDate(scope.row.createTime) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right" align="center">
+      <el-table-column label="操作" width="250" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
+            <el-button
+                size="small"
+                type="info"
+                plain
+                circle
+                @click="handleView(scope.row)"
+                class="action-icon-btn"
+                title="查看"
+            >
+              <i class="el-icon-view"></i>
+            </el-button>
             <el-button
                 size="small"
                 type="primary"
@@ -143,8 +153,20 @@
                 circle
                 @click="handleEdit(scope.row)"
                 class="action-icon-btn"
+                title="编辑"
             >
               <i class="el-icon-edit"></i>
+            </el-button>
+            <el-button
+                size="small"
+                type="success"
+                plain
+                circle
+                @click="handleConvertToFaq(scope.row)"
+                class="action-icon-btn"
+                title="转为常见问题"
+            >
+              <i class="el-icon-star-on"></i>
             </el-button>
             <el-button
                 size="small"
@@ -153,6 +175,7 @@
                 circle
                 @click="handleDelete(scope.row)"
                 class="action-icon-btn"
+                title="删除"
             >
               <i class="el-icon-delete"></i>
             </el-button>
@@ -191,13 +214,27 @@
           </el-form-item>
 
           <el-form-item label="内容" prop="content">
-            <el-input
-                v-model="currentKnowledge.content"
-                type="textarea"
-                :rows="5"
-                placeholder="请输入知识内容"
-                size="medium"
-            ></el-input>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <el-input
+                  v-model="currentKnowledge.content"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="请输入知识内容"
+                  size="medium"
+                  style="flex: 1;"
+              ></el-input>
+              <el-button
+                  type="primary"
+                  size="medium"
+                  @click="generateContentByAI"
+                  :loading="aiContentGenerating"
+                  :disabled="!currentKnowledge.title"
+                  style="margin-top: 0;"
+              >
+                <i class="el-icon-magic-stick"></i> AI生成
+              </el-button>
+            </div>
+            <div class="form-tip">点击AI生成按钮可根据标题自动生成内容</div>
           </el-form-item>
 
           <el-form-item label="关键词" prop="keywords">
@@ -223,10 +260,9 @@
 
           <el-form-item label="分类" prop="category">
             <el-select v-model="currentKnowledge.category" placeholder="请选择分类" size="medium">
-              <el-option label="饮食" value="diet"></el-option>
-              <el-option label="健康" value="health"></el-option>
-              <el-option label="训练" value="training"></el-option>
-              <el-option label="行为" value="behavior"></el-option>
+              <el-option label="服务咨询" value="service"></el-option>
+              <el-option label="宠物知识" value="pet_knowledge"></el-option>
+              <el-option label="宠物用品" value="pet_product"></el-option>
               <el-option label="其他" value="other"></el-option>
             </el-select>
           </el-form-item>
@@ -247,11 +283,111 @@
         </el-button>
       </span>
     </el-dialog>
+
+    <!-- 知识详情对话框 -->
+    <el-dialog
+        title="知识详情"
+        :visible.sync="detailVisible"
+        width="650px"
+        center
+        class="knowledge-detail-dialog"
+    >
+      <div class="detail-content" v-if="currentDetailKnowledge">
+        <!-- 基本信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-info"></i>
+            <span>基本信息</span>
+          </div>
+          <el-row :gutter="16">
+            <el-col :span="24">
+              <div class="detail-item">
+                <span class="detail-label">标题：</span>
+                <span class="detail-value">{{ currentDetailKnowledge.title }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">分类：</span>
+                <span class="detail-value">{{ currentDetailKnowledge.categoryName }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">来源：</span>
+                <el-tag :type="currentDetailKnowledge.source === 1 ? 'success' : 'primary'" size="small">
+                  {{ currentDetailKnowledge.source === 1 ? '人工录入' : 'AI生成' }}
+                </el-tag>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">状态：</span>
+                <el-tag :type="currentDetailKnowledge.status === 1 ? 'success' : 'danger'" size="small">
+                  {{ currentDetailKnowledge.status === 1 ? '启用' : '禁用' }}
+                </el-tag>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">使用次数：</span>
+                <span class="detail-value">{{ currentDetailKnowledge.useCount || 0 }}</span>
+              </div>
+            </el-col>
+            <el-col :span="24">
+              <div class="detail-item">
+                <span class="detail-label">关键词：</span>
+                <div class="keywords-detail">
+                  <el-tag v-for="kw in (currentDetailKnowledge.keywords || '').split(',')" :key="kw" size="small" style="margin: 2px;">
+                    {{ kw }}
+                  </el-tag>
+                </div>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- 内容信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-document"></i>
+            <span>内容详情</span>
+          </div>
+          <div class="detail-content-text">{{ currentDetailKnowledge.content }}</div>
+        </div>
+
+        <!-- 时间信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-time"></i>
+            <span>时间信息</span>
+          </div>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">创建时间：</span>
+                <span class="detail-value">{{ formatDate(currentDetailKnowledge.createTime) }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">更新时间：</span>
+                <span class="detail-value">{{ formatDate(currentDetailKnowledge.updateTime) || '--' }}</span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+
+      <span slot="footer" class="dialog-footer">
+    <el-button @click="detailVisible = false">关闭</el-button>
+  </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { getKnowledgeList, addKnowledge, updateKnowledge, updateKnowledgeStatus, deleteKnowledge, batchDeleteKnowledge } from '@/api/ai';
+import { getKnowledgeList, addKnowledge, updateKnowledge, updateKnowledgeStatus, deleteKnowledge, batchDeleteKnowledge,convertKnowledgeToFaq    } from '@/api/ai';
 import request from '@/utils/request';
 
 export default {
@@ -261,6 +397,9 @@ export default {
       loading: false,
       submitLoading: false,
       aiGenerating: false,
+      detailVisible: false,
+      currentDetailKnowledge: null,
+      aiContentGenerating: false,
       knowledgeList: [],
       total: 0,
       page: 1,
@@ -314,12 +453,31 @@ export default {
       try {
         const params = {
           page: this.page,
-          pageSize: this.pageSize,
-          keyword: this.searchForm.keyword || undefined,
-          category: this.searchForm.category || undefined,
-          source: this.searchForm.source || undefined,
-          status: this.searchForm.status || undefined
+          pageSize: this.pageSize
         };
+
+        // 关键词
+        if (this.searchForm.keyword && this.searchForm.keyword.trim()) {
+          params.keyword = this.searchForm.keyword.trim();
+        }
+
+        // 分类
+        if (this.searchForm.category && this.searchForm.category !== '') {
+          params.category = this.searchForm.category;
+        }
+
+        // 来源
+        if (this.searchForm.source !== '' && this.searchForm.source !== null && this.searchForm.source !== undefined) {
+          params.source = this.searchForm.source;
+        }
+
+        // 状态 - 修复：status 可能为 0，不能使用 || 判断
+        if (this.searchForm.status !== '' && this.searchForm.status !== null && this.searchForm.status !== undefined) {
+          params.status = this.searchForm.status;
+        }
+
+        console.log('请求参数:', params);
+
         const res = await getKnowledgeList(params);
         if (res.code === 200) {
           this.knowledgeList = res.data.list;
@@ -351,6 +509,11 @@ export default {
     },
     handleSelectionChange(rows) {
       this.selectedRows = rows;
+    },
+    // 查看知识详情
+    handleView(row) {
+      this.currentDetailKnowledge = row;
+      this.detailVisible = true;
     },
     formatDate(date) {
       if (!date) return '';
@@ -513,7 +676,66 @@ export default {
           this.submitLoading = false;
         }
       });
-    }
+    },
+
+    // 转为常见问题
+    handleConvertToFaq(row) {
+      this.$confirm(`确定要将知识 "${row.title}" 转为常见问题吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }).then(async () => {
+        try {
+          const res = await convertKnowledgeToFaq({
+            id: row.id,
+            title: row.title,
+            content: row.content,
+            keywords: row.keywords,
+            category: row.category
+          });
+          if (res.code === 200) {
+            this.$message.success('转换成功，已添加到常见问题');
+          } else {
+            this.$message.error(res.message);
+          }
+        } catch (error) {
+          console.error('转换失败', error);
+          this.$message.error('转换失败');
+        }
+      }).catch(() => {});
+    },
+
+    // AI生成内容
+    async generateContentByAI() {
+      if (!this.currentKnowledge.title) {
+        this.$message.warning('请先填写标题，以便AI生成内容');
+        return;
+      }
+
+      this.aiContentGenerating = true;
+      try {
+        const res = await request({
+          url: '/admin/ai/generate-content',
+          method: 'post',
+          data: {
+            title: this.currentKnowledge.title,
+            category: this.currentKnowledge.category
+          }
+        });
+
+        if (res.code === 200 && res.data.content) {
+          this.currentKnowledge.content = res.data.content;
+          this.$message.success('AI内容生成成功');
+        } else {
+          this.$message.error('AI生成失败，请手动输入');
+        }
+      } catch (error) {
+        console.error('AI生成内容失败', error);
+        this.$message.error('AI生成失败，请手动输入');
+      } finally {
+        this.aiContentGenerating = false;
+      }
+    },
   }
 };
 </script>
@@ -742,5 +964,105 @@ export default {
   .action-left, .action-right {
     justify-content: center;
   }
+}
+
+/* 知识详情对话框样式 */
+.knowledge-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.knowledge-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.knowledge-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.knowledge-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.knowledge-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.detail-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 16px;
+}
+
+.detail-item {
+  margin-bottom: 12px;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: #909399;
+  display: inline-block;
+  width: 85px;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.keywords-detail {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.detail-content-text {
+  background: #f8f9fc;
+  padding: 16px;
+  border-radius: 12px;
+  color: #5a6874;
+  line-height: 1.8;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding-top: 10px;
 }
 </style>

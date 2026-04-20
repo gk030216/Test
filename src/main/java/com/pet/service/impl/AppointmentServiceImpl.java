@@ -1,21 +1,18 @@
 package com.pet.service.impl;
 
 import com.alipay.api.AlipayApiException;
-import com.pet.entity.Appointment;
-import com.pet.entity.ServiceItem;
-import com.pet.entity.User;
+import com.pet.entity.*;
 import com.pet.mapper.*;
 import com.pet.service.AlipayService;
 import com.pet.service.AppointmentService;
+import com.pet.service.NotificationService;
 import com.pet.util.EmailUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class AppointmentServiceImpl implements AppointmentService {
@@ -41,12 +38,23 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Autowired
     private AlipayService alipayService;
 
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private StaffStatisticsMapper statisticsMapper;
+
+    @Autowired
+    private ServiceCommentMapper serviceCommentMapper;
+
     @Override
     @Transactional
     public Appointment createAppointment(Appointment appointment) {
+        // 1. 生成预约编号
         String appointmentNo = appointmentMapper.generateAppointmentNo();
         appointment.setAppointmentNo(appointmentNo);
 
+        // 2. 获取服务信息
         ServiceItem service = serviceItemMapper.getById(appointment.getServiceId());
         if (service == null) {
             throw new RuntimeException("服务不存在");
@@ -55,34 +63,54 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setServicePrice(service.getPrice());
         appointment.setServiceImage(service.getImage());
 
+        // 3. 获取宠物名称
         String petName = petProfileMapper.getPetNameById(appointment.getPetId());
         appointment.setPetName(petName);
 
+        // 4. 设置初始状态
         appointment.setPayStatus(0);
+        appointment.setStatus(0);
 
-        appointmentMapper.insert(appointment);
+        // 5. 检查预约日期不能是过去
+        Date today = new Date();
+        today.setHours(0);
+        today.setMinutes(0);
+        today.setSeconds(0);
 
-        try {
-            User user = userMapper.findById(appointment.getUserId());
-            if (user != null && user.getEmail() != null && !user.getEmail().isEmpty()) {
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日");
-                String formattedDate = dateFormat.format(appointment.getAppointmentDate());
-
-                emailUtil.sendAppointmentNotification(
-                        user.getEmail(),
-                        user.getNickname() != null ? user.getNickname() : user.getUsername(),
-                        service.getName(),
-                        formattedDate,
-                        appointment.getAppointmentTime(),
-                        petName,
-                        appointmentNo
-                );
-                System.out.println("预约邮件已发送至: " + user.getEmail());
-            }
-        } catch (Exception e) {
-            System.err.println("发送预约邮件失败: " + e.getMessage());
-            e.printStackTrace();
+        if (appointment.getAppointmentDate().before(today)) {
+            throw new RuntimeException("不能预约过去的日期");
         }
+
+        // 6. 检查预约时间是否有效（不能预约当天已过的时间段）
+        Calendar now = Calendar.getInstance();
+        Calendar appointmentCal = Calendar.getInstance();
+        appointmentCal.setTime(appointment.getAppointmentDate());
+
+        if (appointmentCal.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
+                appointmentCal.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR)) {
+
+            String timeSlot = appointment.getAppointmentTime();
+            int slotHour = Integer.parseInt(timeSlot.split(":")[0]);
+            int currentHour = now.get(Calendar.HOUR_OF_DAY);
+
+            if (slotHour <= currentHour) {
+                throw new RuntimeException("不能预约当天已过的时间段");
+            }
+        }
+
+        // 7. ✅ 检查用户时间冲突（同一用户同一时间段不能有多个预约）
+        int userConflict = appointmentMapper.checkUserTimeConflict(
+                appointment.getUserId(),
+                appointment.getAppointmentDate(),
+                appointment.getAppointmentTime(),
+                null
+        );
+        if (userConflict > 0) {
+            throw new RuntimeException("您在该时间段已有其他预约，请选择其他时间");
+        }
+
+        // 8. 保存到数据库
+        appointmentMapper.insert(appointment);
 
         return appointment;
     }
@@ -109,19 +137,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public boolean cancelAppointment(Integer id, Integer userId, String reason) {
-        // 先获取预约信息
         Appointment appointment = appointmentMapper.getById(id);
         if (appointment == null || !appointment.getUserId().equals(userId)) {
             throw new RuntimeException("预约不存在或无权限");
         }
 
-        // 检查状态：只有待确认(0)和已确认(1)可以取消
         if (appointment.getStatus() != 0 && appointment.getStatus() != 1) {
             throw new RuntimeException("当前状态不允许取消");
         }
 
-        // 如果已支付，需要退款
+        boolean success;
         if (appointment.getPayStatus() != null && appointment.getPayStatus() == 1) {
+            // 已支付，需要退款
             try {
                 boolean refundSuccess = alipayService.refund(
                         appointment.getAppointmentNo(),
@@ -132,16 +159,39 @@ public class AppointmentServiceImpl implements AppointmentService {
                 if (!refundSuccess) {
                     throw new RuntimeException("退款失败，请稍后重试");
                 }
-                // 退款成功，更新状态为已退款(5)
-                appointmentMapper.updateRefundStatus(appointment.getAppointmentNo(), 5);
-                return true;
+                // ✅ 修改：退款成功，状态改为 4（已取消），同时 pay_status 会在 Mapper 中更新为 3
+                appointmentMapper.updateRefundStatus(appointment.getAppointmentNo(), 4, reason);
+                success = true;
+
+                // 发送退款成功站内消息
+                notificationService.sendNotification(
+                        userId,
+                        "appointment",
+                        "预约退款成功",
+                        "您的服务【" + appointment.getServiceName() + "】已取消，退款金额 ¥" + appointment.getServicePrice() + " 将原路返回。",
+                        "/personal/appointments"
+                );
+
             } catch (AlipayApiException e) {
                 throw new RuntimeException("退款异常: " + e.getMessage());
             }
         } else {
             // 未支付，直接取消
-            return appointmentMapper.cancelAppointment(id, userId, reason) > 0;
+            success = appointmentMapper.cancelAppointment(id, userId, reason) > 0;
+
+            // 发送取消成功站内消息（未支付）
+            if (success) {
+                notificationService.sendNotification(
+                        userId,
+                        "appointment",
+                        "预约已取消",
+                        "您的服务【" + appointment.getServiceName() + "】已取消。" + (reason != null ? " 原因：" + reason : ""),
+                        "/personal/appointments"
+                );
+            }
         }
+
+        return success;
     }
 
     @Override
@@ -173,6 +223,16 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public boolean confirmAppointment(Integer id, Integer staffId) {
+        Appointment appointment = appointmentMapper.getById(id);
+        if (appointment == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        // 检查状态是否为待确认
+        if (appointment.getStatus() != 0) {
+            throw new RuntimeException("预约状态不允许确认");
+        }
+
         return appointmentMapper.confirmAppointment(id, staffId) > 0;
     }
 
@@ -185,7 +245,24 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public boolean completeAppointment(Integer id) {
-        return appointmentMapper.completeAppointment(id) > 0;
+        Appointment appointment = appointmentMapper.getById(id);
+        if (appointment == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        // 完成预约
+        int result = appointmentMapper.completeAppointment(id);
+
+        if (result > 0) {
+            // 增加服务销量
+            serviceItemMapper.incrementSales(appointment.getServiceId(), 1);
+            System.out.println("✅ 服务销量已更新，服务ID: " + appointment.getServiceId());
+
+            // ❌ 删除这里的员工统计更新，因为评价时才会更新
+            // 员工统计由 addComment 方法负责更新
+        }
+
+        return result > 0;
     }
 
     @Override
@@ -202,7 +279,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new RuntimeException("预约不存在");
         }
 
-        // 如果已支付，需要退款
+        boolean success;
         if (appointment.getPayStatus() != null && appointment.getPayStatus() == 1) {
             try {
                 boolean refundSuccess = alipayService.refund(
@@ -214,16 +291,38 @@ public class AppointmentServiceImpl implements AppointmentService {
                 if (!refundSuccess) {
                     throw new RuntimeException("退款失败，请稍后重试");
                 }
-                // 退款成功，更新状态为已退款(5)
-                appointmentMapper.updateRefundStatus(appointment.getAppointmentNo(), 5);
-                return true;
+                appointmentMapper.updateRefundStatus(appointment.getAppointmentNo(), 4, reason);
+                success = true;
+
+                // ✅ 添加：发送退款成功站内消息
+                notificationService.sendNotification(
+                        appointment.getUserId(),
+                        "appointment",
+                        "预约已被商家取消",
+                        "您的服务【" + appointment.getServiceName() + "】已被商家取消，退款金额 ¥" + appointment.getServicePrice() + " 将原路返回。" +
+                                (reason != null ? " 原因：" + reason : ""),
+                        "/personal/appointments"
+                );
+
             } catch (AlipayApiException e) {
                 throw new RuntimeException("退款失败: " + e.getMessage());
             }
         } else {
-            // 未支付，直接取消
-            return appointmentMapper.cancelAppointmentByAdmin(id, reason) > 0;
+            success = appointmentMapper.cancelAppointmentByAdmin(id, reason) > 0;
+
+            // ✅ 添加：发送取消成功站内消息（未支付）
+            if (success) {
+                notificationService.sendNotification(
+                        appointment.getUserId(),
+                        "appointment",
+                        "预约已被商家取消",
+                        "您的服务【" + appointment.getServiceName() + "】已被商家取消。" + (reason != null ? " 原因：" + reason : ""),
+                        "/personal/appointments"
+                );
+            }
         }
+
+        return success;
     }
 
     @Override
@@ -266,4 +365,6 @@ public class AppointmentServiceImpl implements AppointmentService {
     public Appointment getByAppointmentNo(String appointmentNo) {
         return appointmentMapper.getByAppointmentNo(appointmentNo);
     }
+
+
 }

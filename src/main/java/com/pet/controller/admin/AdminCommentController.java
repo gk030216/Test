@@ -1,5 +1,7 @@
 package com.pet.controller.admin;
 
+import com.pet.entity.ProductComment;
+import com.pet.service.NotificationService;
 import com.pet.service.ProductCommentService;
 import com.pet.util.Result;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,9 @@ public class AdminCommentController {
 
     @Autowired
     private ProductCommentService commentService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     /**
      * 获取评价列表（后台）
@@ -89,11 +94,23 @@ public class AdminCommentController {
             Integer id = (Integer) params.get("id");
             String reply = (String) params.get("reply");
             boolean success = commentService.replyComment(id, reply);
+
             if (success) {
+                // 获取评价信息
+                ProductComment comment = commentService.getById(id);
+                if (comment != null) {
+                    // ✅ 发送站内消息通知
+                    notificationService.sendNotification(
+                            comment.getUserId(),
+                            "comment",
+                            "商家回复了你的评价",
+                            "商家回复了你在【" + comment.getProductName() + "】的评价：" + reply,
+                            "/personal/comments"
+                    );
+                }
                 return Result.success("回复成功");
-            } else {
-                return Result.error("回复失败");
             }
+            return Result.error("回复失败");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -136,4 +153,38 @@ public class AdminCommentController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 获取指定商品的评价统计（用于商品评价分析页面）
+     */
+    @GetMapping("/product/{productId}/statistics")
+    public Result<Map<String, Object>> getProductCommentStatistics(@PathVariable Integer productId) {
+        try {
+            Map<String, Object> statistics = commentService.getProductCommentStatistics(productId);
+            return Result.success(statistics);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取指定商品的评价列表（支持分页和评分筛选）
+     */
+    @GetMapping("/product/{productId}/list")
+    public Result<Map<String, Object>> getProductCommentsList(
+            @PathVariable Integer productId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) Integer rating) {
+        try {
+            Map<String, Object> result = commentService.getProductCommentsList(productId, page, pageSize, rating);
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+
 }

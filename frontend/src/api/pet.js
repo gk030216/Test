@@ -167,3 +167,118 @@ export function getAllHealthRecords(params) {
         params
     });
 }
+
+// 更新疫苗记录
+export function updateVaccineRecord(data) {
+    return request({
+        url: '/admin/pet/vaccine/update',
+        method: 'put',
+        data
+    });
+}
+
+// 更新体检记录
+export function updateHealthRecord(data) {
+    return request({
+        url: '/admin/pet/health/update',
+        method: 'put',
+        data
+    });
+}
+
+// 批量删除疫苗记录
+export function batchDeleteVaccineRecords(ids) {
+    return request({
+        url: '/admin/pet/vaccine/batch-delete',
+        method: 'delete',
+        data: ids
+    });
+}
+
+// 批量删除体检记录
+export function batchDeleteHealthRecords(ids) {
+    return request({
+        url: '/admin/pet/health/batch-delete',
+        method: 'delete',
+        data: ids
+    });
+}
+
+// 获取即将到期的宠物数量（7天内需要接种疫苗的宠物）
+export function getUpcomingPetsCount() {
+    return request({
+        url: '/admin/pet/vaccine/upcoming/pets/count',
+        method: 'get'
+    });
+}
+
+// 获取有疫苗记录的正常宠物数量（去重）
+export function getDistinctPetsWithVaccineCount() {
+    return request({
+        url: '/admin/pet/vaccine/pets/count',
+        method: 'get'
+    });
+}
+
+// 获取有体检记录的正常宠物数量（去重）
+export function getDistinctPetsWithHealthRecordCount() {
+    return request({
+        url: '/admin/pet/health/pets/count',
+        method: 'get'
+    });
+}
+
+// 获取正常宠物的平均体重
+export function getAvgWeight() {
+    return request({
+        url: '/admin/pet/health/avg-weight',
+        method: 'get'
+    });
+}
+
+// ========== 疫苗库存管理 ==========
+
+// 获取疫苗库存列表
+export function getVaccineStockList(params) {
+    return request({
+        url: '/admin/pet/vaccine/stock/list',
+        method: 'get',
+        params
+    });
+}
+
+// 新增疫苗
+export function addVaccine(data) {
+    return request({
+        url: '/admin/pet/vaccine/add',
+        method: 'post',
+        data
+    });
+}
+
+// 更新疫苗信息
+export function updateVaccine(data) {
+    return request({
+        url: '/admin/pet/vaccine/update',
+        method: 'put',
+        data
+    });
+}
+
+// 更新疫苗库存（入库/出库）
+export function updateVaccineStock(data) {
+    return request({
+        url: '/admin/pet/vaccine/stock/update',
+        method: 'put',
+        data
+    });
+}
+
+// 获取疫苗库存列表（用于选择）
+export function getVaccineInventoryList(params) {
+    return request({
+        url: '/admin/inventory/list',
+        method: 'get',
+        params: { ...params, type: 'vaccine' }
+    });
+}

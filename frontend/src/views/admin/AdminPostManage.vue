@@ -56,6 +56,7 @@
             type="success"
             plain
             @click="handleBatchTop"
+            :loading="batchLoading"
         >
           <i class="el-icon-top"></i> 批量置顶 ({{ selectedRows.length }})
         </el-button>
@@ -64,6 +65,7 @@
             type="warning"
             plain
             @click="handleBatchEssence"
+            :loading="batchLoading"
         >
           <i class="el-icon-star-on"></i> 批量精华 ({{ selectedRows.length }})
         </el-button>
@@ -72,6 +74,7 @@
             type="danger"
             plain
             @click="handleBatchDelete"
+            :loading="batchLoading"
         >
           <i class="el-icon-delete"></i> 批量删除 ({{ selectedRows.length }})
         </el-button>
@@ -113,7 +116,7 @@
             @change="handleSearch"
         >
           <el-option label="正常" :value="1"></el-option>
-          <el-option label="已删除" :value="0"></el-option>
+          <el-option label="隐藏" :value="0"></el-option>
         </el-select>
         <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">
           搜索
@@ -137,13 +140,19 @@
       <el-table-column type="selection" width="45" align="center"></el-table-column>
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
 
-      <el-table-column label="用户" width="120" align="center">
+      <!-- 用户列 - 优先显示昵称 -->
+      <el-table-column label="用户" width="150" align="center">
         <template slot-scope="scope">
           <div class="user-info">
             <el-avatar :size="32" :src="scope.row.userAvatar" class="user-avatar">
-              {{ scope.row.userName ? scope.row.userName.charAt(0).toUpperCase() : 'U' }}
+              {{ getDisplayName(scope.row).charAt(0).toUpperCase() }}
             </el-avatar>
-            <span class="user-name">{{ scope.row.userName || '未知用户' }}</span>
+            <div class="user-detail">
+              <span class="user-name">{{ getDisplayName(scope.row) }}</span>
+              <span class="user-username" v-if="scope.row.userNickname && scope.row.userName">
+                @{{ scope.row.userName }}
+              </span>
+            </div>
           </div>
         </template>
       </el-table-column>
@@ -270,31 +279,118 @@
     </div>
 
     <!-- 帖子详情对话框 -->
-    <el-dialog :title="'帖子详情'" :visible.sync="detailVisible" width="700px" center>
-      <div class="detail-content" v-if="currentPost">
-        <div class="detail-user">
-          <el-avatar :size="40" :src="currentPost.userAvatar">
-            {{ currentPost.userName ? currentPost.userName.charAt(0).toUpperCase() : 'U' }}
-          </el-avatar>
-          <div class="detail-user-info">
-            <div class="detail-user-name">{{ currentPost.userName || '匿名用户' }}</div>
-            <div class="detail-time">{{ formatDate(currentPost.createTime) }}</div>
+    <el-dialog title="帖子详情" :visible.sync="detailVisible" width="750px" center class="post-detail-dialog">
+      <div class="post-detail" v-if="currentPost">
+        <!--  修改：发布者信息 - 优先显示昵称 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-user"></i>
+            <span>发布者信息</span>
+          </div>
+          <div class="detail-user">
+            <el-avatar :size="48" :src="currentPost.userAvatar" class="user-avatar">
+              {{ getDetailDisplayName().charAt(0).toUpperCase() }}
+            </el-avatar>
+            <div class="detail-user-info">
+              <div class="detail-user-name">{{ getDetailDisplayName() }}</div>
+              <div class="detail-user-username" v-if="currentPost.userNickname && currentPost.userName">
+                @{{ currentPost.userName }}
+              </div>
+              <div class="detail-time">{{ formatDate(currentPost.createTime) }}</div>
+            </div>
           </div>
         </div>
-        <div class="detail-title">{{ currentPost.title }}</div>
-        <div class="detail-text">{{ currentPost.content }}</div>
-        <div class="detail-images" v-if="currentPost.images">
-          <el-image
-              v-for="(img, idx) in currentPost.images.split(',')"
-              :key="idx"
-              :src="img"
-              fit="cover"
-              class="detail-img"
-              :preview-src-list="currentPost.images.split(',')"
-          ></el-image>
+
+        <!-- 帖子信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-document"></i>
+            <span>帖子信息</span>
+          </div>
+          <el-row :gutter="16">
+            <el-col :span="24">
+              <div class="detail-item">
+                <span class="detail-label">标题：</span>
+                <span class="detail-value">{{ currentPost.title }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">分类：</span>
+                <span :class="['category-tag', getCategoryClass(currentPost.category)]">
+                  {{ getCategoryName(currentPost.category) }}
+                </span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">状态：</span>
+                <el-tag :type="currentPost.status === 1 ? 'success' : 'danger'" size="small">
+                  {{ currentPost.status === 1 ? '正常' : '已删除' }}
+                </el-tag>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">置顶：</span>
+                <el-tag :type="currentPost.isTop === 1 ? 'warning' : 'info'" size="small">
+                  {{ currentPost.isTop === 1 ? '已置顶' : '未置顶' }}
+                </el-tag>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">精华：</span>
+                <el-tag :type="currentPost.isEssence === 1 ? 'danger' : 'info'" size="small">
+                  {{ currentPost.isEssence === 1 ? '精华帖' : '普通帖' }}
+                </el-tag>
+              </div>
+            </el-col>
+            <el-col :span="8">
+              <div class="detail-item">
+                <span class="detail-label">点赞数：</span>
+                <span class="detail-value">{{ currentPost.likeCount || 0 }}</span>
+              </div>
+            </el-col>
+            <el-col :span="8">
+              <div class="detail-item">
+                <span class="detail-label">评论数：</span>
+                <span class="detail-value">{{ currentPost.commentCount || 0 }}</span>
+              </div>
+            </el-col>
+            <el-col :span="8">
+              <div class="detail-item">
+                <span class="detail-label">浏览量：</span>
+                <span class="detail-value">{{ currentPost.viewCount || 0 }}</span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- 帖子内容 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-edit-outline"></i>
+            <span>帖子内容</span>
+          </div>
+          <div class="detail-content-text">{{ currentPost.content }}</div>
+          <div class="detail-images" v-if="currentPost.images">
+            <div class="images-title">图片附件：</div>
+            <div class="images-list">
+              <el-image
+                  v-for="(img, idx) in currentPost.images.split(',')"
+                  :key="idx"
+                  :src="img"
+                  fit="cover"
+                  class="detail-img"
+                  :preview-src-list="currentPost.images.split(',')"
+              ></el-image>
+            </div>
+          </div>
         </div>
       </div>
-      <span slot="footer">
+
+      <span slot="footer" class="dialog-footer">
         <el-button @click="detailVisible = false">关闭</el-button>
         <el-button type="primary" @click="goToPost">查看原帖</el-button>
       </span>
@@ -303,13 +399,24 @@
 </template>
 
 <script>
-import { getAdminPostList, updatePostStatus, updatePostTop, updatePostEssence, adminDeletePost } from '@/api/community';
+import {
+  getAdminPostList,
+  updatePostStatus,
+  updatePostTop,
+  updatePostEssence,
+  adminDeletePost,
+  batchUpdatePostTop,
+  batchUpdatePostEssence,
+  batchDeletePosts,
+  getPostStatistics
+} from '@/api/community';
 
 export default {
   name: 'AdminPostManage',
   data() {
     return {
       loading: false,
+      batchLoading: false,
       postList: [],
       total: 0,
       page: 1,
@@ -332,27 +439,72 @@ export default {
   },
   created() {
     this.loadList();
+    this.loadStatistics();
   },
   methods: {
+    // 获取显示名称（优先昵称，其次用户名）
+    getDisplayName(row) {
+      return row.userNickname || row.userName || '未知用户';
+    },
+
+    // 获取详情页显示名称
+    getDetailDisplayName() {
+      if (!this.currentPost) return '匿名用户';
+      return this.currentPost.userNickname || this.currentPost.userName || '匿名用户';
+    },
+
     async loadList() {
       this.loading = true;
       try {
-        const params = {
-          page: this.page,
-          pageSize: this.pageSize,
-          keyword: this.searchForm.keyword || undefined,
-          category: this.searchForm.category || undefined,
-          status: this.searchForm.status !== '' ? this.searchForm.status : undefined
-        };
+        const params = { page: this.page, pageSize: this.pageSize };
+
+        if (this.searchForm.keyword && this.searchForm.keyword.trim()) {
+          params.keyword = this.searchForm.keyword.trim();
+        }
+        if (this.searchForm.category && this.searchForm.category !== '') {
+          params.category = this.searchForm.category;
+        }
+        if (this.searchForm.status !== '' && this.searchForm.status !== null) {
+          params.status = this.searchForm.status;
+        }
+
         const res = await getAdminPostList(params);
         if (res.code === 200) {
           this.postList = res.data.list || [];
           this.total = res.data.total || 0;
+
+          this.statistics = {
+            totalPosts: this.total,
+            totalComments: this.postList.reduce((sum, p) => sum + (p.commentCount || 0), 0),
+            todayPosts: this.postList.filter(p => {
+              const today = new Date().toDateString();
+              return p.createTime && new Date(p.createTime).toDateString() === today;
+            }).length,
+            totalViews: this.postList.reduce((sum, p) => sum + (p.viewCount || 0), 0)
+          };
         }
       } catch (error) {
+        console.error('加载失败', error);
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
+      }
+    },
+
+    async loadStatistics() {
+      try {
+        const res = await getPostStatistics();
+        if (res.code === 200) {
+          this.statistics = res.data;
+        }
+      } catch (error) {
+        console.error('加载统计失败', error);
+        this.statistics = {
+          totalPosts: this.total,
+          totalComments: this.postList.reduce((sum, p) => sum + (p.commentCount || 0), 0),
+          todayPosts: 0,
+          totalViews: this.postList.reduce((sum, p) => sum + (p.viewCount || 0), 0)
+        };
       }
     },
 
@@ -423,6 +575,7 @@ export default {
         if (res.code === 200) {
           row.status = newStatus;
           this.$message.success(res.message);
+          await this.loadStatistics();
         }
       } catch (error) {
         this.$message.error('操作失败');
@@ -436,6 +589,7 @@ export default {
         if (res.code === 200) {
           row.isTop = newTop;
           this.$message.success(newTop === 1 ? '置顶成功' : '取消置顶');
+          await this.loadStatistics();
         }
       } catch (error) {
         this.$message.error('操作失败');
@@ -449,6 +603,7 @@ export default {
         if (res.code === 200) {
           row.isEssence = newEssence;
           this.$message.success(newEssence === 1 ? '设为精华成功' : '取消精华');
+          await this.loadStatistics();
         }
       } catch (error) {
         this.$message.error('操作失败');
@@ -462,6 +617,7 @@ export default {
           if (res.code === 200) {
             this.$message.success('删除成功');
             this.loadList();
+            this.loadStatistics();
           }
         } catch (error) {
           this.$message.error('删除失败');
@@ -470,15 +626,78 @@ export default {
     },
 
     async handleBatchTop() {
-      this.$message.info('批量置顶功能开发中');
+      if (this.selectedRows.length === 0) return;
+
+      const ids = this.selectedRows.map(row => row.id).join(',');
+      this.$confirm(`确定要置顶选中的 ${this.selectedRows.length} 个帖子吗？`, '提示', { type: 'info' })
+          .then(async () => {
+            this.batchLoading = true;
+            try {
+              const res = await batchUpdatePostTop(ids, 1);
+              if (res.code === 200) {
+                this.$message.success(res.message);
+                this.selectedRows = [];
+                await this.loadList();
+                await this.loadStatistics();
+              } else {
+                this.$message.error(res.message);
+              }
+            } catch (error) {
+              this.$message.error('操作失败');
+            } finally {
+              this.batchLoading = false;
+            }
+          }).catch(() => {});
     },
 
     async handleBatchEssence() {
-      this.$message.info('批量精华功能开发中');
+      if (this.selectedRows.length === 0) return;
+
+      const ids = this.selectedRows.map(row => row.id).join(',');
+      this.$confirm(`确定要将选中的 ${this.selectedRows.length} 个帖子设为精华吗？`, '提示', { type: 'info' })
+          .then(async () => {
+            this.batchLoading = true;
+            try {
+              const res = await batchUpdatePostEssence(ids, 1);
+              if (res.code === 200) {
+                this.$message.success(res.message);
+                this.selectedRows = [];
+                await this.loadList();
+                await this.loadStatistics();
+              } else {
+                this.$message.error(res.message);
+              }
+            } catch (error) {
+              this.$message.error('操作失败');
+            } finally {
+              this.batchLoading = false;
+            }
+          }).catch(() => {});
     },
 
     async handleBatchDelete() {
-      this.$message.info('批量删除功能开发中');
+      if (this.selectedRows.length === 0) return;
+
+      const ids = this.selectedRows.map(row => row.id).join(',');
+      this.$confirm(`确定要删除选中的 ${this.selectedRows.length} 个帖子吗？删除后无法恢复！`, '警告', { type: 'warning' })
+          .then(async () => {
+            this.batchLoading = true;
+            try {
+              const res = await batchDeletePosts(ids);
+              if (res.code === 200) {
+                this.$message.success(res.message);
+                this.selectedRows = [];
+                await this.loadList();
+                await this.loadStatistics();
+              } else {
+                this.$message.error(res.message);
+              }
+            } catch (error) {
+              this.$message.error('批量删除失败');
+            } finally {
+              this.batchLoading = false;
+            }
+          }).catch(() => {});
     },
 
     handleView(row) {
@@ -598,15 +817,28 @@ export default {
   overflow: hidden;
 }
 
+/* 用户信息样式 */
 .user-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+.user-detail {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
 .user-name {
+  font-weight: 500;
   font-size: 13px;
   color: #2c3e50;
+}
+
+.user-username {
+  font-size: 11px;
+  color: #909399;
 }
 
 .post-title {
@@ -678,18 +910,94 @@ export default {
   border-radius: 16px;
 }
 
+/* 帖子详情对话框样式 */
+.post-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.post-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.post-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.post-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.post-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.post-detail {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 16px;
+}
+
+/* 详情页用户信息样式 */
 .detail-user {
   display: flex;
   align-items: center;
   gap: 15px;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eef2f6;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.detail-user-info {
+  flex: 1;
 }
 
 .detail-user-name {
   font-weight: 600;
   color: #2c3e50;
+  font-size: 15px;
+}
+
+.detail-user-username {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
 }
 
 .detail-time {
@@ -698,29 +1006,58 @@ export default {
   margin-top: 4px;
 }
 
-.detail-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 20px;
+.detail-item {
+  margin-bottom: 12px;
 }
 
-.detail-text {
+.detail-label {
+  font-size: 13px;
+  color: #909399;
+  display: inline-block;
+  width: 60px;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #2c3e50;
+  margin-left: 4px;
+}
+
+.detail-content-text {
+  background: #f8f9fc;
+  padding: 16px;
+  border-radius: 12px;
   color: #5a6874;
   line-height: 1.8;
-  margin-bottom: 20px;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.detail-images {
+.images-title {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.images-list {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
 .detail-img {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  background: #f8f9fc;
   object-fit: cover;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding-top: 10px;
 }
 </style>

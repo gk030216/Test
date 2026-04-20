@@ -9,12 +9,14 @@ import com.pet.service.AppointmentService;
 import com.pet.service.OrderService;
 import com.pet.util.Result;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.Map;
 
+@Service
 @RestController
 @RequestMapping("/api/order")
 @CrossOrigin(origins = "*")
@@ -107,10 +109,13 @@ public class OrderController {
      * 取消订单
      */
     @PutMapping("/cancel/{orderNo}")
-    public Result<?> cancelOrder(@PathVariable String orderNo, HttpServletRequest req) {
+    public Result<?> cancelOrder(@PathVariable String orderNo,
+                                 @RequestBody(required = false) Map<String, String> params,
+                                 HttpServletRequest req) {
         try {
             Integer userId = getUserId(req);
-            boolean success = orderService.cancelOrder(orderNo, userId);
+            String reason = params != null ? params.get("reason") : "用户取消";
+            boolean success = orderService.cancelOrder(orderNo, userId, reason);
             if (success) {
                 return Result.success("取消成功");
             } else {
@@ -179,6 +184,21 @@ public class OrderController {
 
             boolean result = alipayService.queryPayResult(request.getOrderNo());
             return Result.success(result);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PutMapping("/confirm/{orderNo}")
+    public Result<?> confirmReceipt(@PathVariable String orderNo, HttpServletRequest req) {
+        try {
+            Integer userId = getUserId(req);
+            boolean success = orderService.confirmReceipt(orderNo, userId);
+            if (success) {
+                return Result.success("确认收货成功");
+            } else {
+                return Result.error("确认收货失败");
+            }
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

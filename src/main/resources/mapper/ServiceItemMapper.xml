@@ -84,6 +84,7 @@
             <if test="categoryId != null">
                 AND s.category_id = #{categoryId}
             </if>
+            <!-- ✅ 添加 status 条件 -->
             <if test="status != null">
                 AND s.status = #{status}
             </if>

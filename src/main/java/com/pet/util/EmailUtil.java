@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
 
 @Component
@@ -123,19 +125,20 @@ public class EmailUtil {
      * 发送验证码邮件
      */
     public boolean sendVerificationCode(String toEmail, String code, String type) {
-        // 设置邮件服务器属性
         Properties props = new Properties();
         props.setProperty("mail.smtp.host", emailConfig.getHost());
         props.setProperty("mail.smtp.port", emailConfig.getPort());
         props.setProperty("mail.smtp.auth", emailConfig.getAuth());
+
+        // ✅ 修复 SSL 信任问题
         props.setProperty("mail.smtp.ssl.enable", emailConfig.getSslEnable());
         props.setProperty("mail.smtp.ssl.protocols", emailConfig.getSslProtocols());
-        props.setProperty("mail.smtp.ssl.trust", emailConfig.getSslTrust());
+        props.setProperty("mail.smtp.ssl.trust", "*");  // 关键：信任所有证书
+
         props.setProperty("mail.smtp.connectiontimeout", emailConfig.getConnectionTimeout());
         props.setProperty("mail.smtp.timeout", emailConfig.getTimeout());
         props.setProperty("mail.smtp.writetimeout", emailConfig.getWriteTimeout());
 
-        // 创建验证器
         Authenticator auth = new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
@@ -143,16 +146,14 @@ public class EmailUtil {
             }
         };
 
-        // 创建会话
         Session session = Session.getInstance(props, auth);
+        session.setDebug(true);  // 调试用
 
         try {
-            // 创建邮件消息
             MimeMessage message = new MimeMessage(session);
             message.setFrom(new InternetAddress(emailConfig.getSenderEmail(), "宠物服务系统"));
             message.setRecipient(MimeMessage.RecipientType.TO, new InternetAddress(toEmail));
 
-            // 设置邮件主题
             String subject = "";
             String content = "";
 
@@ -170,7 +171,6 @@ public class EmailUtil {
             message.setSubject(subject);
             message.setContent(content, "text/html;charset=utf-8");
 
-            // 发送邮件
             Transport.send(message);
             System.out.println("✅ 邮件发送成功 to: " + toEmail + ", type: " + type);
             return true;
@@ -437,6 +437,217 @@ public class EmailUtil {
                 "<div style='background-color:#f8f9fa; padding:20px 30px; border-top:1px solid #e9ecef; text-align:center;'>" +
                 "<p style='color:#868e96; margin:0 0 10px; font-size:14px;'>这是系统自动发送的邮件，请勿回复</p>" +
                 "<p style='color:#adb5bd; margin:0; font-size:13px;'>© 2026 宠物服务系统 · 用心服务每一个宠物家庭</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
+    }
+
+
+    public boolean sendAppointmentPaymentSuccess(String toEmail, String userName,
+                                                 String serviceName, Date appointmentDate,
+                                                 String appointmentTime, String petName,
+                                                 String appointmentNo) {
+        Properties props = new Properties();
+        props.setProperty("mail.smtp.host", emailConfig.getHost());
+        props.setProperty("mail.smtp.port", emailConfig.getPort());
+        props.setProperty("mail.smtp.auth", emailConfig.getAuth());
+        props.setProperty("mail.smtp.ssl.enable", emailConfig.getSslEnable());
+        props.setProperty("mail.smtp.ssl.protocols", emailConfig.getSslProtocols());
+        // ✅ 关键修复：指定信任的服务器，避免 SSL 握手失败
+        props.setProperty("mail.smtp.ssl.trust", "smtp.qq.com");
+        props.setProperty("mail.smtp.connectiontimeout", emailConfig.getConnectionTimeout());
+        props.setProperty("mail.smtp.timeout", emailConfig.getTimeout());
+        props.setProperty("mail.smtp.writetimeout", emailConfig.getWriteTimeout());
+
+        Authenticator auth = new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(emailConfig.getSenderEmail(), emailConfig.getSenderPassword());
+            }
+        };
+
+        Session session = Session.getInstance(props, auth);
+        // 为调试添加，可以打印更详细的日志
+        // session.setDebug(true);
+
+        try {
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(emailConfig.getSenderEmail(), "宠物服务系统"));
+            message.setRecipient(MimeMessage.RecipientType.TO, new InternetAddress(toEmail));
+            message.setSubject("🐾 预约支付成功 - " + serviceName);
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日");
+            String formattedDate = dateFormat.format(appointmentDate);
+
+            message.setContent(getPaymentSuccessEmailContent(userName, serviceName, formattedDate,
+                    appointmentTime, petName, appointmentNo), "text/html;charset=utf-8");
+
+            Transport.send(message);
+            System.out.println("✅ 支付成功邮件发送成功 to: " + toEmail);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("❌ 支付成功邮件发送失败 to: " + toEmail);
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 支付成功邮件模板
+     */
+    private String getPaymentSuccessEmailContent(String userName, String serviceName,
+                                                 String appointmentDate, String appointmentTime,
+                                                 String petName, String appointmentNo) {
+        return "<!DOCTYPE html>" +
+                "<html lang='zh-CN'>" +
+                "<head><meta charset='UTF-8'><title>预约支付成功</title></head>" +
+                "<body style='margin:0; padding:0; font-family: \"Microsoft YaHei\", sans-serif; background-color:#f4f7fc;'>" +
+                "<div style='max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.1);'>" +
+
+                // 头部
+                "<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:30px 20px; text-align:center;'>" +
+                "<h1 style='color:#ffffff; margin:0; font-size:28px;'>🐾 支付成功！</h1>" +
+                "<p style='color:#e0e0ff; margin:10px 0 0;'>预约已确认，请等待商家接单</p>" +
+                "</div>" +
+
+                // 内容区域
+                "<div style='padding:30px;'>" +
+                "<p style='color:#333333; font-size:16px;'>亲爱的 <strong>" + (userName != null ? userName : "用户") + "</strong>，你好！</p>" +
+                "<p style='color:#666666; line-height:1.8;'>你的预约已支付成功，商家将尽快确认。以下是预约详情：</p>" +
+
+                // 预约信息卡片
+                "<div style='background: linear-gradient(145deg, #f6f9fc 0%, #eef2f7 100%); border-radius:12px; padding:20px; margin:20px 0;'>" +
+                "<table style='width:100%; border-collapse:collapse;'>" +
+                "<tr><td style='padding:8px 0; color:#666; width:100px;'>预约编号：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + appointmentNo + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>服务项目：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + serviceName + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>预约宠物：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + (petName != null ? petName : "未指定") + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>预约日期：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + appointmentDate + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>预约时段：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + appointmentTime + "</td></tr>" +
+                "</table>" +
+                "</div>" +
+
+                // 提示信息
+                "<div style='background-color:#fff9f0; padding:15px; border-radius:8px; margin:20px 0; border-left:4px solid #ffb347;'>" +
+                "<p style='color:#666; margin:0; font-size:14px;'>📌 <strong>温馨提示：</strong></p>" +
+                "<ul style='color:#666; margin:10px 0 0; padding-left:20px; font-size:14px;'>" +
+                "<li>商家确认后，你可以在「我的预约」中查看最新状态</li>" +
+                "<li>如需取消预约，请至少提前2小时操作</li>" +
+                "<li>如有疑问，请联系客服 400-888-6666</li>" +
+                "</ul>" +
+                "</div>" +
+
+                // 按钮
+                "<div style='text-align:center; margin:30px 0;'>" +
+                "<a href='http://localhost:8081/personal/appointments' style='display:inline-block; background:linear-gradient(135deg, #667eea, #764ba2); color:white; text-decoration:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:500;'>查看我的预约</a>" +
+                "</div>" +
+                "</div>" +
+
+                // 底部
+                "<div style='background-color:#f8f9fa; padding:20px; text-align:center; border-top:1px solid #e9ecef;'>" +
+                "<p style='color:#868e96; margin:0; font-size:14px;'>© 2026 宠物服务系统 · 用心服务每一个宠物家庭</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>";
+    }
+
+    /**
+     * 发送待支付提醒邮件
+     */
+    public boolean sendAppointmentPendingReminder(String toEmail, String userName,
+                                                  String serviceName, Date appointmentDate,
+                                                  String appointmentTime, String petName,
+                                                  String appointmentNo) {
+        Properties props = new Properties();
+        props.setProperty("mail.smtp.host", emailConfig.getHost());
+        props.setProperty("mail.smtp.port", emailConfig.getPort());
+        props.setProperty("mail.smtp.auth", emailConfig.getAuth());
+        props.setProperty("mail.smtp.ssl.enable", emailConfig.getSslEnable());
+        props.setProperty("mail.smtp.ssl.protocols", emailConfig.getSslProtocols());
+        props.setProperty("mail.smtp.ssl.trust", "smtp.qq.com");
+        props.setProperty("mail.smtp.connectiontimeout", emailConfig.getConnectionTimeout());
+        props.setProperty("mail.smtp.timeout", emailConfig.getTimeout());
+        props.setProperty("mail.smtp.writetimeout", emailConfig.getWriteTimeout());
+
+        Authenticator auth = new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(emailConfig.getSenderEmail(), emailConfig.getSenderPassword());
+            }
+        };
+
+        Session session = Session.getInstance(props, auth);
+
+        try {
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(emailConfig.getSenderEmail(), "宠物服务系统"));
+            message.setRecipient(MimeMessage.RecipientType.TO, new InternetAddress(toEmail));
+            message.setSubject("⏰ 待支付提醒 - " + serviceName);
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日");
+            String formattedDate = dateFormat.format(appointmentDate);
+
+            message.setContent(getPendingPaymentEmailContent(userName, serviceName, formattedDate,
+                    appointmentTime, petName, appointmentNo), "text/html;charset=utf-8");
+
+            Transport.send(message);
+            System.out.println("✅ 待支付提醒邮件已发送至: " + toEmail);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("❌ 待支付提醒邮件发送失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 待支付提醒邮件模板
+     */
+    private String getPendingPaymentEmailContent(String userName, String serviceName,
+                                                 String appointmentDate, String appointmentTime,
+                                                 String petName, String appointmentNo) {
+        return "<!DOCTYPE html>" +
+                "<html lang='zh-CN'>" +
+                "<head><meta charset='UTF-8'><title>待支付提醒</title></head>" +
+                "<body style='margin:0; padding:0; font-family: \"Microsoft YaHei\", sans-serif; background-color:#f4f7fc;'>" +
+                "<div style='max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.1);'>" +
+                "<div style='background: linear-gradient(135deg, #e6a23c 0%, #f0b45c 100%); padding:30px 20px; text-align:center;'>" +
+                "<h1 style='color:#ffffff; margin:0; font-size:28px;'>⏰ 待支付提醒</h1>" +
+                "<p style='color:#fff0e0; margin:10px 0 0;'>请尽快完成支付，否则预约将自动取消</p>" +
+                "</div>" +
+                "<div style='padding:30px;'>" +
+                "<p style='color:#333333; font-size:16px;'>亲爱的 <strong>" + (userName != null ? userName : "用户") + "</strong>，你好！</p>" +
+                "<p style='color:#666666; line-height:1.8;'>您有一个预约待支付，请在30分钟内完成支付：</p>" +
+                "<div style='background: linear-gradient(145deg, #f6f9fc 0%, #eef2f7 100%); border-radius:12px; padding:20px; margin:20px 0;'>" +
+                "<table style='width:100%; border-collapse:collapse;'>" +
+                "<tr><td style='padding:8px 0; color:#666; width:100px;'>预约编号：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + appointmentNo + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>服务项目：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + serviceName + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>预约宠物：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + (petName != null ? petName : "未指定") + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>预约日期：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + appointmentDate + "</td></tr>" +
+                "<tr><td style='padding:8px 0; color:#666;'>预约时段：</td>" +
+                "<td style='padding:8px 0; color:#333; font-weight:500;'>" + appointmentTime + "</td></tr>" +
+                "</table>" +
+                "</div>" +
+                "<div style='background-color:#fef9e6; padding:15px; border-radius:8px; margin:20px 0; border-left:4px solid #e6a23c;'>" +
+                "<p style='color:#666; margin:0; font-size:14px;'>⚠️ <strong>温馨提示：</strong> 请尽快完成支付，超时未支付预约将自动取消。</p>" +
+                "</div>" +
+                "<div style='text-align:center; margin:30px 0;'>" +
+                "<a href='http://localhost:8081/pay/" + appointmentNo + "' style='display:inline-block; background:linear-gradient(135deg, #e6a23c, #f0b45c); color:white; text-decoration:none; padding:12px 40px; border-radius:30px; font-size:16px; font-weight:500;'>立即支付</a>" +
+                "</div>" +
+                "</div>" +
+                "<div style='background-color:#f8f9fa; padding:20px; text-align:center; border-top:1px solid #e9ecef;'>" +
+                "<p style='color:#868e96; margin:0; font-size:14px;'>© 2026 宠物服务系统 · 用心服务每一个宠物家庭</p>" +
                 "</div>" +
                 "</div>" +
                 "</body>" +

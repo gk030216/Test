@@ -1,9 +1,5 @@
 <template>
   <div class="staff-evaluations">
-    <div class="page-header">
-      <h2 class="page-title">服务评价</h2>
-      <p class="page-desc">查看用户对服务的评价</p>
-    </div>
 
     <!-- 统计卡片 -->
     <el-row :gutter="20">
@@ -107,14 +103,16 @@
         :data="commentList"
         stripe
         class="comment-table"
+        @selection-change="handleSelectionChange"
     >
+      <el-table-column type="selection" width="45" align="center"></el-table-column>
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
 
       <el-table-column label="服务信息" min-width="200">
         <template slot-scope="scope">
           <div class="service-info">
             <span class="service-name">{{ scope.row.serviceName || '--' }}</span>
-            <span class="service-id">服务ID: {{ scope.row.serviceId }}</span>
+            <span class="service-id">ID: {{ scope.row.serviceId }}</span>
           </div>
         </template>
       </el-table-column>
@@ -156,17 +154,30 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="120" fixed="right" align="center">
+      <el-table-column label="操作" width="200" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
             <el-button
                 size="small"
+                type="info"
+                plain
+                circle
+                @click="handleView(scope.row)"
+                class="action-icon-btn"
+                title="查看"
+            >
+              <i class="el-icon-view"></i>
+            </el-button>
+            <el-button
+                size="small"
                 type="primary"
                 plain
+                circle
                 @click="openReplyDialog(scope.row)"
-                class="action-btn"
+                class="action-icon-btn"
+                title="回复"
             >
-              {{ scope.row.reply ? '查看/回复' : '回复' }}
+              <i class="el-icon-chat-dot-round"></i>
             </el-button>
           </div>
         </template>
@@ -243,6 +254,110 @@
         </el-button>
       </span>
     </el-dialog>
+
+    <!-- 评价详情对话框 -->
+    <el-dialog
+        title="评价详情"
+        :visible.sync="detailVisible"
+        width="550px"
+        center
+        class="comment-detail-dialog"
+    >
+      <div class="detail-content" v-if="currentDetailComment">
+        <!-- 服务信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-service"></i>
+            <span>服务信息</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">服务名称：</span>
+            <span class="detail-value">{{ currentDetailComment.serviceName || '--' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">服务ID：</span>
+            <span class="detail-value">{{ currentDetailComment.serviceId }}</span>
+          </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-user"></i>
+            <span>用户信息</span>
+          </div>
+          <div class="detail-user">
+            <el-avatar :size="50" :src="currentDetailComment.userAvatar" class="detail-avatar">
+              {{ currentDetailComment.userName ? currentDetailComment.userName.charAt(0).toUpperCase() : 'U' }}
+            </el-avatar>
+            <div class="user-detail">
+              <span class="user-name">{{ currentDetailComment.userName }}</span>
+              <span class="user-id">用户ID: {{ currentDetailComment.userId }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 评价内容 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-star-on"></i>
+            <span>评价内容</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">评分：</span>
+            <el-rate v-model="currentDetailComment.rating" disabled show-score text-color="#ff9900"></el-rate>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">评价内容：</span>
+            <span class="detail-value comment-text">{{ currentDetailComment.content }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">评价时间：</span>
+            <span class="detail-value">{{ formatDate(currentDetailComment.createTime) }}</span>
+          </div>
+        </div>
+
+        <!-- 回复内容 -->
+        <div class="detail-section" v-if="currentDetailComment.reply">
+          <div class="section-title">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>商家回复</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">回复内容：</span>
+            <span class="detail-value reply-text">{{ currentDetailComment.reply }}</span>
+          </div>
+          <div class="detail-item" v-if="currentDetailComment.replyTime">
+            <span class="detail-label">回复时间：</span>
+            <span class="detail-value">{{ formatDate(currentDetailComment.replyTime) }}</span>
+          </div>
+        </div>
+
+        <!-- 状态信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-info"></i>
+            <span>状态信息</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">显示状态：</span>
+            <el-tag :type="currentDetailComment.status === 1 ? 'success' : 'danger'" size="small">
+              {{ currentDetailComment.status === 1 ? '显示' : '隐藏' }}
+            </el-tag>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">回复状态：</span>
+            <el-tag :type="currentDetailComment.reply ? 'success' : 'info'" size="small">
+              {{ currentDetailComment.reply ? '已回复' : '待回复' }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+
+      <span slot="footer">
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -250,7 +365,7 @@
 import {
   getServiceCommentList,
   replyServiceComment,
-  getServiceCommentStatistics
+  getStaffServiceCommentStatistics
 } from '@/api/service';
 
 export default {
@@ -259,10 +374,13 @@ export default {
     return {
       loading: false,
       replyLoading: false,
+      detailVisible: false,
+      currentDetailComment: null,
       commentList: [],
       total: 0,
       page: 1,
       pageSize: 10,
+      selectedRows: [],
       searchForm: {
         keyword: '',
         rating: '',
@@ -310,7 +428,7 @@ export default {
 
     async loadStatistics() {
       try {
-        const res = await getServiceCommentStatistics();
+        const res = await getStaffServiceCommentStatistics();
         if (res.code === 200) {
           this.statistics = res.data || {};
         }
@@ -359,10 +477,20 @@ export default {
       this.loadList();
     },
 
+    handleSelectionChange(rows) {
+      this.selectedRows = rows;
+    },
+
     formatDate(date) {
       if (!date) return '';
       const d = new Date(date);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    },
+
+    // 查看评价详情
+    handleView(row) {
+      this.currentDetailComment = row;
+      this.detailVisible = true;
     },
 
     openReplyDialog(row) {
@@ -565,12 +693,18 @@ export default {
 .action-buttons {
   display: flex;
   justify-content: center;
+  gap: 8px;
 }
 
-.action-btn {
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 12px;
+.action-icon-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.action-icon-btn:hover {
+  transform: scale(1.1);
 }
 
 .pagination-wrapper {
@@ -687,6 +821,122 @@ export default {
 .dialog-footer {
   text-align: right;
   padding-top: 10px;
+}
+
+/* 评价详情对话框样式 */
+.comment-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.detail-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 16px;
+}
+
+.detail-user {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 8px 0;
+}
+
+.detail-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.user-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-detail .user-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+.user-detail .user-id {
+  font-size: 12px;
+  color: #909399;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.detail-label {
+  width: 85px;
+  font-size: 13px;
+  color: #909399;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.comment-text {
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.reply-text {
+  color: #67c23a;
 }
 
 @media (max-width: 768px) {

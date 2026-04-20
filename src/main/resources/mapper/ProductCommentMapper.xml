@@ -19,6 +19,7 @@
         <result column="product_name" property="productName"/>
         <result column="product_image" property="productImage"/>
         <result column="product_price" property="productPrice"/>
+        <!-- 关联查询的用户字段 -->
         <result column="user_avatar" property="userAvatar"/>
     </resultMap>
 
@@ -29,10 +30,21 @@
 
     <select id="getCommentList" resultMap="BaseResultMap">
         SELECT
-            pc.*,
+            pc.id,
+            pc.order_no,
+            pc.product_id,
+            pc.user_id,
+            pc.rating,
+            pc.content,
+            pc.images,
+            pc.reply,
+            pc.reply_time,
+            pc.status,
+            pc.create_time,
             p.name as product_name,
             p.image as product_image,
             p.price as product_price,
+            u.username as user_name,
             u.avatar as user_avatar
         FROM product_comment pc
                  LEFT JOIN product p ON pc.product_id = p.id
@@ -49,17 +61,28 @@
 
     <select id="getAdminCommentList" resultMap="BaseResultMap">
         SELECT
-        pc.*,
+        pc.id,
+        pc.order_no,
+        pc.product_id,
+        pc.user_id,
+        pc.rating,
+        pc.content,
+        pc.images,
+        pc.reply,
+        pc.reply_time,
+        pc.status,
+        pc.create_time,
         p.name as product_name,
         p.image as product_image,
         p.price as product_price,
+        u.username as user_name,
         u.avatar as user_avatar
         FROM product_comment pc
         LEFT JOIN product p ON pc.product_id = p.id
         LEFT JOIN user u ON pc.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (pc.user_name LIKE CONCAT('%', #{keyword}, '%')
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
                 OR pc.content LIKE CONCAT('%', #{keyword}, '%')
                 OR p.name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
@@ -80,15 +103,17 @@
         </where>
         ORDER BY
         CASE WHEN (pc.reply IS NULL OR pc.reply = '') THEN 0 ELSE 1 END,
-        pc.id ASC
+        pc.id DESC
     </select>
 
     <select id="countAdminComment" resultType="int">
-        SELECT COUNT(*) FROM product_comment pc
+        SELECT COUNT(*)
+        FROM product_comment pc
         LEFT JOIN product p ON pc.product_id = p.id
+        LEFT JOIN user u ON pc.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (pc.user_name LIKE CONCAT('%', #{keyword}, '%')
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
                 OR pc.content LIKE CONCAT('%', #{keyword}, '%')
                 OR p.name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
@@ -152,5 +177,101 @@
         ORDER BY date ASC
     </select>
 
+    <!-- 根据ID获取评价 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT
+            pc.id,
+            pc.order_no,
+            pc.product_id,
+            pc.user_id,
+            pc.rating,
+            pc.content,
+            pc.images,
+            pc.reply,
+            pc.reply_time,
+            pc.status,
+            pc.create_time,
+            p.name as product_name,
+            p.image as product_image,
+            p.price as product_price,
+            u.username as user_name,
+            u.avatar as user_avatar
+        FROM product_comment pc
+                 LEFT JOIN product p ON pc.product_id = p.id
+                 LEFT JOIN user u ON pc.user_id = u.id
+        WHERE pc.id = #{id}
+    </select>
+
+    <!-- 获取商品评分分布 -->
+    <select id="getProductRatingDistribution" resultType="java.util.HashMap">
+        SELECT
+            rating,
+            COUNT(*) as count
+        FROM product_comment
+        WHERE product_id = #{productId} AND status = 1
+        GROUP BY rating
+        ORDER BY rating DESC
+    </select>
+
+    <!-- 获取商品近7天评价趋势 -->
+    <select id="getProductCommentTrend" resultType="java.util.HashMap">
+        SELECT
+            DATE_FORMAT(create_time, '%Y-%m-%d') as date,
+        COUNT(*) as count
+        FROM product_comment
+        WHERE product_id = #{productId}
+          AND status = 1
+          AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        ORDER BY date ASC
+    </select>
+
+    <!-- 获取商品已回复评价数量 -->
+    <select id="getProductRepliedCommentCount" resultType="int">
+        SELECT COUNT(*)
+        FROM product_comment
+        WHERE product_id = #{productId}
+          AND status = 1
+          AND reply IS NOT NULL
+          AND reply != ''
+    </select>
+
+    <!-- 获取商品评价列表（支持评分筛选） -->
+    <select id="getCommentListWithRating" resultMap="BaseResultMap">
+        SELECT
+        c.id,
+        c.product_id,
+        c.user_id,
+        c.order_no,
+        c.rating,
+        c.content,
+        c.images,
+        c.reply,
+        c.reply_time,
+        c.status,
+        c.create_time,
+        p.name as product_name,
+        u.username as user_name,
+        u.avatar as user_avatar
+        FROM product_comment c
+        LEFT JOIN product p ON c.product_id = p.id
+        LEFT JOIN user u ON c.user_id = u.id
+        WHERE c.product_id = #{productId} AND c.status = 1
+        <if test="rating != null">
+            AND c.rating = #{rating}
+        </if>
+        ORDER BY c.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计商品评价数量（支持评分筛选） -->
+    <select id="countCommentWithRating" resultType="int">
+        SELECT COUNT(*)
+        FROM product_comment
+        WHERE product_id = #{productId} AND status = 1
+        <if test="rating != null">
+            AND rating = #{rating}
+        </if>
+    </select>
 
 </mapper>

@@ -95,7 +95,14 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        // 4. 排序返回结果
+        // 如果推荐分数为空，返回热门商品
+        if (productScores.isEmpty()) {
+            return getPopularProducts(limit);
+        }
+
+        // 4. 排序返回结果 - 找到最大分数用于归一化
+        double maxScore = productScores.values().stream().max(Double::compareTo).orElse(1.0);
+
         List<Map<String, Object>> result = productScores.entrySet().stream()
                 .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
                 .limit(limit)
@@ -109,8 +116,10 @@ public class RecommendationServiceImpl implements RecommendationService {
                     item.put("price", product.getPrice());
                     item.put("image", product.getImage());
                     item.put("sales", product.getSales());
-                    item.put("score", entry.getValue());
-                    item.put("frequency", productFrequency.get(entry.getKey()));
+                    // 归一化分数到 0-1 范围
+                    double normalizedScore = entry.getValue() / maxScore;
+                    if (normalizedScore > 1.0) normalizedScore = 1.0;
+                    item.put("score", normalizedScore);
                     item.put("reason", "和你兴趣相似的用户也喜欢");
                     return item;
                 })
@@ -143,44 +152,64 @@ public class RecommendationServiceImpl implements RecommendationService {
         // 获取与当前商品相似的商品
         List<Map<String, Object>> similarProducts = favoriteMapper.findSimilarProducts(productId, limit * 2);
 
-        if (similarProducts == null) {
-            similarProducts = new ArrayList<>();
+        if (similarProducts == null || similarProducts.isEmpty()) {
+            return getPopularProducts(limit);
         }
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        // ✅ 步骤1：先计算最大相似度（普通循环）
+        double maxSimilarity = 0;
         for (Map<String, Object> item : similarProducts) {
-            Integer id = (Integer) item.get("id");
             Object similarityObj = item.get("similarity");
-
-            // 处理不同类型的相似度值
-            Double similarity;
-            if (similarityObj instanceof Integer) {
-                similarity = ((Integer) similarityObj).doubleValue();
-            } else if (similarityObj instanceof Long) {
-                similarity = ((Long) similarityObj).doubleValue();
-            } else if (similarityObj instanceof Double) {
-                similarity = (Double) similarityObj;
-            } else if (similarityObj instanceof Number) {
+            double similarity = 0;
+            if (similarityObj instanceof Number) {
                 similarity = ((Number) similarityObj).doubleValue();
-            } else {
-                similarity = 0.0;
             }
-
-            Product product = productMapper.getById(id);
-            if (product != null) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", product.getId());
-                map.put("name", product.getName());
-                map.put("price", product.getPrice());
-                map.put("image", product.getImage());
-                map.put("sales", product.getSales());
-                map.put("score", similarity);
-                map.put("reason", "浏览此商品的用户也喜欢");
-                result.add(map);
+            if (similarity > maxSimilarity) {
+                maxSimilarity = similarity;
             }
-
-            if (result.size() >= limit) break;
         }
+
+        // 如果最大相似度为0，设为1避免除零
+        if (maxSimilarity <= 0) {
+            maxSimilarity = 1;
+        }
+
+        // ✅ 步骤2：声明 final 变量供 lambda 使用
+        final double finalMaxSimilarity = maxSimilarity;
+
+        // ✅ 步骤3：使用 lambda 处理结果
+        List<Map<String, Object>> result = similarProducts.stream()
+                .map(item -> {
+                    Integer id = (Integer) item.get("id");
+
+                    double similarity = 0;
+                    Object similarityObj = item.get("similarity");
+                    if (similarityObj instanceof Number) {
+                        similarity = ((Number) similarityObj).doubleValue();
+                    }
+
+                    // 归一化到 0-1 范围
+                    double normalizedScore = similarity / finalMaxSimilarity;
+                    if (normalizedScore > 1.0) {
+                        normalizedScore = 1.0;
+                    }
+
+                    Product product = productMapper.getById(id);
+                    if (product == null) return null;
+
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", product.getId());
+                    map.put("name", product.getName());
+                    map.put("price", product.getPrice());
+                    map.put("image", product.getImage());
+                    map.put("sales", product.getSales());
+                    map.put("score", normalizedScore);
+                    map.put("reason", "浏览此商品的用户也喜欢");
+                    return map;
+                })
+                .filter(Objects::nonNull)
+                .limit(limit)
+                .collect(Collectors.toList());
 
         // 如果推荐结果不足，用热门商品补充
         if (result.size() < limit) {
@@ -193,7 +222,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        return result.stream().limit(limit).collect(Collectors.toList());
+        return result;
     }
 
     /**
@@ -216,6 +245,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         Set<Integer> seenIds = new HashSet<>();
         List<Map<String, Object>> result = new ArrayList<>();
 
+        // 先添加用户协同过滤的结果
         for (Map<String, Object> item : userBased) {
             Integer id = (Integer) item.get("id");
             if (!seenIds.contains(id)) {
@@ -224,35 +254,20 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
+        // 再添加物品协同过滤的结果（不重复）
         for (Map<String, Object> item : itemBased) {
             Integer id = (Integer) item.get("id");
             if (!seenIds.contains(id)) {
                 seenIds.add(id);
-                // 物品协同过滤权重稍低
-                Object scoreObj = item.get("score");
-                Double score;
-                if (scoreObj instanceof Integer) {
-                    score = ((Integer) scoreObj).doubleValue() * 0.8;
-                } else if (scoreObj instanceof Long) {
-                    score = ((Long) scoreObj).doubleValue() * 0.8;
-                } else if (scoreObj instanceof Double) {
-                    score = (Double) scoreObj * 0.8;
-                } else if (scoreObj instanceof Number) {
-                    score = ((Number) scoreObj).doubleValue() * 0.8;
-                } else {
-                    score = 0.0;
-                }
-                item.put("score", score);
+                // 物品协同过滤直接使用原有分数（已经是归一化的）
                 result.add(item);
             }
         }
 
         // 按分数排序
         result.sort((a, b) -> {
-            Object scoreAObj = a.get("score");
-            Object scoreBObj = b.get("score");
-            Double scoreA = scoreAObj instanceof Number ? ((Number) scoreAObj).doubleValue() : 0.0;
-            Double scoreB = scoreBObj instanceof Number ? ((Number) scoreBObj).doubleValue() : 0.0;
+            Double scoreA = getDoubleValue(a.get("score"));
+            Double scoreB = getDoubleValue(b.get("score"));
             return scoreB.compareTo(scoreA);
         });
 
@@ -277,9 +292,21 @@ public class RecommendationServiceImpl implements RecommendationService {
      */
     private List<Map<String, Object>> getPopularProducts(Integer limit) {
         List<Product> hotProducts = productMapper.getProductList(0, limit, null, null, 1, null);
-        if (hotProducts == null) {
+        if (hotProducts == null || hotProducts.isEmpty()) {
             return new ArrayList<>();
         }
+
+        // 找出最大销量用于归一化
+        int maxSales = 0;
+        for (Product p : hotProducts) {
+            if (p.getSales() != null && p.getSales() > maxSales) {
+                maxSales = p.getSales();
+            }
+        }
+        if (maxSales <= 0) maxSales = 1;
+
+        final int finalMaxSales = maxSales;
+
         return hotProducts.stream().map(p -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", p.getId());
@@ -287,9 +314,31 @@ public class RecommendationServiceImpl implements RecommendationService {
             item.put("price", p.getPrice());
             item.put("image", p.getImage());
             item.put("sales", p.getSales());
-            item.put("score", p.getSales() != null ? p.getSales() : 0);
+            // 使用 finalMaxSales 而不是 maxSales
+            double normalizedScore = (double) (p.getSales() != null ? p.getSales() : 0) / finalMaxSales;
+            if (normalizedScore > 1.0) normalizedScore = 1.0;
+            item.put("score", normalizedScore);
             item.put("reason", "热门推荐");
             return item;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 安全获取 Double 值
+     */
+    private Double getDoubleValue(Object value) {
+        if (value == null) return 0.0;
+        if (value instanceof Double) return (Double) value;
+        if (value instanceof Integer) return ((Integer) value).doubleValue();
+        if (value instanceof Long) return ((Long) value).doubleValue();
+        if (value instanceof Float) return ((Float) value).doubleValue();
+        if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (NumberFormatException e) {
+                return 0.0;
+            }
+        }
+        return 0.0;
     }
 }

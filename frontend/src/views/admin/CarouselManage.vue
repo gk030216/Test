@@ -3,7 +3,7 @@
     <!-- 顶部操作栏 -->
     <div class="action-bar">
       <div class="action-left">
-        <el-button type="primary" @click="handleAdd">
+        <el-button type="primary" @click="handleAdd" class="add-btn">
           <i class="el-icon-plus"></i> 新增轮播图
         </el-button>
         <el-button
@@ -11,6 +11,7 @@
             type="success"
             plain
             @click="handleBatchEnable"
+            class="batch-btn"
         >
           <i class="el-icon-check"></i> 启用 ({{ selectedRows.length }})
         </el-button>
@@ -19,6 +20,7 @@
             type="danger"
             plain
             @click="handleBatchDisable"
+            class="batch-btn"
         >
           <i class="el-icon-close"></i> 禁用 ({{ selectedRows.length }})
         </el-button>
@@ -27,54 +29,81 @@
             type="danger"
             plain
             @click="handleBatchDelete"
+            class="batch-btn"
         >
           <i class="el-icon-delete"></i> 删除 ({{ selectedRows.length }})
         </el-button>
+        <!-- 保存排序按钮 -->
+        <el-button
+            v-if="sortChanged"
+            type="success"
+            plain
+            @click="saveSortOrder"
+            :loading="sortSaving"
+            class="batch-btn"
+        >
+          <i class="el-icon-check"></i> 保存排序
+        </el-button>
       </div>
       <div class="action-right">
-        <el-input
-            v-model="searchForm.keyword"
-            placeholder="搜索标题"
+        <div class="search-wrapper">
+          <i class="el-icon-search search-icon"></i>
+          <el-input
+              v-model="searchForm.keyword"
+              placeholder="搜索标题"
+              clearable
+              size="medium"
+              @keyup.enter="handleSearch"
+              class="search-input"
+          ></el-input>
+        </div>
+        <el-select
+            v-model="searchForm.status"
+            placeholder="状态"
             clearable
             size="medium"
-            style="width: 200px"
-            @keyup.enter="handleSearch"
+            class="status-select"
+            @change="handleSearch"
         >
-          <i slot="prefix" class="el-icon-search"></i>
-        </el-input>
-        <el-select v-model="searchForm.status" placeholder="状态" clearable size="medium" style="width: 100px" @change="handleSearch">
           <el-option label="正常" :value="1"></el-option>
           <el-option label="禁用" :value="0"></el-option>
         </el-select>
-        <el-button type="primary" size="medium" @click="handleSearch">搜索</el-button>
-        <el-button size="medium" @click="handleReset">重置</el-button>
+        <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">
+          搜索
+        </el-button>
+        <el-button size="medium" @click="handleReset" class="reset-btn">
+          重置
+        </el-button>
       </div>
     </div>
 
-    <!-- 表格 -->
+    <!-- 轮播图表 - 整行可拖拽 -->
     <el-table
         v-loading="loading"
         :data="carouselList"
         stripe
-        @selection-change="handleSelectionChange"
-        class="carousel-table"
         row-key="id"
+        class="carousel-table"
+        @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="45" align="center"></el-table-column>
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
 
-      <el-table-column label="图片" width="120" align="center">
+      <!-- 图片列 -->
+      <el-table-column label="图片" width="100" align="center">
         <template slot-scope="scope">
-          <el-image
-              :src="scope.row.image"
-              fit="cover"
-              style="width: 80px; height: 50px; border-radius: 8px; cursor: pointer;"
-              :preview-src-list="[scope.row.image]"
-          >
-            <div slot="error" class="image-slot">
-              <i class="el-icon-picture-outline"></i>
-            </div>
-          </el-image>
+          <div class="carousel-img-wrapper">
+            <el-image
+                :src="scope.row.image"
+                fit="contain"
+                class="carousel-img"
+                :preview-src-list="[scope.row.image]"
+            >
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline"></i>
+              </div>
+            </el-image>
+          </div>
         </template>
       </el-table-column>
 
@@ -90,7 +119,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="sortOrder" label="排序" width="80" align="center">
+      <el-table-column prop="sortOrder" label="排序" width="100" align="center">
         <template slot-scope="scope">
           <span class="sort-text">{{ scope.row.sortOrder }}</span>
         </template>
@@ -103,8 +132,8 @@
               active-color="#67c23a"
               inactive-color="#f56c6c"
               @change="(val) => handleStatusChange(scope.row, val)"
-          >
-          </el-switch>
+              :loading="scope.row.statusLoading"
+          ></el-switch>
         </template>
       </el-table-column>
 
@@ -114,14 +143,43 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="180" align="center" fixed="right">
+      <el-table-column label="操作" width="240" fixed="right" align="center">
         <template slot-scope="scope">
-          <el-button size="small" type="primary" plain @click="handleEdit(scope.row)">
-            <i class="el-icon-edit"></i> 编辑
-          </el-button>
-          <el-button size="small" type="danger" plain @click="handleDelete(scope.row)">
-            <i class="el-icon-delete"></i> 删除
-          </el-button>
+          <div class="action-buttons">
+            <el-button
+                size="small"
+                type="info"
+                plain
+                circle
+                @click="handleView(scope.row)"
+                class="action-icon-btn"
+                title="查看"
+            >
+              <i class="el-icon-view"></i>
+            </el-button>
+            <el-button
+                size="small"
+                type="primary"
+                plain
+                circle
+                @click="handleEdit(scope.row)"
+                class="action-icon-btn"
+                title="编辑"
+            >
+              <i class="el-icon-edit"></i>
+            </el-button>
+            <el-button
+                size="small"
+                type="danger"
+                plain
+                circle
+                @click="handleDelete(scope.row)"
+                class="action-icon-btn"
+                title="删除"
+            >
+              <i class="el-icon-delete"></i>
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -137,76 +195,134 @@
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
           background
-      >
-      </el-pagination>
+      ></el-pagination>
     </div>
 
-    <!-- 新增/编辑对话框 -->
+    <!-- 新增/编辑轮播图对话框 -->
     <el-dialog
         :title="dialogTitle"
         :visible.sync="dialogVisible"
         width="560px"
         :close-on-click-modal="false"
+        class="carousel-dialog"
         @closed="handleDialogClosed"
     >
-      <el-form :model="currentCarousel" :rules="rules" ref="carouselForm" label-width="80px">
-        <el-form-item label="图片" prop="image">
-          <div class="upload-wrapper">
-            <div class="upload-preview" @click="triggerUpload" v-if="!imagePreview">
-              <i class="el-icon-plus"></i>
-              <span>点击上传图片</span>
-            </div>
-            <div class="upload-preview" v-else @click="triggerUpload">
-              <el-image
-                  :src="imagePreview"
-                  fit="cover"
-                  style="width: 100%; height: 100%; border-radius: 8px;"
-              >
-                <div slot="error" class="image-slot">
-                  <i class="el-icon-picture-outline"></i>
-                </div>
-              </el-image>
-              <div class="upload-mask">
-                <i class="el-icon-edit"></i>
-                <span>更换图片</span>
+      <div class="dialog-content">
+        <el-form :model="currentCarousel" :rules="rules" ref="carouselForm" label-width="80px">
+          <el-form-item label="图片" prop="image">
+            <div class="upload-wrapper">
+              <div class="upload-preview" @click="triggerUpload" v-if="!imagePreview">
+                <i class="el-icon-plus"></i>
+                <span>点击上传图片</span>
               </div>
+              <div class="upload-preview" v-else @click="triggerUpload">
+                <el-image
+                    :src="imagePreview"
+                    fit="contain"
+                    class="preview-image"
+                >
+                  <div slot="error" class="image-slot">
+                    <i class="el-icon-picture-outline"></i>
+                  </div>
+                </el-image>
+                <div class="upload-mask">
+                  <i class="el-icon-edit"></i>
+                  <span>更换图片</span>
+                </div>
+              </div>
+              <input
+                  type="file"
+                  ref="imageInput"
+                  accept="image/jpeg,image/jpg,image/png"
+                  style="display: none"
+                  @change="handleImageUpload"
+              />
+              <div class="upload-tip">支持 JPG、PNG 格式，建议尺寸 1920x500，≤2MB</div>
             </div>
-            <input
-                type="file"
-                ref="imageInput"
-                accept="image/jpeg,image/jpg,image/png"
-                style="display: none"
-                @change="handleImageUpload"
-            />
-            <div class="upload-tip">支持 JPG、PNG 格式，建议尺寸 1920x500，≤2MB</div>
-          </div>
-        </el-form-item>
+          </el-form-item>
 
-        <el-form-item label="标题" prop="title">
-          <el-input v-model="currentCarousel.title" placeholder="请输入标题" maxlength="100" show-word-limit></el-input>
-        </el-form-item>
+          <el-form-item label="标题" prop="title">
+            <el-input v-model="currentCarousel.title" placeholder="请输入标题" maxlength="100" show-word-limit></el-input>
+          </el-form-item>
 
-        <el-form-item label="跳转链接">
-          <el-input v-model="currentCarousel.linkUrl" placeholder="例如：/product/1 或 https://xxx.com"></el-input>
-          <div class="form-tip">留空则不跳转</div>
-        </el-form-item>
+          <el-form-item label="跳转链接">
+            <el-input v-model="currentCarousel.linkUrl" placeholder="例如：/product/1 或 https://xxx.com"></el-input>
+            <div class="form-tip">留空则不跳转</div>
+          </el-form-item>
 
-        <el-form-item label="排序">
-          <el-input-number v-model="currentCarousel.sortOrder" :min="0" :max="999" :step="1" controls-position="right"></el-input-number>
-          <span class="form-tip">数字越小越靠前</span>
-        </el-form-item>
+          <el-form-item label="排序">
+            <el-input-number v-model="currentCarousel.sortOrder" :min="0" :max="999" controls-position="right"></el-input-number>
+            <span class="form-tip">数字越小越靠前</span>
+          </el-form-item>
 
-        <el-form-item label="状态">
-          <el-radio-group v-model="currentCarousel.status">
-            <el-radio :label="1">启用</el-radio>
-            <el-radio :label="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
+          <el-form-item label="状态">
+            <el-radio-group v-model="currentCarousel.status">
+              <el-radio :label="1">启用</el-radio>
+              <el-radio :label="0">禁用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-form>
+      </div>
 
       <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="submitLoading">确定</el-button>
+        <el-button @click="dialogVisible = false" size="medium">取消</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitLoading" size="medium">
+          {{ isEdit ? '保存修改' : '立即创建' }}
+        </el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 轮播图详情对话框 -->
+    <el-dialog
+        title="轮播图详情"
+        :visible.sync="detailVisible"
+        width="500px"
+        center
+        class="carousel-detail-dialog"
+    >
+      <div class="detail-content" v-if="currentDetailCarousel">
+        <div class="detail-image-wrapper">
+          <el-image
+              :src="currentDetailCarousel.image"
+              fit="contain"
+              class="detail-image"
+              :preview-src-list="[currentDetailCarousel.image]"
+          >
+            <div slot="error" class="image-slot">
+              <i class="el-icon-picture-outline"></i>
+            </div>
+          </el-image>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">ID：</span>
+          <span class="detail-value">{{ currentDetailCarousel.id }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">标题：</span>
+          <span class="detail-value">{{ currentDetailCarousel.title }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">跳转链接：</span>
+          <span class="detail-value">{{ currentDetailCarousel.linkUrl || '无' }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">排序值：</span>
+          <span class="detail-value">{{ currentDetailCarousel.sortOrder }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">状态：</span>
+          <el-tag :type="currentDetailCarousel.status === 1 ? 'success' : 'danger'" size="small">
+            {{ currentDetailCarousel.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">创建时间：</span>
+          <span class="detail-value">{{ formatDate(currentDetailCarousel.createTime) }}</span>
+        </div>
+      </div>
+
+      <span slot="footer">
+        <el-button @click="detailVisible = false">关闭</el-button>
       </span>
     </el-dialog>
   </div>
@@ -220,9 +336,11 @@ import {
   updateCarouselStatus,
   deleteCarousel,
   batchUpdateCarouselStatus,
-  batchDeleteCarousel
+  batchDeleteCarousel,
+  batchUpdateCarouselSort
 } from '@/api/carousel';
 import { uploadCarouselImage } from '@/api/upload';
+import Sortable from 'sortablejs';
 
 export default {
   name: 'CarouselManage',
@@ -230,6 +348,10 @@ export default {
     return {
       loading: false,
       submitLoading: false,
+      sortSaving: false,
+      sortChanged: false,
+      detailVisible: false,
+      currentDetailCarousel: null,
       carouselList: [],
       total: 0,
       page: 1,
@@ -269,26 +391,117 @@ export default {
   created() {
     this.loadList();
   },
+  mounted() {
+    this.initSortable();
+  },
   methods: {
     async loadList() {
       this.loading = true;
       try {
+        // 构建参数，只添加有值的字段
         const params = {
           page: this.page,
-          pageSize: this.pageSize,
-          keyword: this.searchForm.keyword || undefined,
-          status: this.searchForm.status || undefined
+          pageSize: this.pageSize
         };
+
+        if (this.searchForm.keyword && this.searchForm.keyword.trim()) {
+          params.keyword = this.searchForm.keyword.trim();
+        }
+
+        // 重要：status 可能为 0，不能使用 || 判断
+        if (this.searchForm.status !== '' && this.searchForm.status !== null && this.searchForm.status !== undefined) {
+          params.status = this.searchForm.status;
+        }
+
+        console.log('请求参数:', params); // 调试用
+
         const res = await getAdminCarouselList(params);
         if (res.code === 200) {
-          this.carouselList = res.data.list;
+          this.carouselList = res.data.list.map(item => ({
+            ...item,
+            statusLoading: false
+          }));
           this.total = res.data.total;
+          this.sortChanged = false;
         }
       } catch (error) {
         console.error('加载失败', error);
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
+      }
+    },
+
+    // 整行可拖拽排序
+    initSortable() {
+      const el = this.$el.querySelector('.el-table__body-wrapper tbody');
+      if (!el) return;
+
+      if (this.sortableInstance) {
+        this.sortableInstance.destroy();
+      }
+
+      this.sortableInstance = new Sortable(el, {
+        animation: 300,
+        onEnd: (evt) => {
+          const oldIndex = evt.oldIndex;
+          const newIndex = evt.newIndex;
+
+          if (oldIndex === newIndex) return;
+
+          const movedItem = this.carouselList.splice(oldIndex, 1)[0];
+          this.carouselList.splice(newIndex, 0, movedItem);
+
+          this.carouselList.forEach((item, index) => {
+            item.sortOrder = index;
+          });
+
+          this.$forceUpdate();
+          this.sortChanged = true;
+
+          console.log('拖拽后排序:', this.carouselList.map(i => ({id: i.id, order: i.sortOrder})));
+        }
+      });
+    },
+
+    // 查看详情
+    handleView(row) {
+      this.currentDetailCarousel = row;
+      this.detailVisible = true;
+    },
+
+    // 保存排序
+    async saveSortOrder() {
+      if (!this.sortChanged) {
+        this.$message.info('排序未发生变化');
+        return;
+      }
+
+      this.sortSaving = true;
+      try {
+        const sortList = this.carouselList.map((item, index) => ({
+          id: item.id,
+          sortOrder: index
+        }));
+
+        console.log('发送的排序数据:', sortList);
+
+        const res = await batchUpdateCarouselSort(sortList);
+
+        if (res.code === 200) {
+          this.$message.success('排序保存成功');
+          this.sortChanged = false;
+          await this.loadList();
+        } else {
+          this.$message.error(res.message || '保存失败');
+          await this.loadList();
+        }
+      } catch (error) {
+        console.error('保存排序失败:', error);
+        this.$message.error('保存排序失败');
+        await this.loadList();
+      } finally {
+        this.sortSaving = false;
       }
     },
 
@@ -332,14 +545,12 @@ export default {
       const file = event.target.files[0];
       if (!file) return;
 
-      // 验证文件类型
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
         this.$message.error('只支持 JPG、PNG 格式的图片');
         return;
       }
 
-      // 验证文件大小
       if (file.size > 2 * 1024 * 1024) {
         this.$message.error('图片大小不能超过 2MB');
         return;
@@ -354,7 +565,6 @@ export default {
           this.imagePreview = res.data.url;
           this.currentCarousel.image = res.data.url;
           this.$message.success('上传成功');
-          // 清除验证
           this.$nextTick(() => {
             if (this.$refs.carouselForm) {
               this.$refs.carouselForm.clearValidate('image');
@@ -487,10 +697,7 @@ export default {
     },
 
     async handleBatchEnable() {
-      if (this.selectedRows.length === 0) {
-        this.$message.warning('请选择要操作的数据');
-        return;
-      }
+      if (this.selectedRows.length === 0) return;
       const ids = this.selectedRows.map(row => row.id).join(',');
       this.$confirm(`确定要启用选中的 ${this.selectedRows.length} 个轮播图吗？`, '提示', {
         confirmButtonText: '确定',
@@ -513,10 +720,7 @@ export default {
     },
 
     async handleBatchDisable() {
-      if (this.selectedRows.length === 0) {
-        this.$message.warning('请选择要操作的数据');
-        return;
-      }
+      if (this.selectedRows.length === 0) return;
       const ids = this.selectedRows.map(row => row.id).join(',');
       this.$confirm(`确定要禁用选中的 ${this.selectedRows.length} 个轮播图吗？`, '提示', {
         confirmButtonText: '确定',
@@ -539,10 +743,7 @@ export default {
     },
 
     async handleBatchDelete() {
-      if (this.selectedRows.length === 0) {
-        this.$message.warning('请选择要操作的数据');
-        return;
-      }
+      if (this.selectedRows.length === 0) return;
       const ids = this.selectedRows.map(row => row.id).join(',');
       this.$confirm(`确定要删除选中的 ${this.selectedRows.length} 个轮播图吗？删除后无法恢复！`, '警告', {
         confirmButtonText: '确定',
@@ -563,6 +764,12 @@ export default {
         }
       }).catch(() => {});
     }
+  },
+
+  beforeDestroy() {
+    if (this.sortableInstance) {
+      this.sortableInstance.destroy();
+    }
   }
 };
 </script>
@@ -574,7 +781,6 @@ export default {
   min-height: 100%;
 }
 
-/* 顶部操作栏 */
 .action-bar {
   background: #fff;
   border-radius: 16px;
@@ -600,6 +806,81 @@ export default {
   gap: 12px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.add-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.batch-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.search-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #909399;
+  font-size: 16px;
+  z-index: 1;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.search-input ::v-deep .el-input__inner {
+  padding-left: 36px;
+  border-radius: 8px;
+}
+
+.status-select {
+  width: 100px;
+}
+
+.status-select ::v-deep .el-input__inner {
+  border-radius: 8px;
+}
+
+.search-btn, .reset-btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+}
+
+.reset-btn {
+  border-color: #dcdfe6;
+  color: #606266;
+}
+
+.reset-btn:hover {
+  background: #f5f7fa;
+  border-color: #c0c4cc;
 }
 
 /* 表格样式 */
@@ -628,6 +909,29 @@ export default {
   font-size: 13px;
 }
 
+/* 图片列样式 */
+.carousel-img-wrapper {
+  width: 80px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  background: #f8f9fc;
+  border-radius: 8px;
+}
+
+.carousel-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.carousel-img .el-image__inner {
+  object-fit: contain;
+}
+
 .title-text {
   color: #2c3e50;
   font-weight: 500;
@@ -644,18 +948,23 @@ export default {
   font-weight: 500;
 }
 
-.image-slot {
+.action-buttons {
   display: flex;
-  align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  background: #f5f7fa;
-  color: #909399;
-  font-size: 20px;
+  gap: 8px;
 }
 
-/* 分页 */
+.action-icon-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.action-icon-btn:hover {
+  transform: scale(1.1);
+}
+
 .pagination-wrapper {
   margin-top: 20px;
   display: flex;
@@ -667,34 +976,38 @@ export default {
 }
 
 /* 对话框样式 */
-::v-deep .el-dialog {
+.carousel-dialog ::v-deep .el-dialog {
   border-radius: 20px;
   overflow: hidden;
 }
 
-::v-deep .el-dialog__header {
+.carousel-dialog ::v-deep .el-dialog__header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px 24px;
   margin: 0;
 }
 
-::v-deep .el-dialog__title {
+.carousel-dialog ::v-deep .el-dialog__title {
   color: white;
   font-weight: 600;
   font-size: 18px;
 }
 
-::v-deep .el-dialog__close {
+.carousel-dialog ::v-deep .el-dialog__close {
   color: white;
   font-size: 20px;
 }
 
-::v-deep .el-dialog__body {
+.carousel-dialog ::v-deep .el-dialog__body {
   padding: 24px;
   background: #fff;
 }
 
-/* 上传组件 */
+.dialog-content {
+  padding: 10px 0;
+}
+
+/* 上传区域样式 */
 .upload-wrapper {
   text-align: center;
 }
@@ -706,12 +1019,8 @@ export default {
   border-radius: 8px;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #909399;
-  transition: all 0.3s;
   position: relative;
   overflow: hidden;
   background: #fafafa;
@@ -723,8 +1032,18 @@ export default {
   background: #f5f7fa;
 }
 
-.upload-preview i {
-  font-size: 32px;
+.upload-preview .preview-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-preview .preview-image .el-image__inner {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .upload-mask {
@@ -770,24 +1089,110 @@ export default {
 
 .dialog-footer {
   text-align: right;
-  padding-top: 16px;
+  padding: 16px 24px 20px;
   border-top: 1px solid #eef2f6;
 }
 
-.dialog-footer .el-button {
-  border-radius: 8px;
-  padding: 9px 24px;
-  font-weight: 500;
+/* 拖拽时的行样式 */
+.sortable-drag {
+  opacity: 0.5;
+  background: #f0f2f5 !important;
 }
 
-.dialog-footer .el-button--primary {
+/* 详情对话框样式 */
+.carousel-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.carousel-detail-dialog ::v-deep .el-dialog__header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
+  padding: 20px 24px;
+  margin: 0;
 }
 
-.dialog-footer .el-button--primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+.carousel-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.carousel-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.carousel-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.detail-content {
+  padding: 0 10px;
+}
+
+.detail-image-wrapper {
+  margin-bottom: 20px;
+  background: #f8f9fc;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+
+.detail-image {
+  width: auto;
+  height: auto;
+  max-width: 65%;     /* 图片最大宽度为容器的80% */
+  max-height: 300px;  /* 图片最大高度300px */
+  border-radius: 8px;
+}
+
+.detail-image .el-image__inner {
+  object-fit: contain;
+}
+
+.detail-image .el-image__inner {
+  object-fit: contain;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  width: 85px;
+  font-size: 14px;
+  color: #909399;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  font-size: 14px;
+  color: #2c3e50;
+  word-break: break-word;
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 20px;
 }
 
 /* 响应式 */
@@ -803,6 +1208,10 @@ export default {
 
   .action-left, .action-right {
     justify-content: center;
+  }
+
+  .search-input {
+    width: 180px;
   }
 
   .pagination-wrapper {

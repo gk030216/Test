@@ -231,6 +231,10 @@ export default {
     },
 
     async loadPosts() {
+      const token = localStorage.getItem('token');
+      // 只有登录后才请求社区帖子
+      if (!token) return;
+
       this.postsLoading = true;
       try {
         const res = await getPostList({ page: 1, pageSize: 3, sort: 'hot' });

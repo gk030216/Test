@@ -26,4 +26,8 @@ public interface ChatHistoryMapper {
                        @Param("answerSource") Integer answerSource,
                        @Param("rating") Integer rating);
     int deleteById(@Param("id") Integer id);
+
+    // 获取所有有对话记录的用户列表
+    List<Map<String, Object>> getUserListWithHistory(@Param("keyword") String keyword);
+
 }

@@ -192,9 +192,13 @@ export default {
 
     async loadStatistics() {
       try {
-        const res = await getAppointmentStatistics();  // 改用这个方法
+        const staffId = this.userInfo.id;
+        const res = await getAppointmentStatistics({ staffId: staffId });
         if (res.code === 200) {
-          this.statistics = res.data;
+          this.statistics = {
+            ...this.statistics,
+            ...res.data
+          };
         }
       } catch (error) {
         console.error('加载统计数据失败', error);
@@ -204,7 +208,10 @@ export default {
     async loadAppointments() {
       this.loading = true;
       try {
-        // 获取待确认预约
+        const today = new Date().toISOString().split('T')[0];
+        const staffId = this.userInfo.id;  // 获取当前员工ID
+
+        // 获取待确认预约（所有员工可见，不传staffId）
         const pendingRes = await getAdminAppointmentList({
           page: 1,
           pageSize: 10,
@@ -214,27 +221,29 @@ export default {
           this.pendingAppointments = pendingRes.data.list || [];
         }
 
-        // 获取服务中预约
+        // 获取服务中预约（只显示当前员工）
         const servicingRes = await getAdminAppointmentList({
           page: 1,
           pageSize: 10,
-          status: 2
+          status: 2,
+          staffId: staffId
         });
         if (servicingRes.code === 200) {
           this.servicingAppointments = servicingRes.data.list || [];
         }
 
-        // 获取今日已完成
-        const today = new Date().toISOString().split('T')[0];
+        // 获取今日已完成（只显示当前员工）
         const completedRes = await getAdminAppointmentList({
           page: 1,
           pageSize: 10,
           status: 3,
           startDate: today,
-          endDate: today
+          endDate: today,
+          staffId: staffId
         });
         if (completedRes.code === 200) {
           this.todayCompleted = completedRes.data.list || [];
+          this.statistics.completed = completedRes.data.total || 0;
         }
       } catch (error) {
         console.error('加载预约列表失败', error);

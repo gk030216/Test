@@ -12,14 +12,15 @@
         <result column="avatar" property="avatar"/>
         <result column="role" property="role"/>
         <result column="status" property="status"/>
+        <result column="gender" property="gender"/>  <!-- 添加这一行 -->
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="last_login_time" property="lastLoginTime"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, username, password, email, phone, nickname, avatar, role, status,
-        create_time, update_time, last_login_time
+        id, username, password, email, phone, nickname, avatar, role, status, gender,
+    create_time, update_time, last_login_time
     </sql>
 
     <select id="findByUsername" resultMap="BaseResultMap">
@@ -100,8 +101,8 @@
     </select>
 
     <insert id="insert" parameterType="com.pet.entity.User" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user (username, password, email, phone, nickname, avatar, role, status)
-        VALUES (#{username}, #{password}, #{email}, #{phone}, #{nickname}, #{avatar}, #{role}, #{status})
+        INSERT INTO user (username, password, email, phone, nickname, avatar, role, status, gender)
+        VALUES (#{username}, #{password}, #{email}, #{phone}, #{nickname}, #{avatar}, #{role}, #{status}, #{gender})
     </insert>
 
     <update id="update" parameterType="com.pet.entity.User">
@@ -115,6 +116,7 @@
             <if test="avatar != null">avatar = #{avatar},</if>
             <if test="role != null">role = #{role},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="gender != null">gender = #{gender},</if>  <!-- 添加这一行 -->
             <if test="lastLoginTime != null">last_login_time = #{lastLoginTime},</if>
         </set>
         WHERE id = #{id}
@@ -172,4 +174,125 @@
             #{id}
         </foreach>
     </delete>
+
+    <!-- 获取所有启用的员工列表 -->
+    <select id="getStaffList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM user
+        WHERE role = 2 AND status = 1
+        ORDER BY id ASC
+    </select>
+
+    <!-- ============= 用户分析 ============= -->
+
+    <!-- 统计活跃用户（最近7天有登录） -->
+    <select id="countActiveUsers" resultType="int">
+        SELECT COUNT(*) FROM user
+        WHERE last_login_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    </select>
+
+    <!-- 统计今日新增用户 -->
+    <select id="countTodayNew" resultType="int">
+        SELECT COUNT(*) FROM user
+        WHERE DATE(create_time) = CURDATE()
+    </select>
+
+    <!-- 统计近7日新增用户 -->
+    <select id="countWeekNew" resultType="int">
+        SELECT COUNT(*) FROM user
+        WHERE create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    </select>
+
+    <!-- 获取用户增长趋势 -->
+    <select id="getUserTrend" resultType="java.util.HashMap">
+        <choose>
+            <when test="type == 'weekly'">
+                SELECT
+                DATE_FORMAT(create_time, '%Y年第%v周') as date,
+                COUNT(*) as count
+                FROM user
+                WHERE create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY DATE_FORMAT(create_time, '%Y年第%v周')
+                ORDER BY date ASC
+                LIMIT 10
+            </when>
+            <when test="type == 'monthly'">
+                SELECT
+                DATE_FORMAT(create_time, '%Y年%m月') as date,
+                COUNT(*) as count
+                FROM user
+                WHERE create_time >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                GROUP BY DATE_FORMAT(create_time, '%Y年%m月')
+                ORDER BY date ASC
+            </when>
+            <otherwise>
+                SELECT
+                DATE_FORMAT(create_time, '%Y-%m-%d') as date,
+                COUNT(*) as count
+                FROM user
+                WHERE create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+                ORDER BY date ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 获取角色分布 -->
+    <select id="getRoleDistribution" resultType="java.util.HashMap">
+        SELECT
+            CASE
+                WHEN role = 1 THEN '普通用户'
+                WHEN role = 2 THEN '员工'
+                WHEN role = 3 THEN '管理员'
+                ELSE '未知'
+                END as name,
+            COUNT(*) as value
+        FROM user
+        GROUP BY role
+    </select>
+
+    <!-- 获取性别分布 -->
+    <select id="getGenderDistribution" resultType="java.util.HashMap">
+        SELECT
+            CASE
+                WHEN gender = '男' THEN '男'
+                WHEN gender = '女' THEN '女'
+                ELSE '保密'
+                END as name,
+            COUNT(*) as value
+        FROM user
+        GROUP BY
+            CASE
+            WHEN gender = '男' THEN '男'
+            WHEN gender = '女' THEN '女'
+            ELSE '保密'
+        END
+    </select>
+
+    <!-- 获取活跃度分布 -->
+    <select id="getActivityDistribution" resultType="java.util.HashMap">
+        SELECT
+            CASE
+                WHEN last_login_time IS NULL THEN '从未登录'
+                WHEN last_login_time >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN '高活跃（近7天）'
+                WHEN last_login_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN '中活跃（近30天）'
+                ELSE '低活跃（30天以上）'
+                END as level,
+            COUNT(*) as count
+        FROM user
+        GROUP BY level
+        ORDER BY
+            CASE level
+            WHEN '高活跃（近7天）' THEN 1
+            WHEN '中活跃（近30天）' THEN 2
+            WHEN '从未登录' THEN 3
+            ELSE 4
+        END
+    </select>
+
+    <select id="countTodayLoginUsers" resultType="int">
+        SELECT COUNT(*)
+        FROM user
+        WHERE DATE(last_login_time) = CURDATE()
+    </select>
 </mapper>

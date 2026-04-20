@@ -1,47 +1,47 @@
+<!-- forget-password.vue 修改后的完整代码 -->
 <template>
   <div class="forget-container">
-    <!-- 背景动画 -->
-    <div class="bg-animation">
-      <div class="floating-paw" v-for="n in 8" :key="n">🐾</div>
-    </div>
+    <!-- 背景 -->
+    <div class="bg-pattern"></div>
 
-    <div class="forget-card" data-aos="fade-up" data-aos-duration="800">
+    <div class="forget-card">
       <!-- 卡片头部 -->
       <div class="card-header">
-        <div class="header-icon">
-          <span class="lock-wrapper">
-            <i class="el-icon-lock"></i>
-          </span>
+        <div class="logo">
+          <svg class="logo-svg" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M25 5C14.5 5 6 13.5 6 24C6 34.5 14.5 43 25 43C35.5 43 44 34.5 44 24C44 13.5 35.5 5 25 5Z" stroke="#409EFF" stroke-width="2" fill="white"/>
+            <circle cx="18" cy="22" r="2" fill="#409EFF"/>
+            <circle cx="32" cy="22" r="2" fill="#409EFF"/>
+            <path d="M20 32C22 35 28 35 30 32" stroke="#409EFF" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 16L20 20M34 16L30 20" stroke="#409EFF" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="logo-text">宠物服务系统</span>
         </div>
-        <h2 class="title">
-          <span class="gradient-text">找回密码</span>
-        </h2>
-        <p class="subtitle">别担心，我们帮你重新设置密码</p>
+        <h2 class="title">找回密码</h2>
+        <p class="subtitle">请输入注册邮箱，我们将发送验证码</p>
       </div>
 
-      <!-- 自定义步骤条 -->
-      <div class="steps-container">
+      <!-- 步骤条 -->
+      <div class="step-indicator">
         <div class="step-item" :class="{ active: step >= 1, completed: step > 1 }">
-          <div class="step-marker">
+          <div class="step-circle">
             <span v-if="step <= 1">1</span>
             <i v-else class="el-icon-check"></i>
           </div>
-          <span class="step-label">验证身份</span>
+          <span class="step-text">验证身份</span>
         </div>
-        <div class="step-connector" :class="{ active: step >= 2 }"></div>
+        <div class="step-line" :class="{ active: step >= 2 }"></div>
         <div class="step-item" :class="{ active: step >= 2, completed: step > 2 }">
-          <div class="step-marker">
+          <div class="step-circle">
             <span v-if="step <= 2">2</span>
             <i v-else class="el-icon-check"></i>
           </div>
-          <span class="step-label">重置密码</span>
+          <span class="step-text">重置密码</span>
         </div>
-        <div class="step-connector" :class="{ active: step >= 3 }"></div>
+        <div class="step-line" :class="{ active: step >= 3 }"></div>
         <div class="step-item" :class="{ active: step >= 3 }">
-          <div class="step-marker">
-            <span>3</span>
-          </div>
-          <span class="step-label">完成</span>
+          <div class="step-circle">3</div>
+          <span class="step-text">完成</span>
         </div>
       </div>
 
@@ -53,147 +53,89 @@
         </div>
 
         <el-form-item prop="email">
-          <div class="input-label">
-            <i class="el-icon-message"></i>
-            <span>邮箱地址</span>
-          </div>
-          <div class="email-group">
+          <el-input
+              v-model="form.email"
+              placeholder="请输入注册邮箱"
+              size="large"
+              prefix-icon="el-icon-message"
+              clearable
+          ></el-input>
+        </el-form-item>
+
+        <el-form-item prop="code">
+          <div class="code-group">
             <el-input
-                v-model="form.email"
-                placeholder="请输入注册邮箱"
+                v-model="form.code"
+                placeholder="请输入6位验证码"
                 size="large"
+                prefix-icon="el-icon-key"
+                maxlength="6"
                 clearable
-                class="email-input"
-                @focus="handleFocus('email')"
-                @blur="handleBlur"
-            >
-              <i slot="prefix" class="el-icon-message" :class="{ 'active-icon': focusedField === 'email' }"></i>
-            </el-input>
+                class="code-input"
+            ></el-input>
             <el-button
                 :disabled="!canSendCode"
                 @click="sendCode"
-                :class="['code-button', { 'is-sending': codeSending }]"
+                :loading="codeSending"
                 size="large"
+                class="code-btn"
             >
               {{ codeBtnText }}
             </el-button>
           </div>
-          <transition name="fade">
-            <div class="input-hint" v-if="!form.email && focusedField !== 'email'">
-              <i class="el-icon-info"></i> 请输入你注册时使用的邮箱
-            </div>
-          </transition>
         </el-form-item>
 
-        <el-form-item prop="code">
-          <div class="input-label">
-            <i class="el-icon-key"></i>
-            <span>验证码</span>
-          </div>
-          <el-input
-              v-model="form.code"
-              placeholder="请输入6位验证码"
-              size="large"
-              maxlength="6"
-              @focus="handleFocus('code')"
-              @blur="handleBlur"
-          >
-            <i slot="prefix" class="el-icon-key" :class="{ 'active-icon': focusedField === 'code' }"></i>
-          </el-input>
-          <transition name="fade">
-            <div class="input-hint" v-if="!form.code && focusedField !== 'code'">
-              <i class="el-icon-info"></i> 请查收邮件中的6位数字验证码
-            </div>
-          </transition>
-        </el-form-item>
-
-        <el-form-item>
-          <el-button
-              type="primary"
-              @click="nextStep"
-              :loading="verifying"
-              class="action-button"
-              :disabled="!form.email || !form.code"
-          >
-            <span v-if="!verifying">下一步 <i class="el-icon-arrow-right"></i></span>
-            <span v-else>验证中...</span>
-          </el-button>
-        </el-form-item>
+        <el-button
+            type="primary"
+            @click="nextStep"
+            :loading="verifying"
+            class="action-button"
+            :disabled="!form.email || !form.code"
+        >
+          {{ verifying ? '验证中...' : '下一步' }}
+        </el-button>
       </el-form>
 
       <!-- 第二步：重置密码 -->
       <el-form v-else-if="step === 2" :model="form" :rules="rules" ref="form2" label-width="0" class="forget-form">
         <div class="form-tip">
           <i class="el-icon-lock"></i>
-          <span>请设置新密码，长度至少6位</span>
+          <span>请设置新密码，长度6-20位</span>
         </div>
 
         <el-form-item prop="newPassword">
-          <div class="input-label">
-            <i class="el-icon-unlock"></i>
-            <span>新密码</span>
-          </div>
           <el-input
               v-model="form.newPassword"
               type="password"
               placeholder="请输入新密码"
               size="large"
+              prefix-icon="el-icon-lock"
               show-password
-              @focus="handleFocus('newPassword')"
-              @blur="handleBlur"
-              @input="checkPasswordStrength"
-          >
-            <i slot="prefix" class="el-icon-unlock" :class="{ 'active-icon': focusedField === 'newPassword' }"></i>
-          </el-input>
+              clearable
+          ></el-input>
         </el-form-item>
 
-        <!-- 密码强度指示器 -->
-        <div class="password-strength" v-if="form.newPassword">
-          <div class="strength-label">
-            <span>密码强度：</span>
-            <span :class="'strength-' + passwordStrength">
-              {{ strengthText }}
-            </span>
-          </div>
-          <div class="strength-bar">
-            <div
-                class="strength-progress"
-                :style="{ width: strengthWidth + '%' }"
-                :class="'strength-' + passwordStrength"
-            ></div>
-          </div>
-        </div>
-
         <el-form-item prop="confirmPassword">
-          <div class="input-label">
-            <i class="el-icon-circle-check"></i>
-            <span>确认密码</span>
-          </div>
           <el-input
               v-model="form.confirmPassword"
               type="password"
               placeholder="请再次输入密码"
               size="large"
+              prefix-icon="el-icon-circle-check"
               show-password
-              @focus="handleFocus('confirmPassword')"
-              @blur="handleBlur"
-          >
-            <i slot="prefix" class="el-icon-circle-check" :class="{ 'active-icon': focusedField === 'confirmPassword' }"></i>
-          </el-input>
+              clearable
+          ></el-input>
         </el-form-item>
 
-        <el-form-item>
-          <el-button
-              type="primary"
-              @click="doResetPassword"
-              :loading="resetting"
-              class="action-button"
-              :disabled="!form.newPassword || !form.confirmPassword"
-          >
-            <span v-if="!resetting">确认重置 <i class="el-icon-arrow-right"></i></span>
-            <span v-else>重置中...</span>
-          </el-button>
-        </el-form-item>
+        <el-button
+            type="primary"
+            @click="doResetPassword"
+            :loading="resetting"
+            class="action-button"
+            :disabled="!form.newPassword || !form.confirmPassword"
+        >
+          {{ resetting ? '重置中...' : '确认重置' }}
+        </el-button>
 
         <div class="back-link">
           <el-button type="text" @click="step = 1">
@@ -204,42 +146,19 @@
 
       <!-- 第三步：完成 -->
       <div v-else class="complete-step">
-        <div class="success-animation">
-          <div class="success-circle">
-            <i class="el-icon-check"></i>
-          </div>
+        <div class="success-icon">
+          <i class="el-icon-circle-check"></i>
         </div>
         <h3 class="success-title">密码重置成功</h3>
         <p class="success-text">您的密码已重置，请使用新密码登录</p>
-
-        <div class="success-tips">
-          <div class="tip-item">
-            <i class="el-icon-time"></i>
-            <span>建议定期更换密码</span>
-          </div>
-          <div class="tip-item">
-            <i class="el-icon-lock"></i>
-            <span>不要与其他网站使用相同密码</span>
-          </div>
-        </div>
-
-        <el-button type="primary" @click="goToLogin" class="login-button">
-          <i class="el-icon-arrow-left"></i> 立即登录
-        </el-button>
+        <el-button type="primary" @click="goToLogin" class="login-button">立即登录</el-button>
       </div>
 
       <!-- 底部链接 -->
       <div class="footer-links" v-if="step !== 3">
-        <router-link to="/login" class="footer-link">
-          <i class="el-icon-arrow-left"></i> 返回登录
-        </router-link>
-        <router-link to="/register" class="footer-link">
-          立即注册 <i class="el-icon-arrow-right"></i>
-        </router-link>
+        <router-link to="/login" class="footer-link">返回登录</router-link>
+        <router-link to="/register" class="footer-link">立即注册</router-link>
       </div>
-
-      <!-- 底部装饰 -->
-      <div class="card-footer"></div>
     </div>
   </div>
 </template>
@@ -278,7 +197,6 @@ export default {
 
     return {
       step: 1,
-      focusedField: '',
       form: {
         email: '',
         code: '',
@@ -299,8 +217,7 @@ export default {
         ],
         newPassword: [
           { required: true, message: '请输入新密码', trigger: 'blur' },
-          { min: 6, max: 20, message: '密码长度在6-20位之间', trigger: 'blur' },
-          { pattern: /^[a-zA-Z0-9!@#$%^&*]+$/, message: '密码包含非法字符', trigger: 'blur' }
+          { min: 6, max: 20, message: '密码长度在6-20位之间', trigger: 'blur' }
         ],
         confirmPassword: [
           { required: true, message: '请再次输入密码', trigger: 'blur' },
@@ -325,37 +242,18 @@ export default {
       if (this.countdown < 60) {
         return `${this.countdown}秒后重试`;
       }
-      if (this.codeSending) {
-        return '发送中...';
-      }
       return '获取验证码';
     },
     strengthText() {
-      const map = {
-        none: '未设置',
-        weak: '弱',
-        medium: '中',
-        strong: '强'
-      };
+      const map = { none: '未设置', weak: '弱', medium: '中', strong: '强' };
       return map[this.passwordStrength];
     },
     strengthWidth() {
-      const map = {
-        none: 0,
-        weak: 33,
-        medium: 66,
-        strong: 100
-      };
+      const map = { none: 0, weak: 33, medium: 66, strong: 100 };
       return map[this.passwordStrength];
     }
   },
   methods: {
-    handleFocus(field) {
-      this.focusedField = field;
-    },
-    handleBlur() {
-      this.focusedField = '';
-    },
     checkPasswordStrength() {
       const pwd = this.form.newPassword;
       if (!pwd) {
@@ -375,6 +273,7 @@ export default {
       else if (score < 5) this.passwordStrength = 'medium';
       else this.passwordStrength = 'strong';
     },
+
     sendCode() {
       this.$refs.form1.validateField('email', errorMsg => {
         if (errorMsg) {
@@ -383,39 +282,41 @@ export default {
         }
 
         this.codeSending = true;
+        this.startCountdown();
+
         sendForgetCode(this.form.email)
             .then(() => {
-              this.$message.success({
-                message: '📧 验证码已发送，请查收邮件',
-                duration: 3000
-              });
-              this.startCountdown();
+              this.$message.success('验证码已发送，请查收邮件');
             })
-            .catch(error => {
-              this.codeSending = false;
-              this.countdown = 60;
-              this.$message.error(error.message || '验证码发送失败');
+            .catch(() => {
+              this.stopCountdown();
+              this.$message.error('验证码发送失败');
             });
       });
     },
+
     startCountdown() {
       this.countdown = 60;
       this.codeSending = true;
 
-      if (this.timer) {
-        clearInterval(this.timer);
-      }
-
+      if (this.timer) clearInterval(this.timer);
       this.timer = setInterval(() => {
-        this.countdown -= 1;
+        this.countdown--;
         if (this.countdown <= 0) {
-          clearInterval(this.timer);
-          this.timer = null;
-          this.countdown = 60;
-          this.codeSending = false;
+          this.stopCountdown();
         }
       }, 1000);
     },
+
+    stopCountdown() {
+      if (this.timer) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+      this.countdown = 60;
+      this.codeSending = false;
+    },
+
     nextStep() {
       this.$refs.form1.validate(valid => {
         if (!valid) {
@@ -425,7 +326,7 @@ export default {
         this.step = 2;
       });
     },
-    // ✅ 修复：使用真实的 resetPassword API
+
     doResetPassword() {
       this.$refs.form2.validate(valid => {
         if (!valid) {
@@ -434,8 +335,6 @@ export default {
         }
 
         this.resetting = true;
-
-        // 调用真实的 API
         resetPassword({
           email: this.form.email,
           newPassword: this.form.newPassword,
@@ -444,95 +343,82 @@ export default {
             .then(res => {
               this.resetting = false;
               if (res.code === 200) {
-                this.$message.success('🎉 密码重置成功');
+                this.$message.success('密码重置成功');
+
+                // 保存邮箱和新密码到 sessionStorage，用于登录页自动填充
+                const loginData = {
+                  account: this.form.email,      // 邮箱作为账号
+                  password: this.form.newPassword
+                };
+                sessionStorage.setItem('autoFillLogin', JSON.stringify(loginData));
+
                 this.step = 3;
               } else {
                 this.$message.error(res.message || '密码重置失败');
               }
             })
-            .catch(error => {
+            .catch(() => {
               this.resetting = false;
-              this.$message.error(error.message || '密码重置失败，请稍后重试');
+              this.$message.error('密码重置失败，请稍后重试');
             });
       });
     },
+
     goToLogin() {
+      if (this.form.newPassword && this.form.email) {
+        const loginData = {
+          account: this.form.email,
+          password: this.form.newPassword
+        };
+        sessionStorage.setItem('autoFillLogin', JSON.stringify(loginData));
+      }
       this.$router.push('/login');
     }
   },
   beforeDestroy() {
-    if (this.timer) {
-      clearInterval(this.timer);
-    }
+    if (this.timer) clearInterval(this.timer);
   }
 };
 </script>
 
 <style scoped>
-/* 主容器 */
 .forget-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 100%);
   padding: 20px;
   position: relative;
-  overflow: hidden;
-  font-family: 'Microsoft YaHei', sans-serif;
 }
 
-/* 背景动画 */
-.bg-animation {
+/* 背景图案 */
+.bg-pattern {
   position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-}
-
-.floating-paw {
-  position: absolute;
-  font-size: 40px;
-  opacity: 0.1;
-  animation: float 20s infinite linear;
-}
-
-.floating-paw:nth-child(1) { top: 10%; left: 5%; animation-duration: 25s; }
-.floating-paw:nth-child(2) { top: 20%; right: 10%; animation-duration: 30s; font-size: 60px; }
-.floating-paw:nth-child(3) { bottom: 30%; left: 15%; animation-duration: 22s; }
-.floating-paw:nth-child(4) { bottom: 10%; right: 20%; animation-duration: 35s; font-size: 50px; }
-.floating-paw:nth-child(5) { top: 50%; left: 30%; animation-duration: 28s; }
-.floating-paw:nth-child(6) { top: 70%; right: 30%; animation-duration: 24s; font-size: 55px; }
-.floating-paw:nth-child(7) { top: 40%; left: 60%; animation-duration: 32s; }
-.floating-paw:nth-child(8) { bottom: 20%; left: 50%; animation-duration: 26s; }
-
-@keyframes float {
-  0% { transform: rotate(0deg) translateY(0); }
-  50% { transform: rotate(180deg) translateY(-20px); }
-  100% { transform: rotate(360deg) translateY(0); }
+  background-image: radial-gradient(#c0c4cc 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.3;
 }
 
 /* 找回密码卡片 */
 .forget-card {
-  width: 520px;
+  width: 480px;
   max-width: 95%;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(10px);
-  border-radius: 40px;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.3);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
   position: relative;
   z-index: 10;
   overflow: hidden;
-  animation: slideUp 0.8s ease;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: slideUp 0.4s ease;
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(50px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -542,76 +428,62 @@ export default {
 
 /* 卡片头部 */
 .card-header {
-  padding: 40px 40px 20px;
+  padding: 32px 32px 20px;
   text-align: center;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.header-icon {
-  margin-bottom: 15px;
-}
-
-.lock-wrapper {
-  display: inline-flex;
-  width: 70px;
-  height: 70px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-  animation: pulse 2s infinite;
-}
-
-.lock-wrapper i {
-  font-size: 32px;
-  color: white;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.title {
-  margin: 0 0 10px;
-  font-size: 28px;
-  font-weight: 600;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.subtitle {
-  color: #999;
-  font-size: 14px;
-  margin: 0;
-  letter-spacing: 1px;
-}
-
-/* 步骤条 */
-.steps-container {
+.logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 40px 30px;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.logo-svg {
+  width: 36px;
+  height: 36px;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  letter-spacing: 1px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.subtitle {
+  color: #909399;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* 步骤指示器 */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 32px 20px;
 }
 
 .step-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  flex: 1;
+  gap: 6px;
 }
 
-.step-marker {
-  width: 40px;
-  height: 40px;
+.step-circle {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #f0f0f0;
   color: #999;
@@ -619,277 +491,159 @@ export default {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 14px;
   transition: all 0.3s;
 }
 
-.step-item.active .step-marker {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.step-item.active .step-circle {
+  background: #409EFF;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
-.step-item.completed .step-marker {
+.step-item.completed .step-circle {
   background: #67c23a;
   color: white;
 }
 
-.step-label {
+.step-text {
   font-size: 12px;
   color: #999;
   transition: color 0.3s;
 }
 
-.step-item.active .step-label {
-  color: #667eea;
+.step-item.active .step-text {
+  color: #409EFF;
   font-weight: 500;
 }
 
-.step-connector {
-  width: 60px;
+.step-line {
+  width: 50px;
   height: 2px;
   background: #f0f0f0;
-  margin: 0 5px;
+  margin: 0 8px;
   transition: background 0.3s;
 }
 
-.step-connector.active {
-  background: linear-gradient(90deg, #667eea, #764ba2);
+.step-line.active {
+  background: #409EFF;
 }
 
 /* 表单 */
 .forget-form {
-  padding: 0 40px 20px;
+  padding: 0 32px 24px;
 }
 
 .form-tip {
-  background: #f0f7ff;
-  border-left: 4px solid #667eea;
+  background: #ecf5ff;
+  border-left: 3px solid #409EFF;
   padding: 12px 16px;
-  border-radius: 12px;
-  margin-bottom: 25px;
+  border-radius: 8px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #666;
-  font-size: 14px;
+  color: #606266;
+  font-size: 13px;
 }
 
 .form-tip i {
-  color: #667eea;
-  font-size: 18px;
-}
-
-/* 输入标签 */
-.input-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: #666;
-  font-size: 14px;
-}
-
-.input-label i {
+  color: #409EFF;
   font-size: 16px;
-  color: #b3b3b3;
-  transition: color 0.3s;
-}
-
-.input-label i.active-icon {
-  color: #667eea;
 }
 
 /* 输入框样式 */
 ::v-deep .el-input__inner {
-  height: 48px;
-  line-height: 48px;
-  border: 2px solid #f0f0f0;
-  border-radius: 16px;
-  font-size: 15px;
-  padding-left: 45px;
-  transition: all 0.3s ease;
-  background: #fafbfc;
-}
-
-::v-deep .el-input__inner:hover {
-  border-color: #b3c0ff;
-  background: #ffffff;
-}
-
-::v-deep .el-input__inner:focus {
-  border-color: #667eea;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-}
-
-::v-deep .el-input__prefix {
-  left: 15px;
-  top: 0px;
-}
-
-::v-deep .el-input__prefix i {
-  font-size: 20px;
-  color: #b3b3b3;
+  height: 44px;
+  line-height: 44px;
+  border-radius: 8px;
+  border-color: #e4e7ed;
   transition: all 0.3s;
 }
 
-::v-deep .el-input__prefix i.active-icon {
-  color: #667eea;
-  transform: scale(1.1);
+::v-deep .el-input__inner:hover {
+  border-color: #c0c4cc;
 }
 
-/* 输入提示 */
-.input-hint {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 6px;
-  padding-left: 12px;
+::v-deep .el-input__inner:focus {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
 }
 
-.input-hint i {
-  margin-right: 4px;
-  font-size: 12px;
+::v-deep .el-form-item {
+  margin-bottom: 20px;
 }
 
-/* 淡入淡出动画 */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-enter, .fade-leave-to {
-  opacity: 0;
-}
-
-/* 邮箱输入组 */
-.email-group {
+/* 验证码组 - 样式与注册页面一致 */
+.code-group {
   display: flex;
   gap: 12px;
 }
 
-.email-input {
+.code-input {
   flex: 1;
 }
 
-.code-button {
-  min-width: 120px;
-  height: 48px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.code-btn {
+  min-width: 110px;
+  height: 44px;
+  background: #409EFF;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  cursor: pointer;
   transition: all 0.3s;
-  padding: 0 15px;
+  color: #ffffff;
 }
 
-.code-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+.code-btn:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+  color: #ffffff;
 }
 
-.code-button:active {
-  transform: translateY(0);
-}
-
-.code-button:disabled {
-  opacity: 0.5;
-  filter: grayscale(50%);
+.code-btn:disabled {
+  background: #a0cfff;
+  color: #ffffff;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
+  opacity: 0.7;
 }
 
-.code-button.is-sending {
-  animation: pulse 1.5s infinite;
+.code-btn:focus {
+  outline: none;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+.code-btn span {
+  color: #ffffff;
 }
 
-/* 密码强度指示器 */
-.password-strength {
-  margin: -10px 0 20px;
-  padding: 0 12px;
-}
-
-.strength-label {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 5px;
-}
-
-.strength-label span:last-child {
-  font-weight: 600;
-}
-
-.strength-weak {
-  color: #f56c6c;
-}
-
-.strength-medium {
-  color: #e6a23c;
-}
-
-.strength-strong {
-  color: #67c23a;
-}
-
-.strength-bar {
-  height: 4px;
-  background: #f0f0f0;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.strength-progress {
-  height: 100%;
-  transition: width 0.3s ease, background 0.3s ease;
-}
-
-.strength-progress.strength-weak {
-  background: linear-gradient(90deg, #f56c6c, #f78989);
-}
-
-.strength-progress.strength-medium {
-  background: linear-gradient(90deg, #e6a23c, #f0b45c);
-}
-
-.strength-progress.strength-strong {
-  background: linear-gradient(90deg, #67c23a, #85ce61);
+.code-btn.is-disabled span,
+.code-btn:disabled span {
+  color: #ffffff;
 }
 
 /* 操作按钮 */
 .action-button {
   width: 100%;
-  height: 54px;
-  font-size: 18px;
+  height: 44px;
+  font-size: 16px;
   font-weight: 500;
-  letter-spacing: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #409EFF;
   border: none;
-  border-radius: 27px;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-  margin-top: 20px;
+  border-radius: 8px;
+  margin-top: 8px;
+  transition: all 0.3s;
 }
 
 .action-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
-}
-
-.action-button:active {
-  transform: translateY(0);
+  background: #66b1ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
 }
 
 .action-button:disabled {
-  opacity: 0.6;
-  filter: grayscale(30%);
+  background: #a0cfff;
   transform: none;
   box-shadow: none;
 }
@@ -897,218 +651,145 @@ export default {
 /* 返回链接 */
 .back-link {
   text-align: center;
-  margin-top: 15px;
+  margin-top: 16px;
 }
 
 .back-link ::v-deep .el-button {
-  color: #999;
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
 }
 
 .back-link ::v-deep .el-button:hover {
-  color: #667eea;
+  color: #409EFF;
 }
 
 /* 完成步骤 */
 .complete-step {
   text-align: center;
-  padding: 30px 40px 20px;
+  padding: 32px;
 }
 
-.success-animation {
-  margin-bottom: 30px;
-}
-
-.success-circle {
-  width: 100px;
-  height: 100px;
+.success-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: #67c23a;
   border-radius: 50%;
-  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto;
-  box-shadow: 0 10px 30px rgba(103, 194, 58, 0.3);
-  animation: scaleIn 0.5s ease;
 }
 
-@keyframes scaleIn {
-  0% { transform: scale(0); }
-  70% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-.success-circle i {
-  font-size: 50px;
+.success-icon i {
+  font-size: 48px;
   color: white;
 }
 
 .success-title {
-  font-size: 24px;
-  color: #333;
-  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
 }
 
 .success-text {
-  color: #999;
-  margin-bottom: 30px;
-  font-size: 16px;
-}
-
-.success-tips {
-  background: #f8f9fa;
-  border-radius: 16px;
-  padding: 20px;
-  margin: 30px 0;
-  text-align: left;
-}
-
-.tip-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  color: #666;
+  color: #909399;
   font-size: 14px;
-}
-
-.tip-item i {
-  color: #667eea;
-  font-size: 16px;
+  margin-bottom: 28px;
 }
 
 .login-button {
-  width: 200px;
-  height: 48px;
+  width: 160px;
+  height: 44px;
   font-size: 16px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #409EFF;
   border: none;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
 }
 
 .login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
+  background: #66b1ff;
+  transform: translateY(-1px);
 }
 
 /* 底部链接 */
 .footer-links {
   display: flex;
   justify-content: space-between;
-  padding: 20px 40px 30px;
+  padding: 20px 32px 24px;
   border-top: 1px solid #f0f0f0;
 }
 
 .footer-link {
-  color: #999;
+  color: #909399;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .footer-link:hover {
-  color: #667eea;
+  color: #409EFF;
 }
 
-/* 卡片底部装饰 */
-.card-footer {
-  height: 8px;
-  background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
-  background-size: 200% 100%;
-  animation: gradientMove 3s infinite;
-}
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* 响应式设计 */
+/* 响应式 */
 @media (max-width: 768px) {
   .forget-card {
-    padding: 0;
+    width: 95%;
   }
 
   .card-header {
-    padding: 30px 20px 10px;
+    padding: 24px 20px 16px;
   }
 
   .title {
-    font-size: 24px;
+    font-size: 20px;
   }
 
-  .steps-container {
-    padding: 10px 20px 20px;
+  .step-indicator {
+    padding: 16px 20px;
   }
 
-  .step-connector {
+  .step-line {
     width: 30px;
   }
 
-  .step-marker {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
+  .step-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
   }
 
-  .step-label {
+  .step-text {
     font-size: 10px;
   }
 
   .forget-form {
-    padding: 0 20px 15px;
+    padding: 0 20px 20px;
   }
 
-  .email-group {
+  .code-group {
     flex-direction: column;
   }
 
-  .code-button {
+  .code-btn {
     width: 100%;
   }
 
-  .success-circle {
-    width: 80px;
-    height: 80px;
-  }
-
-  .success-circle i {
-    font-size: 40px;
-  }
-
-  .success-title {
-    font-size: 20px;
-  }
-
   .footer-links {
-    padding: 15px 20px 20px;
+    padding: 16px 20px 20px;
   }
-}
 
-/* 自定义消息样式 */
-::v-deep .el-message {
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  min-width: 300px;
-}
+  .complete-step {
+    padding: 24px;
+  }
 
-::v-deep .el-message--success {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-  border: 1px solid #91d5ff;
-}
+  .success-icon {
+    width: 64px;
+    height: 64px;
+  }
 
-::v-deep .el-message--error {
-  background: linear-gradient(135deg, #fff2f0 0%, #fff1f0 100%);
-  border: 1px solid #ffccc7;
-}
-
-::v-deep .el-message--warning {
-  background: linear-gradient(135deg, #fffbe6 0%, #fff7e6 100%);
-  border: 1px solid #ffe58f;
+  .success-icon i {
+    font-size: 36px;
+  }
 }
 </style>

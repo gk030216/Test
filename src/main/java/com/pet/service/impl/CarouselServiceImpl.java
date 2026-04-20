@@ -6,6 +6,7 @@ import com.pet.service.CarouselService;
 import com.pet.util.FileUploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -91,5 +92,31 @@ public class CarouselServiceImpl implements CarouselService {
     @Override
     public boolean batchDelete(List<Integer> ids) {
         return carouselMapper.batchDelete(ids) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean batchUpdateSort(List<Map<String, Integer>> sortList) {
+        if (sortList == null || sortList.isEmpty()) {
+            return false;
+        }
+
+        int successCount = 0;
+        for (Map<String, Integer> item : sortList) {
+            Integer id = item.get("id");
+            Integer sortOrder = item.get("sortOrder");
+            if (id != null && sortOrder != null) {
+                Carousel carousel = carouselMapper.getById(id);
+                if (carousel != null) {
+                    carousel.setSortOrder(sortOrder);
+                    int result = carouselMapper.update(carousel);
+                    if (result > 0) {
+                        successCount++;
+                    }
+                }
+            }
+        }
+
+        return successCount > 0;
     }
 }

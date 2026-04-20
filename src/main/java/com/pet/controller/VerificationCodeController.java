@@ -19,13 +19,23 @@ public class VerificationCodeController {
     @PostMapping("/register")
     public Result<?> sendRegisterCode(@RequestParam String email) {
         try {
+            //  增加邮箱格式验证
+            if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+                return Result.error("邮箱格式不正确");
+            }
+
             boolean success = verificationCodeService.sendRegisterCode(email);
             if (success) {
                 return Result.success("验证码发送成功");
             } else {
-                return Result.error("验证码发送失败");
+                return Result.error("验证码发送失败，请检查邮箱地址是否正确");
             }
         } catch (Exception e) {
+            //  返回更友好的错误信息
+            String message = e.getMessage();
+            if (message != null && message.contains("non-existent account")) {
+                return Result.error("邮箱地址不存在，请检查后重试");
+            }
             return Result.error(e.getMessage());
         }
     }

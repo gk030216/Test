@@ -10,42 +10,50 @@ import { getSettings } from '@/api/settings';
 export default {
   name: 'App',
   created() {
-    this.loadSettings();
+    // 只有在已登录的情况下才从后端加载设置
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.loadSettings();
+    } else {
+      // 未登录时使用默认设置，不发起 API 请求
+      this.setDefaultSettings();
+    }
   },
   methods: {
+    setDefaultSettings() {
+      const defaultSettings = {
+        basic: {
+          siteName: '宠物服务系统',
+          siteLogo: '',
+          siteDesc: '用心服务每一个宠物家庭',
+          copyright: '© 2026 宠物服务系统',
+          icp: '',
+          servicePhone: '400-888-6666',
+          serviceEmail: 'service@petservice.com',
+          maintenanceMode: false
+        }
+      };
+      localStorage.setItem('systemSettings', JSON.stringify(defaultSettings));
+      document.title = defaultSettings.basic.siteName;
+
+      // 触发全局事件，通知其他组件设置已加载
+      this.$bus && this.$bus.$emit('settings-loaded', defaultSettings);
+    },
+
     async loadSettings() {
       try {
         const res = await getSettings();
         if (res.code === 200) {
           const settings = res.data;
-          // 保存到 localStorage，供其他组件使用
           localStorage.setItem('systemSettings', JSON.stringify(settings));
-
-          // 更新页面标题
           if (settings.basic && settings.basic.siteName) {
             document.title = settings.basic.siteName;
           }
-
-          // 触发全局事件，通知其他组件设置已加载
           this.$bus && this.$bus.$emit('settings-loaded', settings);
         }
       } catch (error) {
         console.error('加载系统设置失败', error);
-        // 使用默认设置
-        const defaultSettings = {
-          basic: {
-            siteName: '宠物服务系统',
-            siteLogo: '',
-            siteDesc: '用心服务每一个宠物家庭',
-            copyright: '© 2026 宠物服务系统',
-            icp: '',
-            servicePhone: '400-888-6666',
-            serviceEmail: 'service@petservice.com',
-            maintenanceMode: false
-          }
-        };
-        localStorage.setItem('systemSettings', JSON.stringify(defaultSettings));
-        document.title = defaultSettings.basic.siteName;
+        this.setDefaultSettings();
       }
     }
   }
@@ -53,6 +61,7 @@ export default {
 </script>
 
 <style>
+/* 样式保持不变 */
 * {
   margin: 0;
   padding: 0;

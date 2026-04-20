@@ -239,17 +239,37 @@ export default {
     initChart() {
       const chart = echarts.init(document.getElementById('appointmentChart'));
 
-      const data = this.weeklyTrend.length > 0
-          ? this.weeklyTrend
-          : [
-            { date: '周一', count: 5 },
-            { date: '周二', count: 8 },
-            { date: '周三', count: 12 },
-            { date: '周四', count: 7 },
-            { date: '周五', count: 15 },
-            { date: '周六', count: 20 },
-            { date: '周日', count: 10 }
-          ];
+      // 生成近7天的日期数组
+      const last7Days = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        last7Days.push(dateStr);
+      }
+
+      // 将后端数据转换为 Map
+      const dataMap = new Map();
+      if (this.weeklyTrend && this.weeklyTrend.length > 0) {
+        this.weeklyTrend.forEach(item => {
+          // 将 yyyy-mm-dd 转换为 mm/dd 作为 key
+          const date = new Date(item.date);
+          const dateKey = `${date.getMonth() + 1}/${date.getDate()}`;
+          dataMap.set(dateKey, item.count);
+        });
+      }else {
+        // 使用模拟数据
+        const mockData = [5, 8, 12, 7, 15, 20, 10];
+        last7Days.forEach((date, index) => {
+          dataMap.set(date, mockData[index]);
+        });
+      }
+
+      // 构建完整的7天数据
+      const chartData = last7Days.map(date => ({
+        date: date,
+        count: dataMap.get(date) || 0
+      }));
 
       chart.setOption({
         tooltip: {
@@ -264,7 +284,7 @@ export default {
         },
         xAxis: {
           type: 'category',
-          data: data.map(item => item.date),
+          data: chartData.map(item => item.date),
           axisLine: { lineStyle: { color: '#999' } }
         },
         yAxis: {
@@ -273,12 +293,19 @@ export default {
           nameStyle: { color: '#999' }
         },
         series: [{
-          data: data.map(item => item.count),
+          data: chartData.map(item => item.count),
           type: 'bar',
           barWidth: '50%',
           itemStyle: {
             borderRadius: [4, 4, 0, 0],
-            color: '#409EFF'
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: '#409EFF' },
+                { offset: 1, color: '#66b1ff' }
+              ]
+            }
           },
           label: {
             show: true,

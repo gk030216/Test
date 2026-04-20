@@ -103,13 +103,14 @@ public class ServiceCommentController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer rating,
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Integer replyStatus,
             HttpServletRequest request) {
         try {
             Integer role = getUserRole(request);
             if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
-            Map<String, Object> result = commentService.getAdminList(page, pageSize, keyword, rating, status);
+            Map<String, Object> result = commentService.getAdminList(page, pageSize, keyword, rating, status, replyStatus);
             return Result.success(result);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -147,6 +148,28 @@ public class ServiceCommentController {
             }
             boolean success = commentService.deleteComment(id);
             return success ? Result.success("删除成功") : Result.error("删除失败");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 更新评价状态（显示/隐藏）
+     */
+    @PutMapping("/admin/status")
+    public Result<?> updateCommentStatus(@RequestParam Integer id, @RequestParam Integer status,
+                                         HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            boolean success = commentService.updateStatus(id, status);
+            if (success) {
+                return Result.success(status == 1 ? "显示成功" : "隐藏成功");
+            } else {
+                return Result.error("操作失败");
+            }
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

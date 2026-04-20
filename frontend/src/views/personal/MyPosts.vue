@@ -2,69 +2,34 @@
   <div class="my-posts-page">
     <h2 class="page-title">我的帖子</h2>
 
-    <div class="posts-list" v-loading="loading">
-      <div class="post-item" v-for="post in postsList" :key="post.id">
-        <div class="post-header">
-          <div class="post-info">
-            <span class="post-time">{{ formatDate(post.createTime) }}</span>
-            <div class="post-badges">
-              <el-tag v-if="post.isTop === 1" size="mini" type="danger" effect="dark">置顶</el-tag>
-              <el-tag v-if="post.isEssence === 1" size="mini" type="warning" effect="dark">精华</el-tag>
-              <el-tag v-if="post.status === 0" size="mini" type="info">已删除</el-tag>
-            </div>
+    <div class="posts-grid" v-loading="loading">
+      <div class="post-card" v-for="post in postsList" :key="post.id" @click="viewPost(post)">
+        <div class="post-image">
+          <img v-if="post.images && post.images.split(',')[0]" :src="post.images.split(',')[0]" :alt="post.title">
+          <div v-else class="image-placeholder">
+            <i class="el-icon-document"></i>
+          </div>
+          <div class="post-badge">
+            <el-tag v-if="post.isTop === 1" size="mini" type="danger" effect="dark">置顶</el-tag>
+            <el-tag v-if="post.isEssence === 1" size="mini" type="warning" effect="dark">精华</el-tag>
+            <el-tag v-if="post.status === 0" size="mini" type="info">已删除</el-tag>
           </div>
         </div>
-
-        <div class="post-body" @click="viewPost(post)">
+        <div class="post-info">
           <h3 class="post-title">{{ post.title }}</h3>
-          <p class="post-content">{{ truncateText(post.content, 120) }}</p>
-        </div>
-
-        <div class="post-footer">
-          <div class="footer-left">
-            <div class="action-item">
-              <i class="el-icon-star-on"></i>
-              <span>{{ post.likeCount || 0 }}</span>
-            </div>
-            <div class="action-item">
-              <i class="el-icon-chat-dot-round"></i>
-              <span>{{ post.commentCount || 0 }}</span>
-            </div>
-            <div class="action-item">
-              <i class="el-icon-view"></i>
-              <span>{{ post.viewCount || 0 }}</span>
+          <p class="post-content">{{ truncateText(post.content, 80) }}</p>
+          <div class="post-meta">
+            <span class="post-time"><i class="el-icon-time"></i> {{ formatDate(post.createTime) }}</span>
+            <div class="post-stats">
+              <span><i class="el-icon-star-on"></i> {{ post.likeCount || 0 }}</span>
+              <span><i class="el-icon-chat-dot-round"></i> {{ post.commentCount || 0 }}</span>
+              <span><i class="el-icon-view"></i> {{ post.viewCount || 0 }}</span>
             </div>
           </div>
-          <div class="footer-right">
-            <el-button
-                type="primary"
-                size="small"
-                plain
-                @click.stop="viewPost(post)"
-                class="action-btn view-btn"
-            >
-              <i class="el-icon-view"></i> 查看
-            </el-button>
-            <el-button
-                v-if="post.status === 1"
-                type="warning"
-                size="small"
-                plain
-                @click.stop="editPost(post)"
-                class="action-btn edit-btn"
-            >
-              <i class="el-icon-edit"></i> 编辑
-            </el-button>
-            <el-button
-                v-if="post.status === 1"
-                type="danger"
-                size="small"
-                plain
-                @click.stop="deletePost(post)"
-                class="action-btn delete-btn"
-            >
-              <i class="el-icon-delete"></i> 删除
-            </el-button>
+          <div class="post-actions" @click.stop>
+            <el-button size="small" plain @click="viewPost(post)">查看</el-button>
+            <el-button v-if="post.status === 1" size="small" type="primary" plain @click="editPost(post)">编辑</el-button>
+            <el-button v-if="post.status === 1" size="small" type="danger" plain @click="deletePost(post)">删除</el-button>
           </div>
         </div>
       </div>
@@ -75,7 +40,6 @@
         <el-button type="primary" size="small" @click="$router.push('/community')">去发布</el-button>
       </div>
 
-      <!-- 分页 -->
       <div class="pagination" v-if="total > pageSize">
         <el-pagination
             @current-change="handlePageChange"
@@ -84,60 +48,35 @@
             layout="prev, pager, next"
             :total="total"
             background
-        ></el-pagination>
+        />
       </div>
     </div>
 
     <!-- 编辑帖子对话框 -->
-    <el-dialog
-        title="编辑帖子"
-        :visible.sync="editDialogVisible"
-        width="700px"
-        :close-on-click-modal="false"
-        @closed="resetEditForm"
-    >
+    <el-dialog title="编辑帖子" :visible.sync="editDialogVisible" width="700px" :close-on-click-modal="false" @closed="resetEditForm">
       <el-form :model="editForm" :rules="editRules" ref="editForm" label-width="80px">
         <el-form-item label="标题" prop="title">
-          <el-input v-model="editForm.title" placeholder="请输入标题" maxlength="100" show-word-limit></el-input>
+          <el-input v-model="editForm.title" placeholder="请输入标题" maxlength="100" show-word-limit />
         </el-form-item>
-
         <el-form-item label="分类" prop="category">
           <el-select v-model="editForm.category" placeholder="请选择分类" style="width: 100%">
-            <el-option label="宠物日常" value="pet_daily"></el-option>
-            <el-option label="健康分享" value="health"></el-option>
-            <el-option label="美食分享" value="food"></el-option>
-            <el-option label="领养信息" value="adopt"></el-option>
-            <el-option label="其他" value="other"></el-option>
+            <el-option label="宠物日常" value="pet_daily" />
+            <el-option label="健康分享" value="health" />
+            <el-option label="美食分享" value="food" />
+            <el-option label="领养信息" value="adopt" />
+            <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
-
         <el-form-item label="内容" prop="content">
-          <el-input
-              v-model="editForm.content"
-              type="textarea"
-              :rows="8"
-              placeholder="分享你的养宠经验、萌宠日常..."
-              maxlength="5000"
-              show-word-limit
-          ></el-input>
+          <el-input v-model="editForm.content" type="textarea" :rows="8" placeholder="分享你的养宠经验、萌宠日常..." maxlength="5000" show-word-limit />
         </el-form-item>
-
         <el-form-item label="图片">
-          <el-upload
-              action="#"
-              :http-request="uploadImage"
-              list-type="picture-card"
-              :on-preview="handlePreview"
-              :on-remove="handleRemove"
-              :file-list="editForm.imageList"
-              :limit="9"
-          >
-            <i class="el-icon-plus"></i>
+          <el-upload action="#" :http-request="uploadImage" list-type="picture-card" :on-preview="handlePreview" :on-remove="handleRemove" :file-list="editForm.imageList" :limit="9">
+            <i class="el-icon-plus" />
           </el-upload>
           <div class="upload-tip">支持 JPG、PNG 格式，最多9张，每张不超过2MB</div>
         </el-form-item>
       </el-form>
-
       <span slot="footer">
         <el-button @click="editDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitEdit" :loading="editLoading">保存修改</el-button>
@@ -164,7 +103,7 @@ export default {
       postsList: [],
       total: 0,
       page: 1,
-      pageSize: 10,
+      pageSize: 12,
       editDialogVisible: false,
       previewVisible: false,
       previewImage: '',
@@ -181,9 +120,7 @@ export default {
           { required: true, message: '请输入标题', trigger: 'blur' },
           { min: 2, max: 100, message: '长度在2-100个字符', trigger: 'blur' }
         ],
-        content: [
-          { required: true, message: '请输入内容', trigger: 'blur' }
-        ]
+        content: [{ required: true, message: '请输入内容', trigger: 'blur' }]
       }
     };
   },
@@ -235,23 +172,19 @@ export default {
     async uploadImage(file) {
       const formData = new FormData();
       formData.append('file', file.file);
-
       try {
         const res = await uploadPostImage(formData);
         if (res.code === 200) {
           this.editForm.imageUrls.push(res.data.url);
           this.editForm.imageList.push({
-            uid: Date.now() + Math.random(),
+            uid: Date.now(),
             name: file.file.name,
             url: res.data.url,
             status: 'success'
           });
           this.$message.success('上传成功');
-        } else {
-          this.$message.error(res.message || '上传失败');
         }
       } catch (error) {
-        console.error('上传失败', error);
         this.$message.error('上传失败');
       }
     },
@@ -261,7 +194,7 @@ export default {
       this.previewVisible = true;
     },
 
-    handleRemove(file, fileList) {
+    handleRemove(file) {
       const index = this.editForm.imageList.findIndex(f => f.uid === file.uid);
       if (index !== -1) {
         this.editForm.imageList.splice(index, 1);
@@ -272,26 +205,21 @@ export default {
     async submitEdit() {
       this.$refs.editForm.validate(async (valid) => {
         if (!valid) return;
-
         this.editLoading = true;
         try {
-          const data = {
+          const res = await updatePost({
             id: this.currentEditId,
             title: this.editForm.title,
             content: this.editForm.content,
             category: this.editForm.category,
             images: this.editForm.imageUrls.join(',')
-          };
-          const res = await updatePost(data);
+          });
           if (res.code === 200) {
             this.$message.success('修改成功');
             this.editDialogVisible = false;
             this.loadPosts();
-          } else {
-            this.$message.error(res.message || '修改失败');
           }
         } catch (error) {
-          console.error('修改失败', error);
           this.$message.error('修改失败');
         } finally {
           this.editLoading = false;
@@ -308,25 +236,21 @@ export default {
         imageList: [],
         imageUrls: []
       };
-      if (this.$refs.editForm) {
-        this.$refs.editForm.clearValidate();
-      }
+      this.$nextTick(() => {
+        this.$refs.editForm?.clearValidate();
+      });
     },
 
     async deletePost(post) {
-      this.$confirm(`确定要删除帖子 "${post.title}" 吗？`, '提示', { type: 'warning' }).then(async () => {
-        try {
-          const res = await deletePost(post.id);
-          if (res.code === 200) {
-            this.$message.success('删除成功');
-            this.loadPosts();
-          } else {
-            this.$message.error(res.message || '删除失败');
-          }
-        } catch (error) {
-          this.$message.error('删除失败');
-        }
-      }).catch(() => {});
+      this.$confirm(`确定要删除帖子 "${post.title}" 吗？`, '提示', { type: 'warning' })
+          .then(async () => {
+            const res = await deletePost(post.id);
+            if (res.code === 200) {
+              this.$message.success('删除成功');
+              this.loadPosts();
+            }
+          })
+          .catch(() => {});
     },
 
     handlePageChange(page) {
@@ -352,182 +276,149 @@ export default {
 <style scoped>
 .page-title {
   font-size: 24px;
-  margin-bottom: 30px;
-  color: #333;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.post-item {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  transition: all 0.3s;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
-}
-
-.post-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: #e0e0e0;
-}
-
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.post-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.post-time {
-  font-size: 13px;
-  color: #999;
-}
-
-.post-badges {
-  display: flex;
-  gap: 6px;
-}
-
-.post-body {
-  cursor: pointer;
-  margin-bottom: 16px;
-}
-
-.post-title {
-  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 12px;
   color: #2c3e50;
-  transition: color 0.3s;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
 }
 
-.post-body:hover .post-title {
-  color: #667eea;
-}
-
-.post-content {
-  color: #5a6874;
-  line-height: 1.7;
-  font-size: 14px;
-}
-
-.post-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.footer-left {
-  display: flex;
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
-.action-item {
+.post-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid #eee;
+}
+
+.post-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.post-image {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.post-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #909399;
-  font-size: 13px;
-  transition: color 0.3s;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa, #e8eaef);
+  color: #bbb;
+  font-size: 48px;
 }
 
-.action-item i {
+.post-info {
+  padding: 16px;
+}
+
+.post-title {
   font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.action-item:hover {
-  color: #667eea;
-}
-
-.footer-right {
-  display: flex;
-  gap: 10px;
-}
-
-.action-btn {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.action-btn i {
-  margin-right: 4px;
+.post-content {
   font-size: 13px;
+  color: #999;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.view-btn {
-  color: #409EFF;
-  border-color: #d9ecff;
-  background: #ecf5ff;
+.post-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #999;
 }
 
-.view-btn:hover {
-  color: white;
-  background: #409EFF;
-  border-color: #409EFF;
+.post-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.edit-btn {
-  color: #e6a23c;
-  border-color: #faecd8;
-  background: #fdf6ec;
+.post-stats {
+  display: flex;
+  gap: 12px;
 }
 
-.edit-btn:hover {
-  color: white;
-  background: #e6a23c;
-  border-color: #e6a23c;
+.post-stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.delete-btn {
-  color: #f56c6c;
-  border-color: #fde2e2;
-  background: #fef0f0;
+.post-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
 }
 
-.delete-btn:hover {
-  color: white;
-  background: #f56c6c;
-  border-color: #f56c6c;
+.post-actions .el-button {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
 }
 
 .empty-state {
+  grid-column: 1 / -1;
   text-align: center;
-  padding: 80px 20px;
+  padding: 60px;
   background: #fff;
-  border-radius: 16px;
+  border-radius: 12px;
   color: #999;
 }
 
 .empty-state i {
   font-size: 64px;
-  margin-bottom: 20px;
-  color: #dcdfe6;
+  margin-bottom: 16px;
+  color: #ddd;
 }
 
 .pagination {
-  margin-top: 30px;
+  grid-column: 1 / -1;
   display: flex;
   justify-content: center;
+  margin-top: 20px;
 }
 
 .upload-tip {
@@ -538,55 +429,41 @@ export default {
 
 /* 对话框样式 */
 ::v-deep .el-dialog {
-  border-radius: 20px;
-  overflow: hidden;
+  border-radius: 16px;
 }
 
 ::v-deep .el-dialog__header {
   background: linear-gradient(135deg, #667eea, #764ba2);
-  padding: 20px 24px;
-  margin: 0;
+  padding: 16px 20px;
 }
 
 ::v-deep .el-dialog__title {
-  color: white;
+  color: #fff;
   font-weight: 600;
-  font-size: 18px;
 }
 
 ::v-deep .el-dialog__close {
-  color: white;
-  font-size: 20px;
+  color: #fff;
 }
 
 ::v-deep .el-dialog__body {
-  padding: 24px;
+  padding: 20px;
 }
 
 ::v-deep .el-dialog__footer {
-  padding: 16px 24px 20px;
-  border-top: 1px solid #eef2f6;
+  padding: 12px 20px;
+  border-top: 1px solid #f0f0f0;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .post-footer {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+@media (max-width: 900px) {
+  .posts-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
+}
 
-  .footer-right {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .post-item {
-    padding: 16px;
-  }
-
-  .footer-left {
-    gap: 16px;
+@media (max-width: 600px) {
+  .posts-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -51,4 +51,9 @@ public interface CarouselService {
      * 批量删除
      */
     boolean batchDelete(List<Integer> ids);
+
+    /**
+     * 批量更新排序
+     */
+    boolean batchUpdateSort(List<Map<String, Integer>> sortList);
 }

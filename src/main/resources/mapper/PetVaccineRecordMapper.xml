@@ -8,13 +8,13 @@
         <result column="vaccine_name" property="vaccineName"/>
         <result column="vaccine_date" property="vaccineDate"/>
         <result column="next_date" property="nextDate"/>
-        <result column="hospital" property="hospital"/>
-        <result column="doctor" property="doctor"/>
+        <result column="operator_name" property="operatorName"/>
         <result column="remark" property="remark"/>
         <result column="create_time" property="createTime"/>
         <result column="pet_name" property="petName"/>
     </resultMap>
 
+    <!-- 获取宠物的疫苗记录 -->
     <select id="getByPetId" resultMap="BaseResultMap">
         SELECT v.*, p.name as pet_name
         FROM pet_vaccine_record v
@@ -24,8 +24,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO pet_vaccine_record (pet_id, vaccine_name, vaccine_date, next_date, hospital, doctor, remark)
-        VALUES (#{petId}, #{vaccineName}, #{vaccineDate}, #{nextDate}, #{hospital}, #{doctor}, #{remark})
+        INSERT INTO pet_vaccine_record (pet_id, inventory_id, vaccine_name, vaccine_date, next_date, operator_name, remark)
+        VALUES (#{petId}, #{inventoryId}, #{vaccineName}, #{vaccineDate}, #{nextDate}, #{operatorName}, #{remark})
     </insert>
 
     <update id="update">
@@ -34,8 +34,7 @@
             <if test="vaccineName != null">vaccine_name = #{vaccineName},</if>
             <if test="vaccineDate != null">vaccine_date = #{vaccineDate},</if>
             <if test="nextDate != null">next_date = #{nextDate},</if>
-            <if test="hospital != null">hospital = #{hospital},</if>
-            <if test="doctor != null">doctor = #{doctor},</if>
+            <if test="operatorName != null">operator_name = #{operatorName},</if>
             <if test="remark != null">remark = #{remark},</if>
         </set>
         WHERE id = #{id}
@@ -45,6 +44,7 @@
         DELETE FROM pet_vaccine_record WHERE id = #{id}
     </delete>
 
+    <!-- 获取即将到期的疫苗 -->
     <select id="getUpcoming" resultMap="BaseResultMap">
         SELECT v.*, p.name as pet_name, p.user_id
         FROM pet_vaccine_record v
@@ -54,7 +54,7 @@
         ORDER BY v.next_date ASC
     </select>
 
-    <!-- 获取所有疫苗记录（管理员用） -->
+    <!--获取所有疫苗记录（管理员用）- 删除 hospital，doctor 改为 operator_name -->
     <select id="getAllVaccineRecords" resultType="java.util.HashMap">
         SELECT
         v.id,
@@ -62,40 +62,66 @@
         DATE_FORMAT(v.vaccine_date, '%Y-%m-%d') as vaccineDate,
         DATE_FORMAT(v.next_date, '%Y-%m-%d') as nextDate,
         DATE_FORMAT(v.create_time, '%Y-%m-%d %H:%i:%s') as createTime,
-        v.hospital,
-        v.doctor,
+        v.operator_name as operatorName,
         v.remark,
         p.id as petId,
         p.name as petName,
         u.id as ownerId,
-        u.username as ownerName
+        u.username as ownerName,
+        i.item_name as vaccineStockName,
+        i.stock as currentStock
         FROM pet_vaccine_record v
         LEFT JOIN pet_profile p ON v.pet_id = p.id
         LEFT JOIN user u ON p.user_id = u.id
-        <where>
-            <if test="keyword != null and keyword != ''">
-                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
-                OR u.username LIKE CONCAT('%', #{keyword}, '%')
-                OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-        </where>
+        LEFT JOIN inventory i ON v.inventory_id = i.id
+        WHERE p.status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
         ORDER BY v.create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
-    <!-- 统计所有疫苗记录 -->
+    <!-- 统计所有疫苗记录（只统计正常宠物的记录） -->
     <select id="countAllVaccineRecords" resultType="int">
         SELECT COUNT(*)
         FROM pet_vaccine_record v
-        LEFT JOIN pet_profile p ON v.pet_id = p.id
+        INNER JOIN pet_profile p ON v.pet_id = p.id
         LEFT JOIN user u ON p.user_id = u.id
-        <where>
-            <if test="keyword != null and keyword != ''">
-                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
-                OR u.username LIKE CONCAT('%', #{keyword}, '%')
-                OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-        </where>
+        WHERE p.status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </select>
+
+    <!-- 批量删除疫苗记录 -->
+    <delete id="batchDeleteByIds">
+        DELETE FROM pet_vaccine_record
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 获取即将到期的宠物数量（7天内需要接种疫苗的宠物，按宠物去重） -->
+    <select id="countUpcomingPets" resultType="int">
+        SELECT COUNT(DISTINCT v.pet_id)
+        FROM pet_vaccine_record v
+                 JOIN pet_profile p ON v.pet_id = p.id
+        WHERE v.next_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+          AND p.status = 1
+    </select>
+
+    <!-- 统计有疫苗记录的正常宠物数量（去重） -->
+    <select id="countDistinctPetsWithVaccine" resultType="int">
+        SELECT COUNT(DISTINCT v.pet_id)
+        FROM pet_vaccine_record v
+                 INNER JOIN pet_profile p ON v.pet_id = p.id
+        WHERE p.status = 1
     </select>
 
 </mapper>

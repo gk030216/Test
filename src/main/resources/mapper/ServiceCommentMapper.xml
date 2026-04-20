@@ -86,13 +86,23 @@
             <if test="status != null">
                 AND c.status = #{status}
             </if>
+            <!-- ✅ 添加 replyStatus 筛选 -->
+            <if test="replyStatus != null">
+                <if test="replyStatus == 0">
+                    AND (c.reply IS NULL OR c.reply = '')
+                </if>
+                <if test="replyStatus == 1">
+                    AND c.reply IS NOT NULL AND c.reply != ''
+                </if>
+            </if>
         </where>
         ORDER BY c.create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
     <select id="countAdminList" resultType="int">
-        SELECT COUNT(*) FROM service_comment c
+        SELECT COUNT(*)
+        FROM service_comment c
         LEFT JOIN service_item s ON c.service_id = s.id
         <where>
             <if test="keyword != null and keyword != ''">
@@ -106,8 +116,104 @@
             <if test="status != null">
                 AND c.status = #{status}
             </if>
+            <!-- ✅ 添加 replyStatus 筛选 -->
+            <if test="replyStatus != null">
+                <if test="replyStatus == 0">
+                    AND (c.reply IS NULL OR c.reply = '')
+                </if>
+                <if test="replyStatus == 1">
+                    AND c.reply IS NOT NULL AND c.reply != ''
+                </if>
+            </if>
         </where>
     </select>
 
+    <!-- 获取服务评分分布 -->
+    <select id="getServiceRatingDistribution" resultType="java.util.HashMap">
+        SELECT
+            rating,
+            COUNT(*) as count
+        FROM service_comment
+        WHERE service_id = #{serviceId} AND status = 1
+        GROUP BY rating
+        ORDER BY rating DESC
+    </select>
+
+    <!-- 获取服务近7天评价趋势 -->
+    <select id="getServiceCommentTrend" resultType="java.util.HashMap">
+        SELECT
+            DATE_FORMAT(create_time, '%Y-%m-%d') as date,
+        COUNT(*) as count
+        FROM service_comment
+        WHERE service_id = #{serviceId}
+          AND status = 1
+          AND create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        ORDER BY date ASC
+    </select>
+
+    <!-- 获取服务已回复评价数量 -->
+    <select id="getServiceRepliedCommentCount" resultType="int">
+        SELECT COUNT(*)
+        FROM service_comment
+        WHERE service_id = #{serviceId}
+          AND status = 1
+          AND reply IS NOT NULL
+          AND reply != ''
+    </select>
+
+    <!-- 获取服务评价列表（支持评分筛选） -->
+    <select id="getServiceCommentListWithRating" resultMap="BaseResultMap">
+        SELECT
+        c.id, c.appointment_id, c.service_id, c.user_id,
+        c.rating, c.content, c.images, c.reply, c.reply_time,
+        c.status, c.create_time, c.update_time,
+        u.username as user_name,
+        u.avatar as user_avatar,
+        s.name as service_name
+        FROM service_comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN service_item s ON c.service_id = s.id
+        WHERE c.service_id = #{serviceId} AND c.status = 1
+        <if test="rating != null">
+            AND c.rating = #{rating}
+        </if>
+        ORDER BY c.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计服务评价数量（支持评分筛选） -->
+    <select id="countServiceCommentWithRating" resultType="int">
+        SELECT COUNT(*)
+        FROM service_comment
+        WHERE service_id = #{serviceId} AND status = 1
+        <if test="rating != null">
+            AND rating = #{rating}
+        </if>
+    </select>
+
+    <!-- 获取评价统计 -->
+    <select id="getStatistics" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) as total,
+            ROUND(AVG(rating), 1) as avgRating,
+            SUM(CASE WHEN reply IS NOT NULL AND reply != '' THEN 1 ELSE 0 END) as replyCount,
+            SUM(CASE WHEN reply IS NULL OR reply = '' THEN 1 ELSE 0 END) as unreplyCount
+        FROM service_comment
+        WHERE status = 1
+    </select>
+
+    <!-- 获取员工自己的评价统计 -->
+    <select id="getStatisticsByStaff" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) as total,
+            ROUND(AVG(rating), 1) as avgRating,
+            SUM(CASE WHEN reply IS NOT NULL AND reply != '' THEN 1 ELSE 0 END) as replyCount,
+            SUM(CASE WHEN reply IS NULL OR reply = '' THEN 1 ELSE 0 END) as unreplyCount
+        FROM service_comment sc
+                 LEFT JOIN appointment a ON sc.appointment_id = a.id
+        WHERE sc.status = 1
+          AND a.staff_id = #{staffId}
+    </select>
 
 </mapper>

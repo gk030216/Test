@@ -8,12 +8,41 @@
         </el-button>
         <el-button
             v-if="selectedRows.length > 0"
+            type="success"
+            plain
+            @click="handleBatchEnable"
+            class="batch-btn"
+        >
+          <i class="el-icon-check"></i> 启用 ({{ selectedRows.length }})
+        </el-button>
+        <el-button
+            v-if="selectedRows.length > 0"
+            type="danger"
+            plain
+            @click="handleBatchDisable"
+            class="batch-btn"
+        >
+          <i class="el-icon-close"></i> 禁用 ({{ selectedRows.length }})
+        </el-button>
+        <el-button
+            v-if="selectedRows.length > 0"
             type="danger"
             plain
             @click="handleBatchDelete"
             class="batch-btn"
         >
           <i class="el-icon-delete"></i> 删除 ({{ selectedRows.length }})
+        </el-button>
+        <!-- 保存排序按钮 -->
+        <el-button
+            v-if="sortChanged"
+            type="success"
+            plain
+            @click="saveSortOrder"
+            :loading="sortSaving"
+            class="batch-btn"
+        >
+          <i class="el-icon-check"></i> 保存排序
         </el-button>
       </div>
       <div class="action-right">
@@ -26,8 +55,7 @@
               size="medium"
               @keyup.enter="handleSearch"
               class="search-input"
-          >
-          </el-input>
+          ></el-input>
         </div>
         <el-select
             v-model="searchForm.status"
@@ -46,19 +74,23 @@
         <el-button size="medium" @click="handleReset" class="reset-btn">
           重置
         </el-button>
+        <el-button type="success" size="medium" @click="handleExport" :loading="exportLoading" plain class="export-btn">
+          <i class="el-icon-download"></i> 导出
+        </el-button>
       </div>
     </div>
 
-    <!-- 分类表格 - 简单表格，无树形结构 -->
+    <!-- 分类表格 - 整行可拖拽 -->
     <el-table
         v-loading="loading"
         :data="categoryList"
         stripe
-        style="width: 100%"
+        row-key="id"
         class="category-table"
         @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="45" align="center"></el-table-column>
+
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
 
       <el-table-column prop="name" label="分类名称" min-width="200">
@@ -67,7 +99,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="sortOrder" label="排序" width="100" align="center">
+      <el-table-column prop="sortOrder" label="排序值" width="100" align="center">
         <template slot-scope="scope">
           <span class="sort-text">{{ scope.row.sortOrder }}</span>
         </template>
@@ -89,8 +121,7 @@
               inactive-color="#f56c6c"
               @change="(val) => handleStatusChange(scope.row, val)"
               :loading="scope.row.statusLoading"
-          >
-          </el-switch>
+          ></el-switch>
         </template>
       </el-table-column>
 
@@ -100,9 +131,20 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="180" fixed="right" align="center">
+      <el-table-column label="操作" width="240" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
+            <el-button
+                size="small"
+                type="info"
+                plain
+                circle
+                @click="handleView(scope.row)"
+                class="action-icon-btn"
+                title="查看"
+            >
+              <i class="el-icon-view"></i>
+            </el-button>
             <el-button
                 size="small"
                 type="primary"
@@ -110,6 +152,7 @@
                 circle
                 @click="handleEdit(scope.row)"
                 class="action-icon-btn"
+                title="编辑"
             >
               <i class="el-icon-edit"></i>
             </el-button>
@@ -120,6 +163,7 @@
                 circle
                 @click="handleDelete(scope.row)"
                 class="action-icon-btn"
+                title="删除"
             >
               <i class="el-icon-delete"></i>
             </el-button>
@@ -139,8 +183,7 @@
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
           background
-      >
-      </el-pagination>
+      ></el-pagination>
     </div>
 
     <!-- 新增/编辑分类对话框 -->
@@ -158,7 +201,7 @@
             <el-input v-model="currentCategory.name" placeholder="请输入分类名称" size="medium"></el-input>
           </el-form-item>
 
-          <el-form-item label="排序">
+          <el-form-item label="排序值">
             <el-input-number v-model="currentCategory.sortOrder" :min="0" :max="999" size="medium" controls-position="right"></el-input-number>
             <span class="form-tip">数字越小越靠前</span>
           </el-form-item>
@@ -179,6 +222,50 @@
         </el-button>
       </span>
     </el-dialog>
+
+    <!-- 分类详情对话框 -->
+    <el-dialog
+        title="分类详情"
+        :visible.sync="detailVisible"
+        width="480px"
+        center
+        class="category-detail-dialog"
+    >
+      <div class="detail-content" v-if="currentDetailCategory">
+        <div class="detail-item">
+          <span class="detail-label">ID：</span>
+          <span class="detail-value">{{ currentDetailCategory.id }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">分类名称：</span>
+          <span class="detail-value">{{ currentDetailCategory.name }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">排序值：</span>
+          <span class="detail-value">{{ currentDetailCategory.sortOrder }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">服务数量：</span>
+          <el-tag size="small" :type="currentDetailCategory.serviceCount > 0 ? 'success' : 'info'">
+            {{ currentDetailCategory.serviceCount || 0 }}
+          </el-tag>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">状态：</span>
+          <el-tag :type="currentDetailCategory.status === 1 ? 'success' : 'danger'" size="small">
+            {{ currentDetailCategory.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">创建时间：</span>
+          <span class="detail-value">{{ formatDate(currentDetailCategory.createTime) }}</span>
+        </div>
+      </div>
+
+      <span slot="footer">
+    <el-button @click="detailVisible = false">关闭</el-button>
+  </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -189,8 +276,11 @@ import {
   updateServiceCategory,
   updateServiceCategoryStatus,
   deleteServiceCategory,
-  batchDeleteServiceCategories
+  batchDeleteServiceCategories,
+  batchUpdateServiceCategoryStatus
 } from '@/api/service';
+import { batchUpdateServiceCategorySort } from '@/api/service';
+import Sortable from 'sortablejs';
 
 export default {
   name: 'ServiceCategory',
@@ -198,6 +288,11 @@ export default {
     return {
       loading: false,
       submitLoading: false,
+      exportLoading: false,
+      sortSaving: false,
+      sortChanged: false,
+      detailVisible: false,
+      currentDetailCategory: null,
       categoryList: [],
       total: 0,
       page: 1,
@@ -231,6 +326,9 @@ export default {
   created() {
     this.loadCategoryList();
   },
+  mounted() {
+    this.initSortable();
+  },
   methods: {
     async loadCategoryList() {
       this.loading = true;
@@ -248,6 +346,7 @@ export default {
             statusLoading: false
           }));
           this.total = res.data.total;
+          this.sortChanged = false;
         }
       } catch (error) {
         console.error('加载分类列表失败', error);
@@ -257,10 +356,204 @@ export default {
       }
     },
 
+    // 整行可拖拽排序
+    initSortable() {
+      const el = this.$el.querySelector('.el-table__body-wrapper tbody');
+      if (!el) return;
+
+      if (this.sortableInstance) {
+        this.sortableInstance.destroy();
+      }
+
+      this.sortableInstance = new Sortable(el, {
+        animation: 300,
+        onEnd: (evt) => {
+          const oldIndex = evt.oldIndex;
+          const newIndex = evt.newIndex;
+
+          if (oldIndex === newIndex) return;
+
+          const movedItem = this.categoryList.splice(oldIndex, 1)[0];
+          this.categoryList.splice(newIndex, 0, movedItem);
+
+          this.categoryList.forEach((item, index) => {
+            item.sortOrder = index;
+          });
+
+          this.$forceUpdate();
+          this.sortChanged = true;
+
+          console.log('拖拽后排序:', this.categoryList.map(i => ({id: i.id, order: i.sortOrder})));
+        }
+      });
+    },
+
+    // 查看分类详情
+    handleView(row) {
+      this.currentDetailCategory = row;
+      this.detailVisible = true;
+    },
+
+    async saveSortOrder() {
+      if (!this.sortChanged) {
+        this.$message.info('排序未发生变化');
+        return;
+      }
+
+      this.sortSaving = true;
+      try {
+        const sortList = this.categoryList.map((item, index) => ({
+          id: item.id,
+          sortOrder: index
+        }));
+
+        const res = await batchUpdateServiceCategorySort(sortList);
+
+        if (res.code === 200) {
+          this.$message.success('排序保存成功');
+          this.sortChanged = false;
+          await this.loadCategoryList();
+        } else {
+          this.$message.error(res.message || '保存失败');
+          await this.loadCategoryList();
+        }
+      } catch (error) {
+        console.error('保存排序失败:', error);
+        this.$message.error('保存排序失败');
+        await this.loadCategoryList();
+      } finally {
+        this.sortSaving = false;
+      }
+    },
+
+    // ✅ 批量启用
+    async handleBatchEnable() {
+      if (this.selectedRows.length === 0) {
+        this.$message.warning('请选择要操作的数据');
+        return;
+      }
+
+      const ids = this.selectedRows.map(row => row.id).join(',');
+      this.$confirm(`确定要启用选中的 ${this.selectedRows.length} 个分类吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }).then(async () => {
+        try {
+          const res = await batchUpdateServiceCategoryStatus(ids, 1);
+          if (res.code === 200) {
+            this.$message.success(res.message);
+            this.selectedRows = [];
+            this.loadCategoryList();
+          } else {
+            this.$message.error(res.message);
+          }
+        } catch (error) {
+          this.$message.error('批量启用失败');
+        }
+      }).catch(() => {});
+    },
+
+    // ✅ 批量禁用
+    async handleBatchDisable() {
+      if (this.selectedRows.length === 0) {
+        this.$message.warning('请选择要操作的数据');
+        return;
+      }
+
+      const ids = this.selectedRows.map(row => row.id).join(',');
+      this.$confirm(`确定要禁用选中的 ${this.selectedRows.length} 个分类吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const res = await batchUpdateServiceCategoryStatus(ids, 0);
+          if (res.code === 200) {
+            this.$message.success(res.message);
+            this.selectedRows = [];
+            this.loadCategoryList();
+          } else {
+            this.$message.error(res.message);
+          }
+        } catch (error) {
+          this.$message.error('批量禁用失败');
+        }
+      }).catch(() => {});
+    },
+
+    // ✅ 批量删除
+    async handleBatchDelete() {
+      if (this.selectedRows.length === 0) {
+        this.$message.warning('请选择要操作的数据');
+        return;
+      }
+
+      const ids = this.selectedRows.map(row => row.id).join(',');
+      this.$confirm(`确定要删除选中的 ${this.selectedRows.length} 个分类吗？删除后无法恢复！`, '警告', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const res = await batchDeleteServiceCategories(ids);
+          if (res.code === 200) {
+            this.$message.success(res.message);
+            this.selectedRows = [];
+            this.loadCategoryList();
+          } else {
+            this.$message.error(res.message);
+          }
+        } catch (error) {
+          this.$message.error('批量删除失败');
+        }
+      }).catch(() => {});
+    },
+
+    // ✅ 导出功能
+    async handleExport() {
+      this.exportLoading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.searchForm.keyword) params.append('keyword', this.searchForm.keyword);
+        if (this.searchForm.status !== '' && this.searchForm.status !== null) params.append('status', this.searchForm.status);
+
+        const token = localStorage.getItem('token');
+        const url = `/api/admin/service/category/export?${params.toString()}`;
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) throw new Error('导出失败');
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `服务分类_${new Date().getTime()}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+
+        this.$message.success('导出成功');
+      } catch (error) {
+        console.error('导出失败', error);
+        this.$message.error('导出失败');
+      } finally {
+        this.exportLoading = false;
+      }
+    },
+
     handleSearch() {
       this.page = 1;
       this.loadCategoryList();
     },
+
     handleReset() {
       this.searchForm = {
         keyword: '',
@@ -269,23 +562,28 @@ export default {
       this.page = 1;
       this.loadCategoryList();
     },
+
     handlePageChange(page) {
       this.page = page;
       this.loadCategoryList();
     },
+
     handleSizeChange(size) {
       this.pageSize = size;
       this.page = 1;
       this.loadCategoryList();
     },
+
     handleSelectionChange(rows) {
       this.selectedRows = rows;
     },
+
     formatDate(date) {
       if (!date) return '';
       const d = new Date(date);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     },
+
     async handleStatusChange(row, val) {
       const newStatus = val ? 1 : 0;
       const action = newStatus === 1 ? '启用' : '禁用';
@@ -310,6 +608,7 @@ export default {
         }
       }).catch(() => {});
     },
+
     async handleDelete(row) {
       this.$confirm(`确定要删除分类 "${row.name}" 吗？删除后无法恢复！`, '警告', {
         confirmButtonText: '确定',
@@ -329,6 +628,7 @@ export default {
         }
       }).catch(() => {});
     },
+
     handleAdd() {
       this.isEdit = false;
       this.currentCategory = {
@@ -344,6 +644,7 @@ export default {
         }
       });
     },
+
     handleEdit(row) {
       this.isEdit = true;
       this.currentCategory = {
@@ -359,6 +660,7 @@ export default {
         }
       });
     },
+
     submitForm() {
       this.$refs.categoryForm.validate(async (valid) => {
         if (!valid) return;
@@ -385,29 +687,12 @@ export default {
           this.submitLoading = false;
         }
       });
-    },
-    async handleBatchDelete() {
-      if (this.selectedRows.length === 0) return;
+    }
+  },
 
-      const ids = this.selectedRows.map(row => row.id).join(',');
-      this.$confirm(`确定要删除选中的 ${this.selectedRows.length} 个分类吗？删除后无法恢复！`, '警告', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(async () => {
-        try {
-          const res = await batchDeleteServiceCategories(ids);
-          if (res.code === 200) {
-            this.$message.success(res.message);
-            this.selectedRows = [];
-            this.loadCategoryList();
-          } else {
-            this.$message.error(res.message);
-          }
-        } catch (error) {
-          this.$message.error('批量删除失败');
-        }
-      }).catch(() => {});
+  beforeDestroy() {
+    if (this.sortableInstance) {
+      this.sortableInstance.destroy();
     }
   }
 };
@@ -466,6 +751,17 @@ export default {
   border-radius: 8px;
   font-weight: 500;
   transition: all 0.2s;
+}
+
+.export-btn {
+  border-color: #67c23a;
+  color: #67c23a;
+}
+
+.export-btn:hover {
+  background: #f0f9ff;
+  border-color: #67c23a;
+  color: #67c23a;
 }
 
 .search-wrapper {
@@ -593,5 +889,83 @@ export default {
   text-align: right;
   padding: 16px 24px 20px;
   border-top: 1px solid #eef2f6;
+}
+
+/* 拖拽时的行样式 */
+.sortable-drag {
+  opacity: 0.5;
+  background: #f0f2f5 !important;
+}
+.export-btn {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+  color: white;
+}
+
+/* 分类详情对话框样式 */
+.category-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.category-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.category-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.category-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.category-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.detail-content {
+  padding: 0 10px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  width: 85px;
+  font-size: 14px;
+  color: #909399;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  font-size: 14px;
+  color: #2c3e50;
 }
 </style>

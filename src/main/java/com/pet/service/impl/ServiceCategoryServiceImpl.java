@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServiceCategoryServiceImpl implements ServiceCategoryService {
@@ -27,6 +28,10 @@ public class ServiceCategoryServiceImpl implements ServiceCategoryService {
         return categoryMapper.getAllCategories(null);
     }
 
+    @Override
+    public List<ServiceCategory> getAllCategories(String keyword) {
+        return categoryMapper.getAllCategories(keyword);
+    }
     @Override
     public Map<String, Object> getCategoryList(Integer page, Integer pageSize, String keyword, Integer status) {
         int offset = (page - 1) * pageSize;
@@ -79,5 +84,21 @@ public class ServiceCategoryServiceImpl implements ServiceCategoryService {
             throw new RuntimeException("请先删除该分类下的服务");
         }
         return categoryMapper.deleteById(id) > 0;
+    }
+
+    @Override
+    @Transactional
+    public void batchUpdateSort(List<Map<String, Integer>> sortList) {
+        System.out.println("========== Service 批量更新排序 ==========");
+        for (Map<String, Integer> item : sortList) {
+            Integer id = item.get("id");
+            Integer sortOrder = item.get("sortOrder");
+            System.out.println("更新: id=" + id + ", sortOrder=" + sortOrder);
+
+            if (id != null && sortOrder != null) {
+                int result = categoryMapper.updateSortOrder(id, sortOrder);
+                System.out.println("更新结果: " + result);
+            }
+        }
     }
 }

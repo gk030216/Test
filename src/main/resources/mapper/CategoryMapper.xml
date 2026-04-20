@@ -16,6 +16,7 @@
         id, name, parent_id, sort_order, status, create_time, update_time
     </sql>
 
+    <!-- 获取分类列表（分页，支持 parentId 筛选） -->
     <select id="getCategoryList" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM product_category
@@ -26,11 +27,15 @@
             <if test="status != null">
                 AND status = #{status}
             </if>
+            <if test="parentId != null">
+                AND parent_id = #{parentId}
+            </if>
         </where>
         ORDER BY sort_order ASC, id ASC
         LIMIT #{offset}, #{limit}
     </select>
 
+    <!-- 获取分类总数 -->
     <select id="countCategory" resultType="int">
         SELECT COUNT(*)
         FROM product_category
@@ -41,9 +46,13 @@
             <if test="status != null">
                 AND status = #{status}
             </if>
+            <if test="parentId != null">
+                AND parent_id = #{parentId}
+            </if>
         </where>
     </select>
 
+    <!-- 获取所有启用的分类 -->
     <select id="getAllEnabledCategories" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM product_category
@@ -78,6 +87,10 @@
 
     <update id="updateStatus">
         UPDATE product_category SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateSortOrder">
+        UPDATE product_category SET sort_order = #{sortOrder} WHERE id = #{id}
     </update>
 
     <delete id="deleteById">

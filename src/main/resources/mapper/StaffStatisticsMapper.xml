@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.StaffStatisticsMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.StaffStatistics">
+        <id column="id" property="id"/>
+        <result column="staff_id" property="staffId"/>
+        <result column="service_count" property="serviceCount"/>
+        <result column="completed_count" property="completedCount"/>
+        <result column="rating_sum" property="ratingSum"/>
+        <result column="rating_avg" property="ratingAvg" jdbcType="DECIMAL"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="getAllStaffStatistics" resultMap="BaseResultMap">
+        SELECT * FROM staff_statistics ORDER BY rating_avg DESC, completed_count DESC
+    </select>
+
+    <select id="getByStaffId" resultMap="BaseResultMap">
+        SELECT * FROM staff_statistics WHERE staff_id = #{staffId}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO staff_statistics (staff_id, service_count, completed_count, rating_sum, rating_avg)
+        VALUES (#{staffId}, 0, 0, 0, 0)
+    </insert>
+
+    <!-- ✅ 修改这里：乘以 1.0 确保小数 -->
+    <update id="updateStatistics">
+        UPDATE staff_statistics
+        SET
+            service_count = COALESCE(service_count, 0) + 1,
+            completed_count = COALESCE(completed_count, 0) + 1,
+            rating_sum = COALESCE(rating_sum, 0) + #{rating},
+            rating_avg = (COALESCE(rating_sum, 0) + #{rating}) * 1.0 / (COALESCE(completed_count, 0) + 1)
+        WHERE staff_id = #{staffId}
+    </update>
+
+    <update id="incrementServiceCount">
+        UPDATE staff_statistics
+        SET
+            service_count = COALESCE(service_count, 0) + 1,
+            completed_count = COALESCE(completed_count, 0) + 1
+        WHERE staff_id = #{staffId}
+    </update>
+
+    <update id="recalculateAllStatistics">
+        UPDATE staff_statistics s
+        SET
+            s.completed_count = (
+                SELECT COUNT(*) FROM appointment
+                WHERE staff_id = s.staff_id AND status = 3
+            ),
+            s.service_count = (
+                SELECT COUNT(*) FROM appointment
+                WHERE staff_id = s.staff_id AND status IN (1,2,3)
+            ),
+            s.rating_sum = (
+                SELECT COALESCE(SUM(sc.rating), 0)
+                FROM appointment a
+                         JOIN service_comment sc ON a.id = sc.appointment_id
+                WHERE a.staff_id = s.staff_id
+            ),
+            s.rating_avg = (
+                SELECT COALESCE(SUM(sc.rating), 0) * 1.0 / COUNT(*)
+                FROM appointment a
+                         JOIN service_comment sc ON a.id = sc.appointment_id
+                WHERE a.staff_id = s.staff_id
+            )
+    </update>
+
+</mapper>

@@ -63,4 +63,26 @@ public interface ProductCommentMapper {
      * 统计用户评论数量
      */
     int countUserComments(@Param("userId") Integer userId);
+
+    // ✅ 新增：根据ID获取评价
+    ProductComment getById(@Param("id") Integer id);
+
+    // 获取商品评分分布
+    List<Map<String, Object>> getProductRatingDistribution(@Param("productId") Integer productId);
+
+    // 获取商品近7天评价趋势
+    List<Map<String, Object>> getProductCommentTrend(@Param("productId") Integer productId);
+
+    // 获取商品已回复评价数量
+    int getProductRepliedCommentCount(@Param("productId") Integer productId);
+
+    // 获取商品评价列表（支持评分筛选）
+    List<ProductComment> getCommentListWithRating(@Param("productId") Integer productId,
+                                                  @Param("offset") Integer offset,
+                                                  @Param("limit") Integer limit,
+                                                  @Param("rating") Integer rating);
+
+    // 统计商品评价数量（支持评分筛选）
+    int countCommentWithRating(@Param("productId") Integer productId,
+                               @Param("rating") Integer rating);
 }

@@ -60,3 +60,23 @@ export function batchDeleteCategories(ids) {
         params: { ids }
     });
 }
+
+// 批量更新分类排序
+export function batchUpdateCategorySort(sortList) {
+    return request({
+        url: '/admin/category/batch-sort',
+        method: 'put',
+        data: sortList
+    });
+}
+
+// 导出分类列表
+export function exportCategoryList(params) {
+    return request({
+        url: '/admin/category/export',
+        method: 'get',
+        params: params,
+        responseType: 'blob'
+    });
+}
+

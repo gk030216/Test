@@ -102,7 +102,10 @@
 
     <!-- 取消预约 -->
     <update id="cancelAppointment">
-        UPDATE appointment SET status = 4, cancel_reason = #{reason}
+        UPDATE appointment
+        SET status = 4,
+            cancel_reason = #{reason},
+            update_time = NOW()
         WHERE id = #{id} AND user_id = #{userId} AND status = 0
     </update>
 
@@ -236,12 +239,12 @@
 
     <select id="getWeeklyTrend" resultType="java.util.HashMap">
         SELECT
-            DATE_FORMAT(create_time, '%a') as date,
-        COUNT(*) as count
+            DATE(create_time) as date,
+            COUNT(*) as count
         FROM appointment
         WHERE create_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY DATE_FORMAT(create_time, '%a'), DATE(create_time)
-        ORDER BY MIN(create_time) ASC
+        GROUP BY DATE(create_time)
+        ORDER BY DATE(create_time) ASC
     </select>
 
     <update id="updatePayStatus">
@@ -271,7 +274,62 @@
     <update id="updateRefundStatus">
         UPDATE appointment
         SET status = #{status},
-            cancel_reason = '用户取消，已退款'
+            cancel_reason = #{reason},
+            pay_status = 3,
+            update_time = NOW()
         WHERE appointment_no = #{appointmentNo}
     </update>
+
+    <!-- 检查员工时间冲突 -->
+    <select id="checkStaffTimeConflict" resultType="int">
+        SELECT COUNT(*)
+        FROM appointment
+        WHERE staff_id = #{staffId}
+        AND appointment_date = #{appointmentDate}
+        AND appointment_time = #{appointmentTime}
+        AND status IN (0, 1, 2)
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 检查宠物时间冲突 -->
+    <select id="checkPetTimeConflict" resultType="int">
+        SELECT COUNT(*)
+        FROM appointment
+        WHERE pet_id = #{petId}
+        AND appointment_date = #{appointmentDate}
+        AND appointment_time = #{appointmentTime}
+        AND status IN (0, 1, 2)
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 检查用户时间冲突 -->
+    <select id="checkUserTimeConflict" resultType="int">
+        SELECT COUNT(*)
+        FROM appointment
+        WHERE user_id = #{userId}
+        AND appointment_date = #{appointmentDate}
+        AND appointment_time = #{appointmentTime}
+        AND status IN (0, 1, 2)
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 统计今日收入 -->
+    <select id="countTodayIncome" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(service_price), 0)
+        FROM appointment
+        WHERE DATE(create_time) = CURDATE() AND status = 3
+    </select>
+
+    <!-- 根据状态统计数量 -->
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*)
+        FROM appointment
+        WHERE status = #{status}
+    </select>
 </mapper>

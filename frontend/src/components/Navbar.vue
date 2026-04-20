@@ -38,10 +38,10 @@
 
       <!-- 右侧用户区域 -->
       <div class="user-area">
-        <!-- 购物车图标 -->
-        <div class="cart-icon" @click="goToCart">
-          <i class="el-icon-shopping-cart-2"></i>
-          <span class="cart-badge" v-if="cartCount > 0">{{ cartCount }}</span>
+        <!-- 消息提醒图标 -->
+        <div class="notification-icon" @click="goToNotifications">
+          <i class="el-icon-bell"></i>
+          <span class="notification-badge" v-if="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
         </div>
 
         <!-- 未登录状态 -->
@@ -63,32 +63,16 @@
             <el-dropdown-item command="profile">
               <i class="el-icon-user"></i> 个人中心
             </el-dropdown-item>
-<!--            <el-dropdown-item command="appointments">-->
-<!--              <i class="el-icon-s-order"></i> 我的预约-->
-<!--            </el-dropdown-item>-->
-<!--            <el-dropdown-item command="orders">-->
-<!--              <i class="el-icon-s-order"></i> 我的订单-->
-<!--            </el-dropdown-item>-->
-<!--            <el-dropdown-item command="favorites">-->
-<!--              <i class="el-icon-star-on"></i> 我的收藏-->
-<!--            </el-dropdown-item>-->
-<!--            <el-dropdown-item command="posts">-->
-<!--              <i class="el-icon-document"></i> 我的帖子-->
-<!--            </el-dropdown-item>-->
-<!--            <el-dropdown-item command="comments">-->
-<!--              <i class="el-icon-chat-dot-round"></i> 我的评论-->
-<!--            </el-dropdown-item>-->
-<!--            <el-dropdown-item command="address">-->
-<!--              <i class="el-icon-location"></i> 收货地址-->
-<!--            </el-dropdown-item>-->
-<!--            <el-dropdown-item command="security">-->
-<!--              <i class="el-icon-lock"></i> 账号安全-->
-<!--            </el-dropdown-item>-->
-            <!-- 员工显示员工工作台 -->
+            <el-dropdown-item command="notifications" divided>
+              <i class="el-icon-bell"></i> 消息通知
+              <span v-if="unreadCount > 0" class="dropdown-badge">{{ unreadCount }}</span>
+            </el-dropdown-item>
+            <el-dropdown-item command="feedback" divided>
+              <i class="el-icon-edit-outline"></i> 意见反馈
+            </el-dropdown-item>
             <el-dropdown-item v-if="userRole === 2" command="staff" divided>
               <i class="el-icon-s-platform"></i> 员工工作台
             </el-dropdown-item>
-            <!-- 管理员显示后台管理 -->
             <el-dropdown-item v-if="userRole === 3" command="admin" divided>
               <i class="el-icon-setting"></i> 后台管理
             </el-dropdown-item>
@@ -104,20 +88,74 @@
         </div>
       </div>
     </div>
+
+    <!-- 消息通知下拉面板（可选，增强体验） -->
+    <div class="notification-dropdown" v-click-outside="closeNotificationPanel" v-show="showNotificationPanel">
+      <div class="notification-header">
+        <span>消息通知</span>
+        <el-button type="text" size="small" @click="markAllAsRead" v-if="unreadCount > 0">全部已读</el-button>
+      </div>
+      <div class="notification-list" v-loading="notificationLoading">
+        <div v-for="item in notificationList" :key="item.id" class="notification-item" :class="{ unread: !item.isRead }" @click="handleNotificationClick(item)">
+          <div class="notification-icon">
+            <i :class="getNotificationIcon(item.type)"></i>
+          </div>
+          <div class="notification-content">
+            <div class="notification-title">{{ item.title }}</div>
+            <div class="notification-desc">{{ item.content }}</div>
+            <div class="notification-time">{{ formatTime(item.createTime) }}</div>
+          </div>
+          <div class="notification-close" v-if="!item.isRead" @click.stop="markAsRead(item.id)">
+            <i class="el-icon-close"></i>
+          </div>
+        </div>
+        <div v-if="notificationList.length === 0 && !notificationLoading" class="notification-empty">
+          <i class="el-icon-bell"></i>
+          <span>暂无消息通知</span>
+        </div>
+      </div>
+      <div class="notification-footer" v-if="total > notificationList.length">
+        <el-button type="text" size="small" @click="loadMoreNotifications">查看更多</el-button>
+      </div>
+    </div>
   </nav>
 </template>
 
 <script>
-import { getCartSummary } from '@/api/cart';
+import { getUnreadCount, getNotificationList, markAsRead, markAllAsRead } from '@/api/notification';
 
 export default {
   name: 'Navbar',
+  directives: {
+    // 点击外部关闭下拉面板的指令
+    'click-outside': {
+      bind(el, binding, vnode) {
+        el.clickOutsideEvent = function(event) {
+          if (!(el === event.target || el.contains(event.target))) {
+            vnode.context[binding.expression]();
+          }
+        };
+        document.body.addEventListener('click', el.clickOutsideEvent);
+      },
+      unbind(el) {
+        document.body.removeEventListener('click', el.clickOutsideEvent);
+      }
+    }
+  },
   data() {
     return {
       mobileMenuOpen: false,
-      cartCount: 0,
       siteName: '宠物服务系统',
-      siteLogo: ''
+      siteLogo: '',
+      // 消息通知相关
+      unreadCount: 0,
+      showNotificationPanel: false,
+      notificationList: [],
+      notificationLoading: false,
+      notificationPage: 1,
+      notificationPageSize: 5,
+      total: 0,
+      pollingTimer: null
     };
   },
   computed: {
@@ -144,24 +182,36 @@ export default {
   watch: {
     '$route'() {
       this.mobileMenuOpen = false;
+      this.showNotificationPanel = false;
     }
   },
   created() {
     this.loadSettings();
   },
   mounted() {
-    this.loadCartCount();
-    this.$bus.$on('cart-updated', this.loadCartCount);
+    this.loadUnreadCount();
     this.$bus.$on('settings-loaded', (settings) => {
       if (settings && settings.basic) {
         this.siteName = settings.basic.siteName || '宠物服务系统';
         this.siteLogo = settings.basic.siteLogo || '';
       }
     });
+    this.$bus.$on('new-notification', () => {
+      this.loadUnreadCount();
+    });
+    // 定时轮询未读消息数量（每30秒）
+    if (this.isLoggedIn) {
+      this.pollingTimer = setInterval(() => {
+        this.loadUnreadCount();
+      }, 30000);
+    }
   },
   beforeDestroy() {
-    this.$bus.$off('cart-updated', this.loadCartCount);
     this.$bus.$off('settings-loaded');
+    this.$bus.$off('new-notification');
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+    }
   },
   methods: {
     loadSettings() {
@@ -176,6 +226,147 @@ export default {
         }
       }
     },
+
+    // ========== 消息通知相关方法 ==========
+
+    async loadUnreadCount() {
+      if (!this.isLoggedIn) return;
+      try {
+        const res = await getUnreadCount();
+        if (res.code === 200) {
+          this.unreadCount = res.data || 0;
+        }
+      } catch (error) {
+        console.error('获取未读消息数失败', error);
+      }
+    },
+
+    async loadNotifications() {
+      if (!this.isLoggedIn) return;
+      this.notificationLoading = true;
+      try {
+        const res = await getNotificationList({
+          page: this.notificationPage,
+          pageSize: this.notificationPageSize
+        });
+        if (res.code === 200) {
+          if (this.notificationPage === 1) {
+            this.notificationList = res.data.list || [];
+          } else {
+            this.notificationList = [...this.notificationList, ...(res.data.list || [])];
+          }
+          this.total = res.data.total || 0;
+        }
+      } catch (error) {
+        console.error('获取消息列表失败', error);
+      } finally {
+        this.notificationLoading = false;
+      }
+    },
+
+    async markAsRead(notificationId) {
+      try {
+        const res = await markAsRead(notificationId);
+        if (res.code === 200) {
+          // 更新本地列表状态
+          const item = this.notificationList.find(n => n.id === notificationId);
+          if (item) {
+            item.isRead = 1;
+          }
+          this.unreadCount = Math.max(0, this.unreadCount - 1);
+        }
+      } catch (error) {
+        console.error('标记已读失败', error);
+      }
+    },
+
+    async markAllAsRead() {
+      try {
+        const res = await markAllAsRead();
+        if (res.code === 200) {
+          this.notificationList.forEach(item => {
+            item.isRead = 1;
+          });
+          this.unreadCount = 0;
+          this.$message.success('已全部标记为已读');
+        }
+      } catch (error) {
+        console.error('全部标记已读失败', error);
+      }
+    },
+
+    loadMoreNotifications() {
+      this.notificationPage++;
+      this.loadNotifications();
+    },
+
+    toggleNotificationPanel() {
+      if (!this.isLoggedIn) {
+        this.$router.push('/login');
+        return;
+      }
+      this.showNotificationPanel = !this.showNotificationPanel;
+      if (this.showNotificationPanel && this.notificationList.length === 0) {
+        this.notificationPage = 1;
+        this.loadNotifications();
+      }
+    },
+
+    closeNotificationPanel() {
+      this.showNotificationPanel = false;
+    },
+
+    goToNotifications() {
+      this.$router.push('/personal/notifications');
+    },
+
+    handleNotificationClick(item) {
+      if (!item.isRead) {
+        this.markAsRead(item.id);
+      }
+      // 根据类型跳转到不同页面
+      switch (item.type) {
+        case 'appointment':
+          this.$router.push('/personal/appointments');
+          break;
+        case 'order':
+          this.$router.push('/personal/orders');
+          break;
+        case 'comment':
+          this.$router.push('/personal/comments');
+          break;
+        case 'system':
+        default:
+          this.$router.push('/personal/notifications');
+          break;
+      }
+      this.showNotificationPanel = false;
+    },
+
+    getNotificationIcon(type) {
+      const iconMap = {
+        appointment: 'el-icon-s-order',
+        order: 'el-icon-shopping-cart-2',
+        comment: 'el-icon-chat-dot-round',
+        system: 'el-icon-info'
+      };
+      return iconMap[type] || 'el-icon-bell';
+    },
+
+    formatTime(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+      if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    },
+
+    // ========== 导航方法 ==========
+
     goToHome() {
       this.$router.push('/');
     },
@@ -216,52 +407,20 @@ export default {
     goToAIChat() {
       this.$router.push('/ai-chat');
     },
-    goToCart() {
-      this.$router.push('/cart');
-    },
-    async loadCartCount() {
-      try {
-        if (this.isLoggedIn) {
-          const res = await getCartSummary();
-          if (res.code === 200) {
-            this.cartCount = res.data.totalCount || 0;
-          }
-        } else {
-          const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-          this.cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-        }
-      } catch (error) {
-        console.error('加载购物车数量失败', error);
-      }
-    },
+
     handleUserMenuCommand(command) {
       switch (command) {
         case 'profile':
           this.$router.push('/personal');
           break;
-        case 'appointments':
-          this.$router.push('/personal/appointments');
-          break;
-        case 'orders':
-          this.$router.push('/personal/orders');
-          break;
-        case 'favorites':
-          this.$router.push('/personal/favorites');
-          break;
-        case 'posts':
-          this.$router.push('/personal/posts');
-          break;
-        case 'comments':
-          this.$router.push('/personal/comments');
-          break;
-        case 'address':
-          this.$router.push('/personal/address');
-          break;
-        case 'security':
-          this.$router.push('/personal/security');
+        case 'notifications':
+          this.$router.push('/personal/notifications');
           break;
         case 'staff':
           this.$router.push('/staff');
+          break;
+        case 'feedback':
+          this.$router.push('/personal/feedback');
           break;
         case 'admin':
           this.$router.push('/admin');
@@ -333,12 +492,8 @@ export default {
 }
 
 @keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 .logo-text {
@@ -385,28 +540,32 @@ export default {
   gap: 20px;
 }
 
-.cart-icon {
+/* 消息提醒图标样式 */
+.notification-icon {
   position: relative;
   color: white;
-  font-size: 24px;
-  text-decoration: none;
-  transition: transform 0.3s;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.3s;
   display: flex;
   align-items: center;
-  cursor: pointer;
+  justify-content: center;
 }
 
-.cart-icon:hover {
-  transform: scale(1.1);
+.notification-icon:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
 }
 
-.cart-badge {
+.notification-badge {
   position: absolute;
-  top: -8px;
-  right: -12px;
+  top: -2px;
+  right: -4px;
   background: #ff6b6b;
   color: white;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
   min-width: 18px;
   height: 18px;
@@ -415,8 +574,156 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 0 4px;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
 }
 
+/* 消息下拉面板 */
+.notification-dropdown {
+  position: absolute;
+  top: 70px;
+  right: 100px;
+  width: 360px;
+  max-height: 450px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+  color: #333;
+}
+
+.notification-header .el-button {
+  color: #667eea;
+}
+
+.notification-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 350px;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.notification-item:hover {
+  background: #f8f9fc;
+}
+
+.notification-item.unread {
+  background: #f0f7ff;
+}
+
+.notification-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-icon i {
+  font-size: 18px;
+  color: #667eea;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.notification-desc {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-time {
+  font-size: 11px;
+  color: #ccc;
+}
+
+.notification-close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #999;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  background: #f0f0f0;
+  color: #f56c6c;
+}
+
+.notification-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.notification-empty i {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.notification-footer {
+  padding: 10px 16px;
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+}
+
+.notification-footer .el-button {
+  color: #667eea;
+}
+
+.dropdown-badge {
+  display: inline-block;
+  background: #ff6b6b;
+  color: white;
+  font-size: 10px;
+  border-radius: 10px;
+  padding: 0 6px;
+  margin-left: 8px;
+  line-height: 16px;
+}
+
+/* 其他原有样式保持不变 */
 .auth-buttons {
   display: flex;
   gap: 12px;
@@ -512,6 +819,11 @@ export default {
   .nav-item {
     padding: 8px 12px;
   }
+
+  .notification-dropdown {
+    right: 60px;
+    width: 320px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -560,8 +872,17 @@ export default {
     display: none;
   }
 
-  .cart-icon {
-    font-size: 22px;
+  .notification-icon {
+    font-size: 20px;
+  }
+
+  .notification-dropdown {
+    position: fixed;
+    top: 70px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
   }
 
   .auth-buttons {

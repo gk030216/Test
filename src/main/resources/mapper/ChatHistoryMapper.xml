@@ -54,62 +54,50 @@
 
     <!-- ============= 后台管理接口 ============= -->
 
-    <!-- 获取对话记录列表（后台）- 按时间升序，确保用户名正确返回 -->
     <select id="getAdminList" resultType="java.util.HashMap">
         SELECT
         ch.id,
         ch.user_id as userId,
-        IFNULL(u.username, CONCAT('用户', ch.user_id)) as userName,
         ch.user_question as userQuestion,
-        ch.answer_source as answerSource,
         ch.ai_answer as aiAnswer,
+        ch.answer_source as answerSource,
         ch.rating,
-        DATE_FORMAT(ch.create_time, '%Y-%m-%d %H:%i:%s') as createTime
+        ch.create_time as createTime,
+        u.username as userName,
+        u.avatar as userAvatar
         FROM chat_history ch
         LEFT JOIN user u ON ch.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (ch.user_question LIKE CONCAT('%', #{keyword}, '%')
-                OR ch.ai_answer LIKE CONCAT('%', #{keyword}, '%')
-                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR ch.user_question LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="answerSource != null">
                 AND ch.answer_source = #{answerSource}
             </if>
             <if test="rating != null">
-                <if test="rating == 0">
-                    AND ch.rating IS NULL
-                </if>
-                <if test="rating > 0">
-                    AND ch.rating = #{rating}
-                </if>
+                AND ch.rating = #{rating}
             </if>
         </where>
-        ORDER BY ch.create_time ASC
+        ORDER BY ch.create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
-    <!-- 获取对话记录总数（后台） -->
+    <!-- 统计总数也需要关联 user 表 -->
     <select id="countAdminList" resultType="int">
         SELECT COUNT(*)
         FROM chat_history ch
         LEFT JOIN user u ON ch.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (ch.user_question LIKE CONCAT('%', #{keyword}, '%')
-                OR ch.ai_answer LIKE CONCAT('%', #{keyword}, '%')
-                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR ch.user_question LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="answerSource != null">
                 AND ch.answer_source = #{answerSource}
             </if>
             <if test="rating != null">
-                <if test="rating == 0">
-                    AND ch.rating IS NULL
-                </if>
-                <if test="rating > 0">
-                    AND ch.rating = #{rating}
-                </if>
+                AND ch.rating = #{rating}
             </if>
         </where>
     </select>
@@ -118,5 +106,29 @@
     <delete id="deleteById">
         DELETE FROM chat_history WHERE id = #{id}
     </delete>
+
+    <!-- 获取所有有对话记录的用户列表 -->
+    <select id="getUserListWithHistory" resultType="java.util.HashMap">
+        SELECT
+        u.id as userId,
+        u.username as userName,
+        u.avatar as userAvatar,
+        COUNT(ch.id) as dialogCount,
+        MAX(ch.create_time) as lastTime,
+        (SELECT user_question FROM chat_history
+        WHERE user_id = u.id
+        ORDER BY create_time DESC LIMIT 1) as lastQuestion
+        FROM user u
+        INNER JOIN chat_history ch ON u.id = ch.user_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        GROUP BY u.id
+        ORDER BY lastTime DESC
+    </select>
+
 
 </mapper>

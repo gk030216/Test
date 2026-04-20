@@ -21,6 +21,7 @@ public class Post {
 
     // 关联字段（非数据库字段）
     private String userName;
+    private String userNickname;
     private String userAvatar;
     private Boolean isLiked;
     private Boolean isFavorited;
@@ -65,4 +66,6 @@ public class Post {
     public void setIsFavorited(Boolean isFavorited) { this.isFavorited = isFavorited; }
     public List<PostComment> getComments() { return comments; }
     public void setComments(List<PostComment> comments) { this.comments = comments; }
+    public String getUserNickname() { return userNickname; }
+    public void setUserNickname(String userNickname) { this.userNickname = userNickname; }
 }

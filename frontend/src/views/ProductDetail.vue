@@ -4,11 +4,15 @@
 
     <div class="detail-content">
       <div class="container">
-        <el-breadcrumb separator="/" class="breadcrumb">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item :to="{ path: '/shop' }">宠物商城</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ product.name }}</el-breadcrumb-item>
-        </el-breadcrumb>
+        <!-- 顶部导航栏：面包屑 + 返回按钮同一行 -->
+        <div class="top-nav">
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/shop' }">宠物商城</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ product.name }}</el-breadcrumb-item>
+          </el-breadcrumb>
+          <el-button icon="el-icon-arrow-left" size="small" @click="$router.back()" class="back-btn">返回</el-button>
+        </div>
 
         <div class="product-info" v-loading="loading">
           <div class="product-gallery">
@@ -72,8 +76,16 @@
               <el-button type="primary" size="large" @click="handleBuyNow" class="buy-btn">
                 立即购买
               </el-button>
-              <el-button size="large" @click="handleAddToCart" class="cart-btn">
-                <i class="el-icon-shopping-cart-2"></i> 加入购物车
+              <el-button
+                  size="large"
+                  @click="handleCartAction"
+                  class="cart-btn"
+                  :class="{ 'in-cart': isInCart }"
+                  :disabled="cartActionLoading"
+                  :loading="cartActionLoading"
+              >
+                <i :class="isInCart ? 'el-icon-check' : 'el-icon-shopping-cart-2'"></i>
+                {{ isInCart ? '已在购物车' : '加入购物车' }}
               </el-button>
             </div>
           </div>
@@ -208,7 +220,7 @@ import Footer from '@/components/Footer.vue';
 import { getProductById, getHotProducts, addFavorite, removeFavorite, checkFavorite } from '@/api/product';
 import { getRecommendProducts } from '@/api/product';
 import { getProductComments, getProductRatingStats } from '@/api/comment';
-import { addToCart } from '@/api/cart';
+import { addToCart, getCartList, deleteCartItem } from '@/api/cart';
 
 export default {
   name: 'ProductDetail',
@@ -217,6 +229,7 @@ export default {
     return {
       loading: false,
       commentLoading: false,
+      cartActionLoading: false,
       product: {},
       quantity: 1,
       activeTab: 'detail',
@@ -226,7 +239,9 @@ export default {
       commentList: [],
       commentPage: 1,
       commentTotal: 0,
-      ratingStats: null
+      ratingStats: null,
+      isInCart: false,
+      cartItemId: null
     };
   },
   computed: {
@@ -252,6 +267,7 @@ export default {
   created() {
     this.loadProduct();
     this.checkFavoriteStatus();
+    this.checkCartStatus();
   },
   methods: {
     async loadProduct() {
@@ -272,6 +288,43 @@ export default {
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
+      }
+    },
+
+    // 检查商品是否已在购物车中
+    async checkCartStatus() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          this.isInCart = false;
+          this.cartItemId = null;
+          return;
+        }
+
+        const res = await getCartList();
+        console.log('========== 检查购物车状态 ==========');
+        console.log('购物车列表:', res);
+
+        if (res.code === 200 && res.data) {
+          // ✅ 使用 == 进行宽松比较，或者手动转换类型
+          const cartItem = res.data.find(item => Number(item.productId) === Number(this.productId));
+          console.log('当前商品ID:', this.productId);
+          console.log('找到的购物车项:', cartItem);
+
+          if (cartItem) {
+            this.isInCart = true;
+            this.cartItemId = Number(cartItem.id);
+            console.log('商品已在购物车, cartItemId:', this.cartItemId);
+          } else {
+            this.isInCart = false;
+            this.cartItemId = null;
+            console.log('商品不在购物车');
+          }
+        }
+      } catch (error) {
+        console.error('检查购物车状态失败', error);
+        this.isInCart = false;
+        this.cartItemId = null;
       }
     },
 
@@ -399,7 +452,9 @@ export default {
       }
     },
 
-    async handleAddToCart() {
+    // 购物车操作：如果已在购物车则删除，否则添加
+// 购物车操作：如果已在购物车则删除，否则添加
+    async handleCartAction() {
       const token = localStorage.getItem('token');
       if (!token) {
         this.$confirm('请先登录', '提示', {
@@ -412,14 +467,90 @@ export default {
         return;
       }
 
+      // 检查库存（添加时）
+      if (!this.isInCart && this.product.stock <= 0) {
+        this.$message.warning('商品库存不足，无法加入购物车');
+        return;
+      }
+
+      this.cartActionLoading = true;
+
       try {
-        const res = await addToCart(this.product.id, this.quantity);
-        if (res.code === 200) {
-          this.$message.success('已加入购物车');
-          this.$bus.$emit('cart-updated');
+        if (this.isInCart) {
+          // ✅ 打印调试信息
+          console.log('========== 删除购物车商品 ==========');
+          console.log('isInCart:', this.isInCart);
+          console.log('cartItemId:', this.cartItemId);
+          console.log('cartItemId 类型:', typeof this.cartItemId);
+          console.log('productId:', this.productId);
+
+          // 已在购物车，执行删除操作
+          if (!this.cartItemId) {
+            // 如果 cartItemId 为空，重新获取
+            const cartRes = await getCartList();
+            console.log('重新获取购物车列表:', cartRes);
+
+            if (cartRes.code === 200 && cartRes.data) {
+              const cartItem = cartRes.data.find(item => item.productId === this.productId);
+              console.log('找到的购物车项:', cartItem);
+
+              if (cartItem) {
+                this.cartItemId = Number(cartItem.id);
+              } else {
+                this.$message.error('购物车信息异常，请刷新页面重试');
+                this.cartActionLoading = false;
+                return;
+              }
+            } else {
+              this.$message.error('获取购物车信息失败');
+              this.cartActionLoading = false;
+              return;
+            }
+          }
+
+          // ✅ 确保传递数字类型
+          console.log('最终删除的 cartItemId:', this.cartItemId);
+          const res = await deleteCartItem(Number(this.cartItemId));
+          console.log('删除结果:', res);
+
+          if (res.code === 200) {
+            this.isInCart = false;
+            this.cartItemId = null;
+            this.$message.success('已从购物车移出');
+            this.$bus.$emit('cart-updated');
+          } else {
+            this.$message.error(res.message || '移出失败');
+          }
+        } else {
+          // 不在购物车，执行添加操作
+          console.log('========== 添加商品到购物车 ==========');
+          console.log('productId:', this.product.id);
+          console.log('quantity:', this.quantity);
+
+          const res = await addToCart(this.product.id, this.quantity);
+          console.log('添加结果:', res);
+
+          if (res.code === 200) {
+            // 添加成功后需要重新获取购物车列表以获取 cartItemId
+            const cartRes = await getCartList();
+            if (cartRes.code === 200 && cartRes.data) {
+              const cartItem = cartRes.data.find(item => item.productId === this.productId);
+              if (cartItem) {
+                this.cartItemId = Number(cartItem.id);
+              }
+            }
+            this.isInCart = true;
+            this.$message.success('已加入购物车');
+            this.$bus.$emit('cart-updated');
+          } else {
+            this.$message.error(res.message || '添加失败');
+          }
         }
       } catch (error) {
-        this.$message.error(error.message || '添加失败');
+        console.error('购物车操作失败:', error);
+        this.$message.error(error.message || '操作失败');
+      } finally {
+        this.cartActionLoading = false;
       }
     },
 
@@ -433,6 +564,11 @@ export default {
         }).then(() => {
           this.$router.push('/login');
         });
+        return;
+      }
+
+      if (this.product.stock <= 0) {
+        this.$message.warning('商品库存不足，无法购买');
         return;
       }
 
@@ -474,7 +610,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .detail-content {
@@ -488,18 +624,45 @@ export default {
   padding: 0 20px;
 }
 
+/* 顶部导航栏：面包屑和返回按钮同一行 */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .breadcrumb {
-  margin-bottom: 30px;
+  flex: 1;
+}
+
+.back-btn {
+  border-radius: 8px;
+  color: #606266;
+  background: white;
+  border: 1px solid #eef2f6;
+  padding: 8px 16px;
+  font-size: 13px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.back-btn:hover {
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
 }
 
 .product-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 50px;
+  gap: 40px;
   background: white;
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
 }
 
 .product-gallery {
@@ -510,9 +673,9 @@ export default {
 .main-image {
   width: 100%;
   height: 400px;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #f5f7fa;
 }
 
 .main-image .el-image {
@@ -522,14 +685,14 @@ export default {
 
 .thumb-images {
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .thumb-item {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  width: 70px;
+  height: 70px;
+  border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
@@ -537,7 +700,7 @@ export default {
 }
 
 .thumb-item.active {
-  border-color: #667eea;
+  border-color: #409EFF;
 }
 
 .thumb-item .el-image {
@@ -546,20 +709,20 @@ export default {
 }
 
 .product-details {
-  padding: 20px 0;
+  padding: 0;
 }
 
 .product-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .product-name {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
-  color: #333;
+  color: #2c3e50;
   margin: 0;
   flex: 1;
 }
@@ -569,13 +732,14 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 10px 16px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
-  color: #999;
-  background: #f8f9fc;
-  margin-left: 20px;
+  color: #909399;
+  background: #f5f7fa;
+  margin-left: 16px;
+  border: 1px solid #eef2f6;
 }
 
 .favorite-btn:hover {
@@ -584,7 +748,7 @@ export default {
 }
 
 .favorite-btn i {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .favorite-btn i.favorited {
@@ -592,47 +756,48 @@ export default {
 }
 
 .favorite-btn span {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .product-price {
-  background: #f8f9fc;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+  background: #f5f7fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
 
 .price-label {
-  color: #999;
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
 }
 
 .current-price {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: bold;
-  color: #ff6b6b;
-  margin: 0 10px;
+  color: #f56c6c;
+  margin: 0 8px;
 }
 
 .original-price {
-  color: #999;
+  color: #c0c4cc;
   text-decoration: line-through;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .product-sales {
   display: flex;
-  gap: 30px;
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
-  color: #666;
+  gap: 24px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef2f6;
+  color: #606266;
+  font-size: 13px;
   flex-wrap: wrap;
 }
 
 .rating-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .favorite-count {
@@ -643,86 +808,131 @@ export default {
 }
 
 .favorite-count i {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .product-description {
-  padding: 20px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 0;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .desc-label {
   font-weight: 500;
-  margin-bottom: 10px;
-  color: #333;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-size: 14px;
 }
 
 .desc-content {
-  color: #666;
+  color: #606266;
   line-height: 1.6;
+  font-size: 14px;
 }
 
 .product-quantity {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 20px 0;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .stock-info {
-  color: #999;
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
 }
 
 .product-actions {
   display: flex;
-  gap: 20px;
-  margin-top: 30px;
+  gap: 16px;
+  margin-top: 24px;
 }
 
 .buy-btn, .cart-btn {
   flex: 1;
-  height: 48px;
-  font-size: 16px;
+  height: 44px;
+  font-size: 15px;
+  border-radius: 8px;
 }
 
 .buy-btn {
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  background: #f56c6c;
   border: none;
 }
 
+.buy-btn:hover {
+  background: #f78989;
+}
+
 .cart-btn {
-  background: #fff;
-  border-color: #667eea;
-  color: #667eea;
+  background: white;
+  border-color: #409EFF;
+  color: #409EFF;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.cart-btn:hover {
+  background: #ecf5ff;
+}
+
+.cart-btn.in-cart {
+  background: #67c23a;
+  border-color: #67c23a;
+  color: white;
+}
+
+.cart-btn.in-cart:hover {
+  background: #85ce61;
+}
+
+.cart-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* 评价区域样式 */
 .product-tabs {
-  margin-top: 40px;
+  margin-top: 30px;
   background: white;
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 20px;
+  border: 1px solid #eef2f6;
+}
+
+.product-tabs ::v-deep .el-tabs__header {
+  margin-bottom: 16px;
+}
+
+.product-tabs ::v-deep .el-tabs__item {
+  font-size: 14px;
+}
+
+.product-tabs ::v-deep .el-tabs__item.is-active {
+  color: #409EFF;
+}
+
+.product-tabs ::v-deep .el-tabs__active-bar {
+  background-color: #409EFF;
 }
 
 .comment-summary {
   display: flex;
-  gap: 40px;
-  padding: 20px;
-  background: #f8f9fc;
-  border-radius: 16px;
-  margin-bottom: 30px;
+  gap: 30px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .rating-score {
   text-align: center;
-  min-width: 150px;
+  min-width: 130px;
 }
 
 .score {
-  font-size: 48px;
+  font-size: 40px;
   font-weight: bold;
   color: #ff9900;
 }
@@ -734,54 +944,58 @@ export default {
 .rating-bar-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .star-label {
-  width: 40px;
-  font-size: 13px;
-  color: #666;
+  width: 35px;
+  font-size: 12px;
+  color: #606266;
 }
 
 .bar {
   flex: 1;
-  height: 8px;
-  background: #e0e0e0;
-  border-radius: 4px;
+  height: 6px;
+  background: #e8eaef;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
   background: #ff9900;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .count {
-  width: 40px;
-  font-size: 13px;
-  color: #999;
+  width: 35px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .comment-list {
-  max-height: 600px;
+  max-height: 500px;
   overflow-y: auto;
 }
 
 .comment-item {
-  padding: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
 }
 
 .comment-header {
   display: flex;
-  gap: 15px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .comment-avatar {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   color: white;
   flex-shrink: 0;
 }
@@ -793,48 +1007,50 @@ export default {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .user-name {
   font-weight: 500;
-  color: #333;
+  color: #2c3e50;
+  font-size: 13px;
 }
 
 .comment-time {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: #909399;
 }
 
 .comment-content {
-  color: #666;
-  line-height: 1.6;
-  margin-bottom: 12px;
+  color: #606266;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  font-size: 13px;
 }
 
 .comment-images {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .comment-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
   object-fit: cover;
   cursor: pointer;
 }
 
 .comment-reply {
-  background: #f8f9fc;
-  padding: 12px;
-  border-radius: 12px;
-  margin-top: 12px;
-  border-left: 3px solid #67c23a;
+  background: #f5f7fa;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border-left: 2px solid #67c23a;
 }
 
 .reply-header {
@@ -844,76 +1060,78 @@ export default {
   font-weight: 500;
   color: #67c23a;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .reply-content {
-  color: #666;
+  color: #606266;
   line-height: 1.5;
+  font-size: 12px;
 }
 
 .reply-time {
-  font-size: 11px;
-  color: #999;
-  margin-top: 6px;
+  font-size: 10px;
+  color: #c0c4cc;
+  margin-top: 4px;
 }
 
 .empty-comment {
   text-align: center;
-  padding: 60px;
-  color: #999;
+  padding: 40px;
+  color: #909399;
 }
 
 .empty-comment i {
   font-size: 48px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  color: #c0c4cc;
 }
 
 .comment-pagination {
-  margin-top: 20px;
+  margin-top: 16px;
   display: flex;
   justify-content: center;
 }
 
 /* 猜你喜欢 */
 .recommend-section {
-  margin-top: 40px;
+  margin-top: 30px;
 }
 
 .recommend-section h3 {
-  font-size: 20px;
-  margin-bottom: 20px;
-  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #2c3e50;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .recommend-section h3 i {
-  color: #f56c6c;
+  color: #409EFF;
 }
 
 .recommend-tip {
-  font-size: 13px;
-  color: #999;
+  font-size: 12px;
+  color: #909399;
   font-weight: normal;
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
 .recommend-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
 .recommend-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
-  position: relative;
-  z-index: 1;
+  border: 1px solid #eef2f6;
 }
 
 .recommend-card * {
@@ -921,14 +1139,16 @@ export default {
 }
 
 .recommend-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #e0e0e0;
 }
 
 .recommend-image {
   position: relative;
-  height: 180px;
+  height: 160px;
   overflow: hidden;
+  background: #f5f7fa;
 }
 
 .recommend-image img {
@@ -944,25 +1164,27 @@ export default {
 
 .recommend-score {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.6);
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.6);
   color: white;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
 }
 
 .recommend-info {
-  padding: 12px;
+  padding: 10px;
 }
 
 .recommend-info h4 {
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #2c3e50;
 }
 
 .recommend-footer {
@@ -972,28 +1194,29 @@ export default {
 }
 
 .recommend-footer .price {
-  color: #ff6b6b;
+  color: #f56c6c;
   font-weight: bold;
+  font-size: 14px;
 }
 
 .recommend-footer .sales {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: #c0c4cc;
 }
 
 .recommend-reason {
-  margin-top: 8px;
-  font-size: 11px;
+  margin-top: 6px;
+  font-size: 10px;
   color: #ff9900;
   background: #fff8e6;
-  padding: 4px 8px;
-  border-radius: 20px;
+  padding: 2px 6px;
+  border-radius: 12px;
   display: inline-block;
 }
 
 .recommend-reason i {
-  margin-right: 4px;
-  font-size: 12px;
+  margin-right: 2px;
+  font-size: 10px;
 }
 
 .image-slot {
@@ -1002,27 +1225,34 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
-  color: #999;
-  font-size: 32px;
+  background: #f5f7fa;
+  color: #c0c4cc;
+  font-size: 28px;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
+  .detail-content {
+    padding: 20px 0 40px;
+  }
+
   .product-info {
     grid-template-columns: 1fr;
     gap: 20px;
+    padding: 16px;
   }
 
   .recommend-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .product-name {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .current-price {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .comment-summary {
@@ -1044,7 +1274,25 @@ export default {
 
   .favorite-btn {
     margin-left: 0;
-    margin-top: 10px;
+    margin-top: 8px;
+  }
+
+  .product-actions {
+    flex-direction: column;
+  }
+
+  .recommend-image {
+    height: 130px;
+  }
+
+  .top-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .back-btn {
+    margin-left: 0;
+    padding: 6px 12px;
   }
 }
 </style>

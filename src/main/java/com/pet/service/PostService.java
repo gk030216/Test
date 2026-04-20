@@ -74,11 +74,6 @@ public interface PostService {
     boolean deleteComment(Integer id, Integer userId);
 
     /**
-     * 点赞评论
-     */
-    boolean toggleCommentLike(Integer commentId, Integer userId);
-
-    /**
      * 获取用户评论列表
      */
     Map<String, Object> getUserComments(Integer userId, Integer page, Integer pageSize);
@@ -88,7 +83,8 @@ public interface PostService {
     /**
      * 管理员获取帖子列表
      */
-    Map<String, Object> getAdminPostList(Integer page, Integer pageSize, String keyword,
+    Map<String, Object> getAdminPostList(Integer page, Integer pageSize,
+                                         String keyword, String category,
                                          Integer status, Integer isTop, Integer isEssence);
 
     /**
@@ -116,7 +112,23 @@ public interface PostService {
     List<PostComment> getCommentReplies(Integer commentId);
 
     /**
+     * 获取帖子统计数据
+     */
+    Map<String, Object> getPostStatistics();
+
+    /**
      * 获取评论列表（后台）
      */
     Map<String, Object> getAdminCommentList(Integer page, Integer pageSize, String keyword, Integer status);
+
+    /**
+     * 软删除帖子（隐藏）
+     */
+    boolean softDeletePost(Integer id);
+
+    /**
+     * 真正删除帖子（物理删除）
+     */
+    boolean physicallyDeletePost(Integer id);
+
 }

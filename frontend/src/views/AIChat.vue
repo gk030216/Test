@@ -29,7 +29,7 @@
             <div class="chat-header">
               <div class="chat-title">
                 <i class="el-icon-cpu"></i>
-                <span>AI智能顾问 - 宠小伴</span>
+                <span>AI智能顾问</span>
                 <el-tag size="small" type="success">24小时在线</el-tag>
               </div>
               <div class="chat-actions">
@@ -45,8 +45,8 @@
             <div class="chat-messages" ref="messagesContainer">
               <div v-if="messages.length === 0" class="empty-chat">
                 <i class="el-icon-cpu"></i>
-                <p>你好！我是宠小伴，你的宠物顾问 🐾</p>
-                <p>有什么关于宠物的问题都可以问我哦~</p>
+                <p>你好！我是AI智能顾问</p>
+                <p>有什么关于宠物的问题都可以问我</p>
                 <div class="example-questions">
                   <span class="example-title">试试问：</span>
                   <span v-for="q in exampleQuestions" :key="q" @click="sendQuestion(q)" class="example-item">
@@ -61,9 +61,10 @@
                   :class="['message', msg.role]"
               >
                 <div class="message-avatar">
-                  <el-avatar :size="36" :src="msg.avatar">
-                    {{ msg.role === 'user' ? (msg.userName ? msg.userName.charAt(0).toUpperCase() : 'U') : 'AI' }}
+                  <el-avatar :size="36" :src="msg.avatar" v-if="msg.role === 'user'">
+                    {{ msg.userName ? msg.userName.charAt(0).toUpperCase() : 'U' }}
                   </el-avatar>
+                  <el-avatar :size="36" v-else class="ai-avatar">🤖</el-avatar>
                 </div>
                 <div class="message-content">
                   <div class="message-text" v-html="formatMessage(msg.content)"></div>
@@ -170,7 +171,6 @@ export default {
         const res = await getFaqList();
         if (res.code === 200) {
           this.faqList = res.data;
-          console.log('常见问题数据:', this.faqList);
         }
       } catch (error) {
         console.error('加载常见问题失败', error);
@@ -211,7 +211,6 @@ export default {
       const question = this.inputMessage.trim();
       if (!question) return;
 
-      // 添加用户消息
       this.messages.push({
         role: 'user',
         content: question,
@@ -235,14 +234,14 @@ export default {
         } else {
           this.messages.push({
             role: 'assistant',
-            content: '抱歉，我遇到了一些问题，请稍后再试 🐾',
+            content: '抱歉，我遇到了一些问题，请稍后再试',
             avatar: ''
           });
         }
       } catch (error) {
         this.messages.push({
           role: 'assistant',
-          content: '网络异常，请稍后再试 🐾',
+          content: '网络异常，请稍后再试',
           avatar: ''
         });
       } finally {
@@ -251,10 +250,8 @@ export default {
     },
 
     sendQuestion(question) {
-      // 查找是否有预设答案
       const faqItem = this.faqList.find(item => item.question === question);
       if (faqItem && faqItem.answer) {
-        // 有预设答案，直接显示，不调用AI
         this.messages.push({
           role: 'user',
           content: question,
@@ -273,7 +270,6 @@ export default {
         return;
       }
 
-      // 没有预设答案，调用 AI
       this.inputMessage = question;
       this.sendMessage();
     },
@@ -331,7 +327,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .chat-content {
@@ -348,7 +344,7 @@ export default {
 .chat-layout {
   display: grid;
   grid-template-columns: 300px 1fr;
-  gap: 24px;
+  gap: 20px;
   height: calc(100vh - 200px);
   min-height: 600px;
 }
@@ -356,86 +352,96 @@ export default {
 /* 左侧常见问题 */
 .faq-sidebar {
   background: white;
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 16px 20px;
+  background: #409EFF;
   color: white;
-  font-weight: 600;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .sidebar-header i {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .faq-list {
   flex: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 8px 0;
 }
 
 .faq-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 15px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 12px 16px;
   cursor: pointer;
-  transition: all 0.3s;
-  color: #666;
+  transition: all 0.2s;
+  color: #606266;
   border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
 }
 
 .faq-item:hover {
-  background: #f8f9fc;
-  color: #667eea;
-  transform: translateX(4px);
+  background: #ecf5ff;
+  color: #409EFF;
 }
 
 .faq-item i {
-  font-size: 18px;
-  color: #667eea;
+  font-size: 16px;
+  color: #409EFF;
 }
 
 /* 右侧聊天区域 */
 .chat-main {
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .chat-header {
-  padding: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eef2f6;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
+  background: white;
 }
 
 .chat-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  color: #333;
+  gap: 8px;
+  font-weight: 500;
+  color: #2c3e50;
 }
 
 .chat-title i {
-  font-size: 24px;
-  color: #667eea;
+  font-size: 20px;
+  color: #409EFF;
+}
+
+.chat-actions .el-button {
+  color: #909399;
+  font-size: 13px;
+}
+
+.chat-actions .el-button:hover {
+  color: #409EFF;
 }
 
 .chat-messages {
@@ -457,15 +463,16 @@ export default {
 }
 
 .message.user .message-content {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   color: white;
-  border-radius: 20px 20px 4px 20px;
+  border-radius: 16px 16px 4px 16px;
 }
 
 .message.assistant .message-content {
   background: white;
-  border-radius: 20px 20px 20px 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 16px 16px 16px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
 }
 
 .message-avatar {
@@ -473,49 +480,56 @@ export default {
 }
 
 .message-avatar ::v-deep .el-avatar {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   color: white;
 }
 
 .message.user .message-avatar ::v-deep .el-avatar {
-  background: #e0e0e0;
-  color: #999;
+  background: #909399;
+  color: white;
 }
 
 .message-content {
   max-width: 70%;
-  padding: 12px 16px;
+  padding: 10px 14px;
 }
 
 .message-text {
-  line-height: 1.6;
+  line-height: 1.5;
   word-break: break-word;
+  font-size: 14px;
 }
 
 .message-footer {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #999;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #909399;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .message-source i {
-  margin-right: 4px;
+  margin-right: 2px;
 }
 
 .message-rating {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+}
+
+.message-rating span {
+  font-size: 11px;
+  margin-right: 4px;
 }
 
 .message-rating i {
   cursor: pointer;
   color: #ddd;
-  transition: color 0.3s;
+  font-size: 14px;
+  transition: color 0.2s;
 }
 
 .message-rating i:hover,
@@ -527,14 +541,14 @@ export default {
 .typing-indicator {
   display: flex;
   gap: 4px;
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .typing-indicator span {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #667eea;
+  background: #409EFF;
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -544,7 +558,7 @@ export default {
 
 @keyframes typing {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-8px); opacity: 1; }
+  30% { transform: translateY(-6px); opacity: 1; }
 }
 
 @keyframes fadeIn {
@@ -555,13 +569,13 @@ export default {
 .empty-chat {
   text-align: center;
   padding: 60px 20px;
-  color: #999;
+  color: #909399;
 }
 
 .empty-chat i {
   font-size: 64px;
   margin-bottom: 20px;
-  color: #667eea;
+  color: #c0c4cc;
 }
 
 .example-questions {
@@ -569,57 +583,78 @@ export default {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .example-title {
-  color: #666;
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
 }
 
 .example-item {
-  padding: 6px 14px;
-  background: #f0f0f0;
-  border-radius: 20px;
-  font-size: 13px;
+  padding: 4px 12px;
+  background: #f5f7fa;
+  border-radius: 16px;
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
+  border: 1px solid #eef2f6;
 }
 
 .example-item:hover {
-  background: #667eea;
+  background: #409EFF;
   color: white;
+  border-color: #409EFF;
 }
 
 /* 输入区域 */
 .chat-input {
-  padding: 20px;
-  border-top: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  border-top: 1px solid #eef2f6;
   background: white;
 }
 
 .chat-input ::v-deep .el-textarea__inner {
-  border-radius: 16px;
+  border-radius: 8px;
   resize: none;
   font-size: 14px;
+  border-color: #e4e7ed;
+}
+
+.chat-input ::v-deep .el-textarea__inner:focus {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
 }
 
 .input-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .input-tip {
   font-size: 12px;
-  color: #999;
+  color: #909399;
 }
 
 .input-tip i {
   margin-right: 4px;
 }
 
+.input-actions .el-button {
+  background: #409EFF;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+}
+
+.input-actions .el-button:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+/* 响应式 */
 @media (max-width: 768px) {
   .chat-layout {
     grid-template-columns: 1fr;
@@ -632,6 +667,12 @@ export default {
 
   .message-content {
     max-width: 85%;
+  }
+
+  .chat-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
   }
 }
 </style>

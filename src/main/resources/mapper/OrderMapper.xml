@@ -15,23 +15,23 @@
         <result column="pay_status" property="payStatus"/>
         <result column="order_status" property="orderStatus"/>
         <result column="trade_no" property="tradeNo"/>
-        <result column="remark" property="remark"/>
         <result column="create_time" property="createTime"/>
         <result column="pay_time" property="payTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="order_type" property="orderType"/>
+        <result column="cancel_reason" property="cancelReason"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id, order_no, user_id, user_name, user_phone, user_address, total_amount, pay_amount,
-    pay_type, pay_status, order_status, trade_no, remark, create_time, pay_time, update_time, order_type
+    pay_type, pay_status, order_status, trade_no, create_time, pay_time, update_time, order_type, cancel_reason
     </sql>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO orders (order_no, user_id, user_name, user_phone, user_address,
-                            total_amount, pay_amount, pay_status, order_status, remark, order_type)
+                            total_amount, pay_amount, pay_status, order_status, order_type)
         VALUES (#{orderNo}, #{userId}, #{userName}, #{userPhone}, #{userAddress},
-                #{totalAmount}, #{payAmount}, #{payStatus}, #{orderStatus}, #{remark}, #{orderType})
+                #{totalAmount}, #{payAmount}, #{payStatus}, #{orderStatus}, #{orderType})
     </insert>
 
     <select id="getByOrderNo" resultMap="BaseResultMap">
@@ -46,7 +46,7 @@
         <if test="status != null">
             AND order_status = #{status}
         </if>
-        ORDER BY create_time ASC
+        ORDER BY create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -59,13 +59,12 @@
     </select>
 
     <update id="updatePayStatus">
-        UPDATE orders SET pay_status = #{payStatus}, order_status = #{orderStatus},
-                          trade_no = #{tradeNo}, pay_time = NOW()
+        UPDATE orders
+        SET pay_status = #{payStatus},
+            order_status = #{orderStatus},
+            trade_no = #{tradeNo},
+            pay_time = NOW()
         WHERE order_no = #{orderNo}
-    </update>
-
-    <update id="updateOrderStatus">
-        UPDATE orders SET order_status = #{orderStatus} WHERE order_no = #{orderNo}
     </update>
 
     <!-- 后台订单列表查询 -->
@@ -85,7 +84,7 @@
                 AND pay_status = #{payStatus}
             </if>
         </where>
-        ORDER BY create_time ASC
+        ORDER BY create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -106,6 +105,14 @@
             </if>
         </where>
     </select>
+
+    <update id="updateOrderStatus">
+        UPDATE orders
+        SET order_status = #{orderStatus},
+            cancel_reason = #{reason},
+            update_time = NOW()
+        WHERE order_no = #{orderNo}
+    </update>
 
     <delete id="deleteById">
         DELETE FROM orders WHERE id = #{id}

@@ -4,6 +4,7 @@ import com.pet.entity.User;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 public interface UserMapper {
 
@@ -87,4 +88,35 @@ public interface UserMapper {
      * 删除用户
      */
     int deleteById(@Param("id") Integer id);
+
+    /**
+     * 获取所有启用的员工列表（role=2, status=1）
+     */
+    List<User> getStaffList();
+
+    // ============= 用户分析 =============
+
+    // 统计活跃用户（最近7天有登录）
+    int countActiveUsers();
+
+    // 统计今日新增用户
+    int countTodayNew();
+
+    // 统计近7日新增用户
+    int countWeekNew();
+
+    // 获取用户增长趋势
+    List<Map<String, Object>> getUserTrend(@Param("type") String type);
+
+    // 获取角色分布
+    List<Map<String, Object>> getRoleDistribution();
+
+    // 获取性别分布
+    List<Map<String, Object>> getGenderDistribution();
+
+    // 获取活跃度分布
+    List<Map<String, Object>> getActivityDistribution();
+
+    // 统计今日登录用户数
+    int countTodayLoginUsers();
 }

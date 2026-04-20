@@ -25,11 +25,12 @@ public class AdminPostController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer isTop,
             @RequestParam(required = false) Integer isEssence) {
         try {
-            Map<String, Object> result = postService.getAdminPostList(page, pageSize, keyword, status, isTop, isEssence);
+            Map<String, Object> result = postService.getAdminPostList(page, pageSize, keyword, category, status, isTop, isEssence);
             return Result.success(result);
         } catch (Exception e) {
             e.printStackTrace();
@@ -91,23 +92,6 @@ public class AdminPostController {
         }
     }
 
-    /**
-     * 删除帖子
-     */
-    @DeleteMapping("/post/{id}")
-    public Result<?> deletePost(@PathVariable Integer id) {
-        try {
-            boolean success = postService.adminDeletePost(id);
-            if (success) {
-                return Result.success("删除成功");
-            } else {
-                return Result.error("删除失败");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Result.error(e.getMessage());
-        }
-    }
 
     /**
      * 获取评论列表（后台）
@@ -180,6 +164,93 @@ public class AdminPostController {
             int successCount = 0;
             for (String idStr : idArray) {
                 if (postService.adminDeleteComment(Integer.parseInt(idStr))) {
+                    successCount++;
+                }
+            }
+            return Result.success("批量删除成功，成功：" + successCount + "个");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取帖子统计数据
+     */
+    @GetMapping("/statistics")
+    public Result<Map<String, Object>> getPostStatistics() {
+        try {
+            Map<String, Object> statistics = postService.getPostStatistics();
+            return Result.success(statistics);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 真正删除帖子（物理删除）- 对应删除按钮
+     */
+    @DeleteMapping("/post/{id}")
+    public Result<?> deletePostPermanently(@PathVariable Integer id) {
+        try {
+            boolean success = postService.physicallyDeletePost(id);
+            return success ? Result.success("删除成功") : Result.error("删除失败");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量置顶
+     */
+    @PutMapping("/posts/batch-top")
+    public Result<?> batchUpdatePostTop(@RequestParam String ids, @RequestParam Integer isTop) {
+        try {
+            String[] idArray = ids.split(",");
+            int successCount = 0;
+            for (String idStr : idArray) {
+                if (postService.updatePostTop(Integer.parseInt(idStr), isTop)) {
+                    successCount++;
+                }
+            }
+            return Result.success("批量置顶成功，成功：" + successCount + "个");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量精华
+     */
+    @PutMapping("/posts/batch-essence")
+    public Result<?> batchUpdatePostEssence(@RequestParam String ids, @RequestParam Integer isEssence) {
+        try {
+            String[] idArray = ids.split(",");
+            int successCount = 0;
+            for (String idStr : idArray) {
+                if (postService.updatePostEssence(Integer.parseInt(idStr), isEssence)) {
+                    successCount++;
+                }
+            }
+            return Result.success("批量精华成功，成功：" + successCount + "个");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除帖子（物理删除）
+     */
+    @DeleteMapping("/posts/batch-delete")
+    public Result<?> batchDeletePosts(@RequestParam String ids) {
+        try {
+            String[] idArray = ids.split(",");
+            int successCount = 0;
+            for (String idStr : idArray) {
+                if (postService.physicallyDeletePost(Integer.parseInt(idStr))) {
                     successCount++;
                 }
             }

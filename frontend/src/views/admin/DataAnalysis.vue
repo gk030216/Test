@@ -5,11 +5,33 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-icon">
-            <i class="el-icon-chat-dot-round"></i>
+            <i class="el-icon-goods"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ stats.totalComments }}</div>
-            <div class="stat-label">总评价数</div>
+            <div class="stat-number">{{ stats.totalProducts }}</div>
+            <div class="stat-label">商品总数</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-icon">
+            <i class="el-icon-shopping-cart-2"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ stats.totalSales }}</div>
+            <div class="stat-label">总销量</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-icon">
+            <i class="el-icon-money"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">¥{{ stats.totalRevenue }}</div>
+            <div class="stat-label">总销售额</div>
           </div>
         </el-card>
       </el-col>
@@ -24,28 +46,6 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-icon">
-            <i class="el-icon-thumb"></i>
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">{{ stats.positiveRate }}%</div>
-            <div class="stat-label">好评率</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-icon">
-            <i class="el-icon-message"></i>
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">{{ stats.replyRate }}%</div>
-            <div class="stat-label">回复率</div>
-          </div>
-        </el-card>
-      </el-col>
     </el-row>
 
     <!-- 图表区域 -->
@@ -53,62 +53,75 @@
       <el-col :span="12">
         <el-card class="chart-card" shadow="hover">
           <div slot="header" class="chart-header">
-            <span>评分分布</span>
-            <el-tag size="small" type="info">近30天</el-tag>
+            <span>分类商品占比</span>
+            <el-tag size="small" type="info">按商品数量</el-tag>
           </div>
-          <div id="ratingChart" style="height: 320px"></div>
+          <div id="categoryChart" style="height: 320px"></div>
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card class="chart-card" shadow="hover">
           <div slot="header" class="chart-header">
-            <span>评价趋势（近7天）</span>
-            <el-tag size="small" type="info">每日新增</el-tag>
+            <span>销量排行 Top 10</span>
+            <el-tag size="small" type="info">按销量排序</el-tag>
           </div>
-          <div id="trendChart" style="height: 320px"></div>
+          <div id="salesRankChart" style="height: 320px"></div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-row style="margin-top: 20px">
-      <el-col :span="24">
+    <el-row :gutter="20" style="margin-top: 20px">
+      <el-col :span="12">
         <el-card class="chart-card" shadow="hover">
           <div slot="header" class="chart-header">
-            <span>热门评价词云</span>
-            <el-tag size="small" type="info">基于用户评价内容</el-tag>
+            <span>价格区间分布</span>
+            <el-tag size="small" type="info">商品价格</el-tag>
           </div>
-          <div id="wordcloudChart" style="height: 400px"></div>
+          <div id="priceChart" style="height: 320px"></div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card class="chart-card" shadow="hover">
+          <div slot="header" class="chart-header">
+            <span>上架商品状态</span>
+            <el-tag size="small" type="info">上架/下架</el-tag>
+          </div>
+          <div id="statusChart" style="height: 320px"></div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 评价列表 -->
+    <!-- 热销商品列表 -->
     <el-row style="margin-top: 20px">
       <el-col :span="24">
-        <el-card class="recent-comment-card" shadow="hover">
+        <el-card class="hot-product-card" shadow="hover">
           <div slot="header" class="chart-header">
-            <span>最新评价</span>
-            <el-button type="text" @click="$router.push('/admin/comment-list')">查看更多</el-button>
+            <span>🔥 热销商品推荐</span>
+            <el-button type="text" @click="$router.push('/admin/product-list')">查看更多</el-button>
           </div>
-          <div class="recent-comments">
-            <div class="comment-item" v-for="comment in recentComments" :key="comment.id">
-              <el-avatar :size="40" class="comment-avatar">{{ comment.userName ? comment.userName.charAt(0) : 'U' }}</el-avatar>
-              <div class="comment-content">
-                <div class="comment-user">
-                  <span class="user-name">{{ comment.userName }}</span>
-                  <el-rate v-model="comment.rating" disabled show-score text-color="#ff9900"></el-rate>
-                  <span class="comment-time">{{ formatDate(comment.createTime) }}</span>
+          <div class="hot-products">
+            <div class="product-item" v-for="product in hotProducts" :key="product.id">
+              <el-image
+                  :src="product.image"
+                  class="product-img"
+                  fit="cover"
+              >
+                <div slot="error" class="image-slot">
+                  <i class="el-icon-picture-outline"></i>
                 </div>
-                <div class="comment-text">{{ comment.content }}</div>
-                <div v-if="comment.reply" class="comment-reply">
-                  <span class="reply-label">商家回复：</span>
-                  <span>{{ comment.reply }}</span>
-                </div>
+              </el-image>
+              <div class="product-info">
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-price">¥{{ product.price }}</div>
+              </div>
+              <div class="product-sales">
+                <span class="sales-num">{{ product.sales }}</span>
+                <span class="sales-label">销量</span>
               </div>
             </div>
-            <div v-if="recentComments.length === 0" class="empty-comment">
-              <i class="el-icon-chat-dot-round"></i>
-              <p>暂无评价数据</p>
+            <div v-if="hotProducts.length === 0" class="empty-data">
+              <i class="el-icon-shopping-cart-2"></i>
+              <p>暂无商品数据</p>
             </div>
           </div>
         </el-card>
@@ -119,7 +132,7 @@
 
 <script>
 import * as echarts from 'echarts';
-import { getCommentStatistics, getRecentComments } from '@/api/comment';
+import { getProductStatistics, getAdminHotProducts  } from '@/api/product';
 
 export default {
   name: 'DataAnalysis',
@@ -127,14 +140,16 @@ export default {
     return {
       loading: false,
       stats: {
-        totalComments: 0,
-        avgRating: 0,
-        positiveRate: 0,
-        replyRate: 0
+        totalProducts: 0,
+        totalSales: 0,
+        totalRevenue: 0,
+        avgRating: 0
       },
-      ratingDistribution: [],
-      commentTrend: [],
-      recentComments: []
+      categoryDistribution: [],
+      salesRank: [],
+      priceDistribution: [],
+      statusDistribution: [],
+      hotProducts: []
     };
   },
   mounted() {
@@ -144,17 +159,50 @@ export default {
     async loadData() {
       this.loading = true;
       try {
-        const statsRes = await getCommentStatistics();
+        // 获取统计数据
+        const statsRes = await getProductStatistics();
         if (statsRes.code === 200) {
           this.stats = statsRes.data;
-          this.ratingDistribution = statsRes.data.ratingDistribution || [];
-          this.commentTrend = statsRes.data.commentTrend || [];
+
+          // 处理销量排行数据
+          if (statsRes.data.salesRank && statsRes.data.salesRank.length > 0) {
+            this.salesRank = statsRes.data.salesRank.map(item => ({
+              name: item.name || item.productName,
+              sales: item.sales || item.count || 0
+            }));
+          }
+
+          // 处理分类分布
+          if (statsRes.data.categoryDistribution && statsRes.data.categoryDistribution.length > 0) {
+            this.categoryDistribution = statsRes.data.categoryDistribution;
+          }
+
+          // 处理价格分布
+          if (statsRes.data.priceDistribution && statsRes.data.priceDistribution.length > 0) {
+            this.priceDistribution = statsRes.data.priceDistribution;
+          }
+
+          // 处理状态分布
+          if (statsRes.data.statusDistribution && statsRes.data.statusDistribution.length > 0) {
+            this.statusDistribution = statsRes.data.statusDistribution;
+          }
+
           this.initCharts();
         }
 
-        const recentRes = await getRecentComments(5);
-        if (recentRes.code === 200) {
-          this.recentComments = recentRes.data;
+        // 获取热销商品
+        const hotRes = await getAdminHotProducts(8);
+        if (hotRes.code === 200) {
+          // 处理热销商品数据
+          if (hotRes.data && hotRes.data.length > 0) {
+            this.hotProducts = hotRes.data.map(item => ({
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              sales: item.sales || 0,
+              image: item.image
+            }));
+          }
         }
       } catch (error) {
         console.error('加载数据失败', error);
@@ -165,101 +213,88 @@ export default {
     },
 
     initCharts() {
-      // 评分分布饼图
-      const ratingChart = echarts.init(document.getElementById('ratingChart'));
-      const ratingData = this.ratingDistribution.map(item => ({
-        name: item.rating + '星',
-        value: item.count
-      }));
-
-      ratingChart.setOption({
-        tooltip: { trigger: 'item', formatter: '{b}: {d}% ({c}条)' },
-        legend: { orient: 'vertical', left: 'left', data: ratingData.map(d => d.name) },
+      // 分类占比饼图
+      const categoryChart = echarts.init(document.getElementById('categoryChart'));
+      categoryChart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {d}% ({c}个)' },
+        legend: { orient: 'vertical', left: 'left', type: 'scroll' },
         series: [{
           type: 'pie',
           radius: '55%',
           center: ['50%', '50%'],
-          data: ratingData,
+          data: this.categoryDistribution,
           label: { show: true, formatter: '{b}: {d}%' },
           emphasis: { scale: true },
-          itemStyle: {
-            borderRadius: 8,
-            borderColor: '#fff',
-            borderWidth: 2
-          }
+          itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 }
         }],
-        color: ['#f56c6c', '#e6a23c', '#f0b45c', '#67c23a', '#409EFF']
+        color: ['#409EFF', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#667eea', '#764ba2', '#85ce61']
       });
 
-      // 趋势折线图
-      const trendChart = echarts.init(document.getElementById('trendChart'));
-      trendChart.setOption({
+      // 销量排行柱状图
+      const salesChart = echarts.init(document.getElementById('salesRankChart'));
+      salesChart.setOption({
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        xAxis: { type: 'category', data: this.commentTrend.map(item => item.date), axisLine: { lineStyle: { color: '#999' } } },
-        yAxis: { type: 'value', name: '评价数量', nameStyle: { color: '#999' } },
+        grid: { left: '15%', right: '5%', bottom: '5%', containLabel: true },
+        xAxis: { type: 'value', name: '销量', nameStyle: { color: '#999' } },
+        yAxis: {
+          type: 'category',
+          data: this.salesRank.map(item => item.name),
+          axisLabel: { rotate: 0, interval: 0, fontSize: 11 }
+        },
         series: [{
-          data: this.commentTrend.map(item => item.count),
-          type: 'line',
-          smooth: true,
-          areaStyle: { opacity: 0.3, color: '#409EFF' },
-          lineStyle: { color: '#409EFF', width: 2 },
-          symbol: 'circle',
-          symbolSize: 8,
-          itemStyle: { color: '#409EFF', borderColor: '#fff', borderWidth: 2 }
-        }]
-      });
-
-      // 词云图
-      const wordcloudChart = echarts.init(document.getElementById('wordcloudChart'));
-      wordcloudChart.setOption({
-        series: [{
-          type: 'wordCloud',
-          shape: 'circle',
-          left: 'center',
-          top: 'center',
-          width: '90%',
-          height: '90%',
-          sizeRange: [12, 50],
-          rotationRange: [-45, 90],
-          rotationStep: 45,
-          gridSize: 8,
-          drawOutOfBound: false,
-          textStyle: {
-            fontFamily: 'sans-serif',
-            fontWeight: 'normal',
-            color: function () {
-              const colors = ['#409EFF', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#667eea', '#764ba2'];
-              return colors[Math.floor(Math.random() * colors.length)];
+          data: this.salesRank.map(item => item.sales),
+          type: 'bar',
+          barWidth: '60%',
+          itemStyle: {
+            borderRadius: [0, 4, 4, 0],
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 1, y2: 0,
+              colorStops: [{ offset: 0, color: '#409EFF' }, { offset: 1, color: '#67c23a' }]
             }
           },
-          data: this.getWordCloudData()
+          label: { show: true, position: 'right', formatter: '{c}' }
         }]
+      });
+
+      // 价格区间分布饼图
+      const priceChart = echarts.init(document.getElementById('priceChart'));
+      priceChart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {d}% ({c}个)' },
+        legend: { orient: 'vertical', left: 'left' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['50%', '50%'],
+          data: this.priceDistribution,
+          label: { show: true, formatter: '{b}: {d}%' },
+          itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 }
+        }],
+        color: ['#67c23a', '#e6a23c', '#f56c6c', '#409EFF', '#909399']
+      });
+
+      // 商品状态饼图
+      const statusChart = echarts.init(document.getElementById('statusChart'));
+      statusChart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {d}% ({c}个)' },
+        legend: { orient: 'vertical', left: 'left' },
+        series: [{
+          type: 'pie',
+          radius: '55%',
+          center: ['50%', '50%'],
+          data: this.statusDistribution,
+          label: { show: true, formatter: '{b}: {d}%' },
+          itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 }
+        }],
+        color: ['#67c23a', '#f56c6c']
       });
 
       window.addEventListener('resize', () => {
-        ratingChart.resize();
-        trendChart.resize();
-        wordcloudChart.resize();
+        categoryChart.resize();
+        salesChart.resize();
+        priceChart.resize();
+        statusChart.resize();
       });
-    },
-
-    getWordCloudData() {
-      return [
-        { name: '质量很好', value: 128 },
-        { name: '发货快', value: 98 },
-        { name: '包装好', value: 85 },
-        { name: '价格实惠', value: 76 },
-        { name: '客服态度好', value: 65 },
-        { name: '还会回购', value: 58 },
-        { name: '物流慢', value: 42 },
-        { name: '尺寸偏小', value: 38 },
-        { name: '味道不错', value: 35 },
-        { name: '适口性好', value: 32 },
-        { name: '性价比高', value: 30 },
-        { name: '猫咪爱吃', value: 28 },
-        { name: '狗狗喜欢', value: 26 }
-      ];
     },
 
     formatDate(date) {
@@ -326,7 +361,7 @@ export default {
   margin-top: 4px;
 }
 
-.chart-card, .recent-comment-card {
+.chart-card, .hot-product-card {
   border-radius: 16px;
   overflow: hidden;
 }
@@ -339,77 +374,81 @@ export default {
   color: #2c3e50;
 }
 
-.recent-comments {
-  max-height: 500px;
+.hot-products {
+  max-height: 400px;
   overflow-y: auto;
 }
 
-.comment-item {
+.product-item {
   display: flex;
+  align-items: center;
   gap: 15px;
-  padding: 15px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.comment-item:last-child {
+.product-item:last-child {
   border-bottom: none;
 }
 
-.comment-avatar {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+.product-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background: #f5f5f5;
   flex-shrink: 0;
 }
 
-.comment-content {
+.product-info {
   flex: 1;
 }
 
-.comment-user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.user-name {
+.product-name {
   font-weight: 500;
-  color: #333;
+  color: #2c3e50;
+  margin-bottom: 4px;
 }
 
-.comment-time {
+.product-price {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.product-sales {
+  text-align: right;
+  min-width: 80px;
+}
+
+.sales-num {
+  font-size: 18px;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.sales-label {
   font-size: 12px;
   color: #999;
+  margin-left: 4px;
 }
 
-.comment-text {
-  color: #666;
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-
-.comment-reply {
-  background: #f8f9fc;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #67c23a;
-}
-
-.reply-label {
-  font-weight: 500;
-  color: #67c23a;
-}
-
-.empty-comment {
+.empty-data {
   text-align: center;
   padding: 40px;
   color: #999;
 }
 
-.empty-comment i {
+.empty-data i {
   font-size: 48px;
   margin-bottom: 16px;
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+  color: #999;
 }
 </style>

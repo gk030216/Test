@@ -1,6 +1,7 @@
 package com.pet.controller.admin;
 
 import com.pet.entity.User;
+import com.pet.mapper.UserMapper;
 import com.pet.service.UserService;
 import com.pet.util.ExcelUtil;
 import com.pet.util.JwtUtil;
@@ -10,10 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -23,6 +21,9 @@ public class AdminUserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserMapper userMapper;
 
     /**
      * 获取用户列表
@@ -294,8 +295,8 @@ public class AdminUserController {
             List<User> userList = (List<User>) result.get("list");
 
             // 定义表头和字段名
-            String[] headers = {"ID", "用户名", "昵称", "邮箱", "手机号", "角色", "状态", "注册时间", "最后登录时间"};
-            String[] fieldNames = {"id", "username", "nickname", "email", "phone", "roleName", "statusName", "createTime", "lastLoginTime"};
+            String[] headers = {"ID", "用户名", "昵称", "邮箱", "手机号", "性别", "角色", "状态", "注册时间", "最后登录时间"};
+            String[] fieldNames = {"id", "username", "nickname", "email", "phone", "gender", "roleName", "statusName", "createTime", "lastLoginTime"};
 
             // 为导出准备数据，添加角色名称和状态名称
             for (User user : userList) {
@@ -336,6 +337,90 @@ public class AdminUserController {
             Map<String, Object> result = userService.getUserList(1, 100, null, 2, 1);
             List<User> staffList = (List<User>) result.get("list");
             return Result.success(staffList);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    // ============= 用户分析接口 ==========
+
+    /**
+     * 获取用户统计数据
+     */
+    @GetMapping("/statistics")
+    public Result<Map<String, Object>> getUserStatistics() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+
+            // 总用户数
+            int totalUsers = userMapper.countAll();
+            stats.put("totalUsers", totalUsers);
+
+            // 活跃用户（最近7天有登录）
+            int activeUsers = userMapper.countActiveUsers();
+            stats.put("activeUsers", activeUsers);
+
+            // 今日新增
+            int todayNew = userMapper.countTodayNew();
+            stats.put("todayNew", todayNew);
+
+            // 近7日新增
+            int weekNew = userMapper.countWeekNew();
+            stats.put("weekNew", weekNew);
+
+            return Result.success(stats);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取用户增长趋势
+     */
+    @GetMapping("/trend")
+    public Result<List<Map<String, Object>>> getUserTrend(@RequestParam(defaultValue = "daily") String type) {
+        try {
+            List<Map<String, Object>> trend = userMapper.getUserTrend(type);
+            return Result.success(trend);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取用户角色分布
+     */
+    @GetMapping("/role-distribution")
+    public Result<List<Map<String, Object>>> getUserRoleDistribution() {
+        try {
+            List<Map<String, Object>> distribution = userMapper.getRoleDistribution();
+            return Result.success(distribution);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取用户性别分布
+     */
+    @GetMapping("/gender-distribution")
+    public Result<List<Map<String, Object>>> getUserGenderDistribution() {
+        try {
+            List<Map<String, Object>> distribution = userMapper.getGenderDistribution();
+            return Result.success(distribution);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取用户活跃度分布
+     */
+    @GetMapping("/activity-distribution")
+    public Result<List<Map<String, Object>>> getUserActivityDistribution() {
+        try {
+            List<Map<String, Object>> distribution = userMapper.getActivityDistribution();
+            return Result.success(distribution);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

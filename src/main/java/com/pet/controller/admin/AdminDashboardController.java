@@ -5,6 +5,7 @@ import com.pet.util.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @RestController
@@ -33,30 +34,50 @@ public class AdminDashboardController {
     @Autowired
     private ServiceItemMapper serviceItemMapper;
 
+    @Autowired
+    private PetProfileMapper petMapper;
+
+    @Autowired
+    private ServiceItemMapper serviceMapper;
+
     @GetMapping("/statistics")
-    public Result<Map<String, Object>> getStatistics() {
-        Map<String, Object> result = new HashMap<>();
+    public Result<Map<String, Object>> getDashboardStatistics() {
+        try {
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> statistics = new HashMap<>();
 
-        // 统计数据
-        Map<String, Object> statistics = new HashMap<>();
-        statistics.put("totalUsers", userMapper.countAll());
-        statistics.put("todayVisits", 0);
-        statistics.put("todayAppointments", appointmentMapper.countToday());
-        statistics.put("todayIncome", orderMapper.countTodayIncome() != null ? orderMapper.countTodayIncome() : 0);
-        statistics.put("pendingAppointments", appointmentMapper.countPending());
-        statistics.put("totalPets", petProfileMapper.countAll());
-        statistics.put("todayPosts", postMapper.countToday());
-        statistics.put("todayComments", commentMapper.countToday());
-        result.put("statistics", statistics);
+            // 总用户数
+            statistics.put("totalUsers", userMapper.countAll());
+            // 今日访问
+            statistics.put("todayVisits", userMapper.countTodayLoginUsers());
+            // 今日预约
+            statistics.put("todayAppointments", appointmentMapper.countToday());
+            // 今日收入
+            BigDecimal todayIncome = appointmentMapper.countTodayIncome();
+            statistics.put("todayIncome", todayIncome != null ? todayIncome : BigDecimal.ZERO);
+            // 待处理预约
+            statistics.put("pendingAppointments", appointmentMapper.countByStatus(0));
+            // 宠物总数
+            statistics.put("totalPets", petMapper.countAll());
+            // 今日帖子
+            statistics.put("todayPosts", postMapper.countToday());
+            // 今日评论
+            statistics.put("todayComments", commentMapper.countToday());
 
-        // 热门服务
-        List<Map<String, Object>> hotServices = serviceItemMapper.getHotServices(5);
-        result.put("hotServices", hotServices);
+            result.put("statistics", statistics);
 
-        // 近7天趋势
-        List<Map<String, Object>> weeklyTrend = appointmentMapper.getWeeklyTrend();
-        result.put("weeklyTrend", weeklyTrend);
+            // 热门服务排行
+            List<Map<String, Object>> hotServices = serviceMapper.getHotServices(5);
+            result.put("hotServices", hotServices);
 
-        return Result.success(result);
+            // 近7天预约趋势
+            List<Map<String, Object>> weeklyTrend = appointmentMapper.getWeeklyTrend();
+            result.put("weeklyTrend", weeklyTrend);
+
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
     }
 }

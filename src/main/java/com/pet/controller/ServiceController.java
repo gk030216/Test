@@ -3,6 +3,7 @@ package com.pet.controller;
 import com.pet.entity.ServiceCategory;
 import com.pet.entity.ServiceItem;
 import com.pet.entity.Appointment;
+import com.pet.mapper.AppointmentMapper;
 import com.pet.service.ServiceCategoryService;
 import com.pet.service.ServiceItemService;
 import com.pet.service.AppointmentService;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,9 @@ public class ServiceController {
 
     @Autowired
     private AppointmentService appointmentService;
+
+    @Autowired
+    private AppointmentMapper appointmentMapper;
 
     private Integer getUserId(HttpServletRequest request) {
         Integer userId = (Integer) request.getAttribute("userId");
@@ -187,6 +193,33 @@ public class ServiceController {
             return Result.success(appointment);
         } else {
             return Result.error("订单不存在");
+        }
+    }
+
+    /**
+     * 检查用户时间冲突
+     */
+    @PostMapping("/check-time-conflict")
+    public Result<Map<String, Boolean>> checkTimeConflict(@RequestBody Map<String, String> params,
+                                                          HttpServletRequest request) {
+        try {
+            Integer userId = getUserId(request);
+            String appointmentDate = params.get("appointmentDate");
+            String appointmentTime = params.get("appointmentTime");
+
+            // 解析日期
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = sdf.parse(appointmentDate);
+
+            int count = appointmentMapper.checkUserTimeConflict(
+                    userId, date, appointmentTime, null
+            );
+
+            Map<String, Boolean> result = new HashMap<>();
+            result.put("hasConflict", count > 0);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
         }
     }
 }

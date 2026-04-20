@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.InventoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.Inventory">
+        <id column="id" property="id"/>
+        <result column="type" property="type"/>
+        <result column="item_id" property="itemId"/>
+        <result column="item_name" property="itemName"/>
+        <result column="stock" property="stock"/>
+        <result column="unit" property="unit"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, type, item_id, item_name, stock, unit, status, create_time, update_time
+    </sql>
+
+    <select id="getInventoryList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        <where>
+            status = 1
+            AND type = #{type}
+            <if test="keyword != null and keyword != ''">
+                AND item_name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countInventoryList" resultType="int">
+        SELECT COUNT(*)
+        FROM inventory
+        <where>
+            status = 1
+            AND type = #{type}
+            <if test="keyword != null and keyword != ''">
+                AND item_name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory WHERE id = #{id}
+    </select>
+
+    <select id="getByTypeAndItemId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory WHERE type = #{type} AND item_id = #{itemId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO inventory (type, item_id, item_name, stock, unit)
+        VALUES (#{type}, #{itemId}, #{itemName}, #{stock}, #{unit})
+    </insert>
+
+    <update id="update">
+        UPDATE inventory
+        <set>
+            <if test="itemId != null">item_id = #{itemId},</if>
+            <if test="stock != null">stock = #{stock},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStock">
+        UPDATE inventory SET stock = stock + #{quantity} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM inventory WHERE id = #{id}
+    </delete>
+
+    <select id="getStatistics" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) as total,
+            SUM(stock) as totalStock,
+            SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END) as outOfStockCount,
+            SUM(CASE WHEN stock > 0 AND stock &lt;= 5 THEN 1 ELSE 0 END) as lowStockCount
+        FROM inventory
+        WHERE status = 1 AND type = #{type}
+    </select>
+
+    <!-- 根据类型和关联ID更新库存 -->
+    <update id="updateStockByItemId">
+        UPDATE inventory
+        SET stock = stock + #{quantity}
+        WHERE type = #{type} AND item_id = #{itemId}
+    </update>
+
+    <!-- 获取疫苗库存列表（用于导出） -->
+    <select id="getVaccineListForExport" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        WHERE type = 'vaccine' AND status = 1
+        <if test="keyword != null and keyword != ''">
+            AND item_name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 获取商品库存列表（用于导出） -->
+    <select id="getProductInventoryListForExport" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        WHERE type = 'product' AND status = 1
+        <if test="keyword != null and keyword != ''">
+            AND item_name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY id ASC
+    </select>
+
+</mapper>

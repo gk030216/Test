@@ -1,6 +1,55 @@
 <template>
   <div class="service-comment-manage">
 
+    <!-- 统计卡片 -->
+    <el-row :gutter="20">
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-icon">
+            <i class="el-icon-chat-dot-round"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ statistics.total || 0 }}</div>
+            <div class="stat-label">总评价数</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-icon stat-rating">
+            <i class="el-icon-star-on"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ statistics.avgRating || 0 }}</div>
+            <div class="stat-label">平均评分</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-icon stat-reply">
+            <i class="el-icon-message"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ statistics.replyCount || 0 }}</div>
+            <div class="stat-label">已回复</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="stat-icon stat-pending">
+            <i class="el-icon-chat-line-round"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ statistics.unreplyCount || 0 }}</div>
+            <div class="stat-label">待回复</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+
     <!-- 操作栏 -->
     <div class="action-bar">
       <div class="action-left">
@@ -128,9 +177,20 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="150" fixed="right" align="center">
+      <el-table-column label="操作" width="200" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
+            <el-button
+                size="small"
+                type="info"
+                plain
+                circle
+                @click="handleView(scope.row)"
+                class="action-icon-btn"
+                title="查看"
+            >
+              <i class="el-icon-view"></i>
+            </el-button>
             <el-button
                 size="small"
                 type="primary"
@@ -228,6 +288,110 @@
         </el-button>
       </span>
     </el-dialog>
+
+    <!-- 评价详情对话框 -->
+    <el-dialog
+        title="评价详情"
+        :visible.sync="detailVisible"
+        width="550px"
+        center
+        class="comment-detail-dialog"
+    >
+      <div class="detail-content" v-if="currentDetailComment">
+        <!-- 服务信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-service"></i>
+            <span>服务信息</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">服务名称：</span>
+            <span class="detail-value">{{ currentDetailComment.serviceName || '--' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">服务ID：</span>
+            <span class="detail-value">{{ currentDetailComment.serviceId }}</span>
+          </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-user"></i>
+            <span>用户信息</span>
+          </div>
+          <div class="detail-user">
+            <el-avatar :size="50" :src="currentDetailComment.userAvatar" class="detail-avatar">
+              {{ currentDetailComment.userName ? currentDetailComment.userName.charAt(0).toUpperCase() : 'U' }}
+            </el-avatar>
+            <div class="user-detail">
+              <span class="user-name">{{ currentDetailComment.userName }}</span>
+              <span class="user-id">用户ID: {{ currentDetailComment.userId }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 评价内容 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-star-on"></i>
+            <span>评价内容</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">评分：</span>
+            <el-rate v-model="currentDetailComment.rating" disabled show-score text-color="#ff9900"></el-rate>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">评价内容：</span>
+            <span class="detail-value comment-text">{{ currentDetailComment.content }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">评价时间：</span>
+            <span class="detail-value">{{ formatDate(currentDetailComment.createTime) }}</span>
+          </div>
+        </div>
+
+        <!-- 回复内容 -->
+        <div class="detail-section" v-if="currentDetailComment.reply">
+          <div class="section-title">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>商家回复</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">回复内容：</span>
+            <span class="detail-value reply-text">{{ currentDetailComment.reply }}</span>
+          </div>
+          <div class="detail-item" v-if="currentDetailComment.replyTime">
+            <span class="detail-label">回复时间：</span>
+            <span class="detail-value">{{ formatDate(currentDetailComment.replyTime) }}</span>
+          </div>
+        </div>
+
+        <!-- 状态信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-info"></i>
+            <span>状态信息</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">显示状态：</span>
+            <el-tag :type="currentDetailComment.status === 1 ? 'success' : 'danger'" size="small">
+              {{ currentDetailComment.status === 1 ? '显示' : '隐藏' }}
+            </el-tag>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">回复状态：</span>
+            <el-tag :type="currentDetailComment.reply ? 'success' : 'info'" size="small">
+              {{ currentDetailComment.reply ? '已回复' : '待回复' }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+
+      <span slot="footer">
+    <el-button @click="detailVisible = false">关闭</el-button>
+  </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -237,7 +401,8 @@ import {
   updateServiceCommentStatus,
   deleteServiceComment,
   batchDeleteServiceComments,
-  replyServiceComment
+  replyServiceComment,
+  getServiceCommentStatistics
 } from '@/api/service';
 
 export default {
@@ -246,6 +411,8 @@ export default {
     return {
       loading: false,
       replyLoading: false,
+      detailVisible: false,
+      currentDetailComment: null,
       commentList: [],
       total: 0,
       page: 1,
@@ -295,9 +462,23 @@ export default {
       }
     },
 
-    loadStatistics() {
-      // 从当前列表计算统计数据（临时方案）
-      this.updateStatistics();
+    // 查看评价详情
+    handleView(row) {
+      this.currentDetailComment = row;
+      this.detailVisible = true;
+    },
+
+    async loadStatistics() {
+      try {
+        const res = await getServiceCommentStatistics();
+        if (res.code === 200) {
+          this.statistics = res.data;
+        }
+      } catch (error) {
+        console.error('加载统计失败', error);
+        // 如果接口失败，使用前端计算
+        this.updateStatistics();
+      }
     },
 
     updateStatistics() {
@@ -729,4 +910,125 @@ export default {
     justify-content: center;
   }
 }
+/* 评价详情对话框样式 */
+.comment-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.comment-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.detail-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 16px;
+}
+
+.detail-user {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 8px 0;
+}
+
+.detail-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.user-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-detail .user-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+.user-detail .user-id {
+  font-size: 12px;
+  color: #909399;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.detail-label {
+  width: 85px;
+  font-size: 13px;
+  color: #909399;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.comment-text {
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.reply-text {
+  color: #67c23a;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding-top: 10px;
+}
+
 </style>

@@ -6,6 +6,7 @@ import ForgetPassword from '@/views/ForgetPassword.vue';
 import Home from '@/views/Home.vue';
 import AdminLayout from '@/views/admin/AdminLayout.vue';
 import PersonalCenterLayout from '@/views/personal/PersonalCenterLayout.vue';
+import commonProfile from '@/views/Profile.vue';
 
 //维护界面
 import Maintenance from '@/views/Maintenance.vue';
@@ -30,7 +31,7 @@ import Community from '@/views/Community.vue';
 import PostDetail from '@/views/PostDetail.vue';
 
 // 个人中心子页面
-import Profile from '@/views/personal/Profile.vue';
+import Profile from '@/views/personal/MyProfile.vue';
 import Address from '@/views/personal/Address.vue';
 import Favorites from '@/views/personal/Favorites.vue';
 import MyPosts from '@/views/personal/MyPosts.vue';
@@ -39,6 +40,7 @@ import Security from '@/views/personal/Security.vue';
 import MyPets from '@/views/MyPets.vue';
 import MyAppointments from '@/views/personal/MyAppointments.vue';
 import MyOrders from "@/views/personal/MyOrders.vue";
+import Notifications from '@/views/personal/Notifications.vue';
 
 // 管理员子页面
 import AdminDashboard from '@/views/admin/Dashboard.vue';
@@ -56,6 +58,8 @@ import AdminPetStatistics from '@/views/admin/AdminPetStatistics.vue';
 import ServiceCategory from '@/views/admin/ServiceCategory.vue';
 import ServiceCommentManage from "@/views/admin/ServiceCommentManage.vue";
 import Settings from "@/views/admin/Settings.vue";
+import AdminVaccineRecord from '@/views/admin/AdminVaccineRecord.vue';
+import AdminHealthRecord from '@/views/admin/AdminHealthRecord.vue';
 
 
 
@@ -64,7 +68,6 @@ import StaffLayout from '@/views/staff/StaffLayout.vue';
 import StaffDashboard from '@/views/staff/StaffDashboard.vue';
 import StaffAppointmentList from "@/views/staff/StaffAppointmentList.vue";
 import StaffPetList from "@/views/staff/StaffPetList.vue";
-import StaffPetHealth from "@/views/staff/StaffPetHealth.vue";
 
 // 后台服务列表
 import AdminServiceList from '@/views/admin/ServiceList.vue';
@@ -81,6 +84,14 @@ import ChatHistory from '@/views/admin/ChatHistory.vue';
 import StaffEvaluations from "@/views/staff/StaffEvaluations.vue";
 import StaffFeedback from "@/views/staff/StaffFeedback.vue";
 import Feedback from "@/views/personal/Feedback.vue";
+import VaccineStock from "@/views/admin/VaccineStock.vue";
+import ProductStock from "@/views/admin/ProductStock.vue";
+import ProductCommentAnalysis from "@/views/admin/ProductCommentAnalysis.vue";
+import ServiceCommentAnalysis from "@/views/admin/ServiceCommentAnalysis.vue";
+import UserChatHistory from "@/views/admin/UserChatHistory.vue";
+import AdminFeedback from "@/views/admin/AdminFeedback.vue";
+import StaffVaccineRecord from "@/views/staff/StaffVaccineRecord.vue";
+import StaffHealthRecord from "@/views/staff/StaffHealthRecord.vue";
 
 Vue.use(Router);
 
@@ -149,9 +160,30 @@ const router = new Router({
         { path: 'dashboard', component: StaffDashboard, meta: { title: '工作台' } },
         { path: 'appointments', component: StaffAppointmentList, meta: { title: '预约管理' } },
         { path: 'pet-list', component: StaffPetList, meta: { title: '宠物列表' } },
-        { path: 'pet-health', component: StaffPetHealth, meta: { title: '健康记录' } },
         { path: 'evaluations', component: StaffEvaluations, meta: { title: '服务评价' } },
-        { path: 'feedback', component: StaffFeedback, meta: { title: '异常反馈' } }
+        { path: 'feedback-manage', component: StaffFeedback, meta: { title: '异常反馈' } },
+        {
+          path: 'Staff-vaccine-record',
+          component: StaffVaccineRecord,
+          meta: { title: '疫苗记录' }
+        },
+        {
+          path: 'Staff-health-record',
+          component: StaffHealthRecord,
+          meta: { title: '体检记录' }
+        },
+        {
+          path: 'vaccine-stock',
+          component: VaccineStock,
+          meta: { title: '疫苗库存' }
+        },
+        {
+          path: 'product-stock',
+          component: ProductStock,
+          meta: { title: '商品库存' }
+        },
+        { path: 'Profile', component: commonProfile, meta: { title: '个人资料' } },
+
       ]
     },
 
@@ -170,7 +202,9 @@ const router = new Router({
         { path: 'posts', component: MyPosts, meta: { title: '我的帖子' } },
         { path: 'comments', component: MyComments, meta: { title: '我的评论' } },
         { path: 'feedback', component: Feedback, meta: { title: '意见反馈' } },
-        { path: 'security', component: Security, meta: { title: '账号安全' } }
+        { path: 'security', component: Security, meta: { title: '账号安全' } },
+        { path: 'notifications', component: Notifications, meta: { title: '消息通知' } },
+
       ]
     },
 
@@ -276,8 +310,63 @@ const router = new Router({
         { path: 'pet-list', component: AdminPetList, meta: { title: '宠物列表' } },
         { path: 'pet-health', component: AdminPetHealth, meta: { title: '健康记录' } },
         { path: 'pet-statistics', component: AdminPetStatistics, meta: { title: '宠物数据统计' } },
-        { path: 'feedback-manage', component: StaffFeedback, meta: { title: '异常反馈' } },
-        { path: 'settings', component: Settings, meta: { title: '系统设置' } }
+        { path: 'feedback', component: AdminFeedback, meta: { title: '异常反馈' } },
+        { path: 'settings', component: Settings, meta: { title: '系统设置' } },
+        { path: 'Profile', component: commonProfile, meta: { title: '个人资料' } },
+        {
+          path: 'vaccine-record',
+          name: 'AdminVaccineRecord',
+          component: AdminVaccineRecord,
+          meta: { title: '疫苗记录管理' }
+        },
+        {
+          path: 'health-record',
+          name: 'AdminHealthRecord',
+          component: AdminHealthRecord,
+          meta: { title: '体检记录管理' }
+        },
+        {
+          path: 'vaccine-stock',
+          name: 'VaccineStock',
+          component: VaccineStock,
+          meta: { title: '疫苗库存' }
+        },
+        {
+          path: 'product-stock',
+          name: 'ProductStock',
+          component: ProductStock,
+          meta: { title: '商品库存' }
+        },
+        {
+          path: 'product-comment-analysis',
+          name: 'AdminProductCommentAnalysis',
+          component: ProductCommentAnalysis,
+          meta: { title: '商品评价分析' }
+        },
+        {
+          path: 'service-comment-analysis',
+          name: 'AdminServiceCommentAnalysis',
+          component: ServiceCommentAnalysis,
+          meta: { title: '服务评价分析' }
+        },
+        {
+          path: 'user-chat-history',
+          name: 'UserChatHistory',
+          component: UserChatHistory,
+          meta: { title: '用户对话记录' }
+        },
+        {
+          path: 'user-analysis',
+          name: 'UserAnalysis',
+          component: () => import('@/views/admin/UserAnalysis.vue'),
+          meta: { title: '用户分析' }
+        },
+        {
+          path: 'service-analysis',
+          name: 'ServiceAnalysis',
+          component: () => import('@/views/admin/ServiceAnalysis.vue'),
+          meta: { title: '服务数据分析' }
+        }
       ]
     }
   ]

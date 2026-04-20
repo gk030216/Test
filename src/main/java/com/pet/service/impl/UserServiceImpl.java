@@ -7,6 +7,7 @@ import com.pet.dto.RegisterRequest;
 import com.pet.dto.ResetPasswordRequest;
 import com.pet.mapper.UserMapper;
 import com.pet.mapper.VerificationCodeMapper;
+import com.pet.service.NotificationService;
 import com.pet.service.UserService;
 import com.pet.util.MD5Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private VerificationCodeMapper verificationCodeMapper;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public User login(LoginRequest request) {
@@ -67,6 +71,7 @@ public class UserServiceImpl implements UserService {
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setNickname(request.getNickname() != null ? request.getNickname() : request.getUsername());
+        user.setGender(request.getGender() != null ? request.getGender() : "保密");
         user.setRole(1);
         user.setStatus(1);
 
@@ -74,6 +79,16 @@ public class UserServiceImpl implements UserService {
 
         if (result > 0) {
             verificationCodeMapper.markAsUsed(validCode.getId());
+
+            // ✅ 发送站内消息通知
+            notificationService.sendNotification(
+                    user.getId(),
+                    "system",
+                    "欢迎注册",
+                    "欢迎加入宠物服务系统！在这里你可以预约服务、购买商品、分享养宠经验。",
+                    "/"
+            );
+
             return true;
         }
 
@@ -180,8 +195,6 @@ public class UserServiceImpl implements UserService {
         return userMapper.update(user) > 0;
     }
 
-    // UserServiceImpl.java 中添加
-
     @Override
     public boolean updateUserInfo(User user) {
         // 不允许修改用户名、角色、状态等敏感信息
@@ -195,6 +208,7 @@ public class UserServiceImpl implements UserService {
         existingUser.setEmail(user.getEmail());
         existingUser.setPhone(user.getPhone());
         existingUser.setAvatar(user.getAvatar());
+        existingUser.setGender(user.getGender());  // 添加性别字段
 
         return userMapper.update(existingUser) > 0;
     }

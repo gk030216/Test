@@ -2,6 +2,7 @@ package com.pet.controller.admin;
 
 import com.pet.entity.Order;
 import com.pet.entity.OrderItem;
+import com.pet.service.NotificationService;
 import com.pet.service.OrderService;
 import com.pet.util.ExcelUtil;
 import com.pet.util.Result;
@@ -10,9 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -22,6 +22,9 @@ public class AdminOrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     /**
      * 获取订单列表（后台）
@@ -66,11 +69,24 @@ public class AdminOrderController {
         try {
             boolean success = orderService.updateOrderStatus(orderNo, orderStatus);
             if (success) {
+                // 发货时发送通知
+                if (orderStatus == 2) {
+                    Order order = orderService.getOrderByNo(orderNo);
+                    if (order != null) {
+                        notificationService.sendNotification(
+                                order.getUserId(),
+                                "order",
+                                "订单已发货",
+                                "您的订单【" + orderNo + "】已发货，请留意查收。",
+                                "/personal/orders"
+                        );
+                        System.out.println("✅ 订单发货站内消息已发送");
+                    }
+                }
                 String message = getStatusMessage(orderStatus);
                 return Result.success(message);
-            } else {
-                return Result.error("更新失败");
             }
+            return Result.error("更新失败");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -138,27 +154,41 @@ public class AdminOrderController {
      * 导出订单列表
      */
     @GetMapping("/export")
-    public void exportOrders(
+    public void exportOrderList(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer orderStatus,
-            @RequestParam(required = false) Integer payStatus,
             HttpServletResponse response) {
         try {
-            Map<String, Object> result = orderService.getAdminOrderList(1, 9999, keyword, orderStatus, payStatus);
-            List<Order> orderList = (List<Order>) result.get("list");
+            // 修复：传入5个参数，payStatus传null
+            Map<String, Object> result = orderService.getAdminOrderList(1, 9999, keyword, orderStatus, null);
+            @SuppressWarnings("unchecked")
+            List<Order> list = (List<Order>) result.get("list");
 
-            String[] headers = {"订单号", "用户", "手机号", "收货地址", "订单金额", "订单状态", "支付状态", "下单时间", "支付时间"};
-            String[] fieldNames = {"orderNo", "userName", "userPhone", "userAddress", "payAmount", "orderStatusName", "payStatusName", "createTime", "payTime"};
-
-            for (Order order : orderList) {
-                order.setOrderStatusName(getStatusName(order.getOrderStatus()));
-                order.setPayStatusName(order.getPayStatus() == 1 ? "已支付" : "未支付");
+            List<Map<String, Object>> exportList = new ArrayList<>();
+            for (Order item : list) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", item.getId());
+                row.put("orderNo", item.getOrderNo());
+                row.put("userName", item.getUserName());
+                row.put("userPhone", item.getUserPhone());
+                row.put("userAddress", item.getUserAddress());
+                row.put("payAmount", item.getPayAmount());
+                row.put("orderStatus", getOrderStatusText(item.getOrderStatus()));
+                row.put("payStatus", item.getPayStatus() == 1 ? "已支付" : "未支付");
+                row.put("createTime", formatDateTime(item.getCreateTime()));
+                exportList.add(row);
             }
 
-            ExcelUtil.exportExcel(response, orderList, headers, fieldNames, "订单列表", "订单数据_" + System.currentTimeMillis());
+            String[] headers = {"ID", "订单号", "用户", "手机号", "收货地址", "金额", "订单状态", "支付状态", "下单时间"};
+            String[] fieldNames = {"id", "orderNo", "userName", "userPhone", "userAddress", "payAmount", "orderStatus", "payStatus", "createTime"};
+
+            String fileName = "订单列表_" + System.currentTimeMillis() + ".xlsx";
+            ExcelUtil.exportExcel(response, exportList, headers, fieldNames, "订单列表", fileName);
+
         } catch (Exception e) {
             e.printStackTrace();
             try {
+                response.setContentType("text/html;charset=UTF-8");
                 response.getWriter().write("导出失败：" + e.getMessage());
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -166,26 +196,34 @@ public class AdminOrderController {
         }
     }
 
-    private String getStatusName(Integer status) {
-        switch (status) {
-            case 0: return "待支付";
-            case 1: return "已支付";
-            case 2: return "已发货";
-            case 3: return "已完成";
-            case 4: return "已取消";
-            case 5: return "已退款";
-            default: return "未知";
-        }
+    // 获取订单状态对应的消息文本
+    private String getStatusMessage(Integer orderStatus) {
+        Map<Integer, String> map = new HashMap<>();
+        map.put(0, "订单已取消");
+        map.put(1, "订单已支付");
+        map.put(2, "订单已发货");
+        map.put(3, "订单已完成");
+        map.put(4, "订单已取消");
+        map.put(5, "订单已退款");
+        return map.getOrDefault(orderStatus, "状态已更新");
     }
 
-    private String getStatusMessage(Integer orderStatus) {
-        switch (orderStatus) {
-            case 1: return "订单已支付";
-            case 2: return "订单已发货";
-            case 3: return "订单已完成";
-            case 4: return "订单已取消";
-            case 5: return "订单已退款";
-            default: return "订单状态已更新";
-        }
+    // 订单状态文本转换（用于导出）
+    private String getOrderStatusText(Integer status) {
+        Map<Integer, String> map = new HashMap<>();
+        map.put(0, "待支付");
+        map.put(1, "已支付");
+        map.put(2, "已发货");
+        map.put(3, "已完成");
+        map.put(4, "已取消");
+        map.put(5, "已退款");
+        return map.getOrDefault(status, "未知");
+    }
+
+    // 格式化日期时间
+    private String formatDateTime(Date date) {
+        if (date == null) return "";
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return sdf.format(date);
     }
 }

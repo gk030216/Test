@@ -19,6 +19,7 @@
         <result column="update_time" property="updateTime"/>
         <!-- 关联字段 -->
         <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>
         <result column="user_avatar" property="userAvatar"/>
         <result column="is_liked" property="isLiked"/>
         <result column="is_favorited" property="isFavorited"/>
@@ -29,21 +30,29 @@
         p.id, p.user_id, p.title, p.content, p.images, p.category,
         p.like_count, p.comment_count, p.view_count, p.is_top, p.is_essence,
         p.status, p.create_time, p.update_time,
-        u.username as user_name, u.avatar as user_avatar
+        u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar
     </sql>
 
     <!-- ========== 前台接口 ========== -->
 
-    <!-- 获取帖子列表 -->
+    <!-- PostMapper.xml - 修复 getPostList -->
     <select id="getPostList" resultMap="BaseResultMap">
         SELECT
         <include refid="Base_Column_List"/>,
-        CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked,
-        CASE WHEN pf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
+        <if test="userId != null">
+            CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked,
+            CASE WHEN pf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
+        </if>
+        <if test="userId == null">
+            NULL as is_liked,
+            NULL as is_favorited
+        </if>
         FROM post p
         LEFT JOIN user u ON p.user_id = u.id
-        LEFT JOIN post_like pl ON p.id = pl.post_id AND pl.user_id = #{userId}
-        LEFT JOIN post_favorite pf ON p.id = pf.post_id AND pf.user_id = #{userId}
+        <if test="userId != null">
+            LEFT JOIN post_like pl ON p.id = pl.post_id AND pl.user_id = #{userId}
+            LEFT JOIN post_favorite pf ON p.id = pf.post_id AND pf.user_id = #{userId}
+        </if>
         WHERE p.status = 1
         <if test="category != null and category != ''">
             AND p.category = #{category}
@@ -51,7 +60,8 @@
         <if test="keyword != null and keyword != ''">
             AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content LIKE CONCAT('%', #{keyword}, '%'))
         </if>
-        ORDER BY p.is_top DESC,
+        ORDER BY
+        p.is_top DESC,
         <choose>
             <when test="sort == 'hot'">p.like_count DESC, p.comment_count DESC,</when>
             <when test="sort == 'latest'">p.create_time DESC,</when>
@@ -159,18 +169,26 @@
         UPDATE post SET status = 0 WHERE id = #{id}
     </update>
 
+    <!-- 真正删除帖子（物理删除） -->
+    <delete id="physicallyDeleteById">
+        DELETE FROM post WHERE id = #{id}
+    </delete>
+
     <!-- ========== 管理员接口 ========== -->
 
     <!-- 管理员获取帖子列表 -->
     <select id="getAdminPostList" resultMap="BaseResultMap">
-        SELECT
-        <include refid="Base_Column_List"/>
+        SELECT p.*, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar
         FROM post p
         LEFT JOIN user u ON p.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (p.title LIKE CONCAT('%', #{keyword}, '%')
-                OR p.content LIKE CONCAT('%', #{keyword}, '%'))
+                OR p.content LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="category != null and category != ''">
+                AND p.category = #{category}
             </if>
             <if test="status != null">
                 AND p.status = #{status}
@@ -190,10 +208,15 @@
     <select id="countAdminPost" resultType="int">
         SELECT COUNT(*)
         FROM post p
+        LEFT JOIN user u ON p.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (p.title LIKE CONCAT('%', #{keyword}, '%')
-                OR p.content LIKE CONCAT('%', #{keyword}, '%'))
+                OR p.content LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="category != null and category != ''">
+                AND p.category = #{category}
             </if>
             <if test="status != null">
                 AND p.status = #{status}
@@ -222,8 +245,15 @@
         UPDATE post SET is_essence = #{isEssence} WHERE id = #{id}
     </update>
 
+    <!-- 统计今日新增帖子数 -->
     <select id="countToday" resultType="int">
-        SELECT COUNT(*) FROM post WHERE DATE(create_time) = CURDATE() AND status = 1
+        SELECT COUNT(*) FROM post
+        WHERE DATE(create_time) = CURDATE() AND status = 1
+    </select>
+
+    <!-- 统计总浏览量 -->
+    <select id="sumViewCount" resultType="java.lang.Integer">
+        SELECT SUM(view_count) FROM post WHERE status = 1
     </select>
 
 </mapper>

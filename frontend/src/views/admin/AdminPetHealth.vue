@@ -110,13 +110,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="hospital" label="接种医院" min-width="150">
-          <template slot-scope="scope">
-            {{ scope.row.hospital || '--' }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="doctor" label="医生" width="100">
+        <el-table-column prop="doctor" label="操作员" width="100">
           <template slot-scope="scope">
             {{ scope.row.doctor || '--' }}
           </template>
@@ -186,7 +180,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="doctor" label="医生" width="100">
+        <el-table-column prop="doctor" label="操作员" width="100">
           <template slot-scope="scope">
             {{ scope.row.doctor || '--' }}
           </template>
@@ -245,7 +239,7 @@
           </el-select>
         </el-form-item>
 
-        <!-- 疫苗记录表单 -->
+        <!-- 疫苗记录表单 - 删除接种医院，医生改为操作员 -->
         <template v-if="recordForm.type === 'vaccine'">
           <el-form-item label="疫苗名称" prop="vaccineName">
             <el-input v-model="recordForm.vaccineName" placeholder="请输入疫苗名称"></el-input>
@@ -256,18 +250,16 @@
           <el-form-item label="下次接种">
             <el-date-picker v-model="recordForm.nextDate" type="date" placeholder="选择日期" value-format="yyyy-MM-dd" style="width: 100%"></el-date-picker>
           </el-form-item>
-          <el-form-item label="接种医院">
-            <el-input v-model="recordForm.hospital" placeholder="请输入医院名称"></el-input>
-          </el-form-item>
-          <el-form-item label="医生">
-            <el-input v-model="recordForm.doctor" placeholder="请输入医生姓名"></el-input>
+          <!-- ✅ 删除接种医院 -->
+          <el-form-item label="操作员">
+            <el-input v-model="recordForm.operatorName" placeholder="请输入操作员姓名"></el-input>
           </el-form-item>
           <el-form-item label="备注">
             <el-input v-model="recordForm.remark" type="textarea" rows="2" placeholder="备注信息"></el-input>
           </el-form-item>
         </template>
 
-        <!-- 体检记录表单 -->
+        <!-- 体检记录表单 - 医生改为操作员 -->
         <template v-else>
           <el-form-item label="体检日期" prop="recordDate">
             <el-date-picker v-model="recordForm.recordDate" type="date" placeholder="选择日期" value-format="yyyy-MM-dd" style="width: 100%"></el-date-picker>
@@ -287,8 +279,9 @@
           <el-form-item label="诊断结果">
             <el-input v-model="recordForm.diagnosis" type="textarea" rows="2" placeholder="诊断结果"></el-input>
           </el-form-item>
-          <el-form-item label="医生">
-            <el-input v-model="recordForm.doctor" placeholder="请输入医生姓名"></el-input>
+          <!-- ✅ 医生改为操作员 -->
+          <el-form-item label="操作员">
+            <el-input v-model="recordForm.operatorName" placeholder="请输入操作员姓名"></el-input>
           </el-form-item>
         </template>
       </el-form>
@@ -331,7 +324,7 @@ export default {
         vaccineDate: '',
         nextDate: '',
         hospital: '',
-        doctor: '',
+        operatorName: '',
         remark: '',
         recordDate: '',
         height: null,

@@ -18,62 +18,66 @@
       >
         <i class="el-icon-goods"></i> 商品收藏
       </div>
+      <div
+          class="tab-item"
+          :class="{ active: favoriteType === 'service' }"
+          @click="favoriteType = 'service'"
+      >
+        <i class="el-icon-service"></i> 服务收藏
+      </div>
     </div>
 
-    <!-- 帖子收藏列表 -->
+    <!-- 帖子收藏列表 - 网格布局 -->
     <div class="favorites-list" v-loading="loading" v-if="favoriteType === 'post'">
-      <div class="favorite-item" v-for="post in postList" :key="post.id">
-        <div class="post-header">
-          <div class="user-info">
-            <el-avatar :size="40" :src="post.userAvatar" class="user-avatar" :style="post.userAvatar ? {} : { background: getAvatarColor(post.userName) }">
-              {{ !post.userAvatar ? getUserInitial(post.userName) : '' }}
-            </el-avatar>
-            <div class="user-detail">
-              <span class="user-name">{{ post.userName || '匿名用户' }}</span>
-              <span class="post-time">{{ formatDate(post.createTime) }}</span>
-            </div>
-          </div>
-          <div class="post-badges">
-            <el-tag v-if="post.isTop === 1" size="mini" type="danger" effect="dark">置顶</el-tag>
-            <el-tag v-if="post.isEssence === 1" size="mini" type="warning" effect="dark">精华</el-tag>
-          </div>
-        </div>
-
-        <div class="post-body" @click="goToPostDetail(post.id)">
-          <h3 class="post-title">{{ post.title }}</h3>
-          <p class="post-content">{{ truncateText(post.content, 120) }}</p>
-        </div>
-
-        <div class="post-footer">
-          <div class="footer-left">
-            <div class="action-item">
+      <div class="post-grid">
+        <div class="post-card" v-for="post in postList" :key="post.id" @click="goToPostDetail(post.id)">
+          <div class="post-image" v-if="post.images && getFirstImage(post.images)">
+            <img :src="getFirstImage(post.images)" :alt="post.title">
+            <div class="favorite-badge" @click.stop="removePostFavorite(post)">
               <i class="el-icon-star-on"></i>
-              <span>{{ post.likeCount || 0 }}</span>
-            </div>
-            <div class="action-item">
-              <i class="el-icon-chat-dot-round"></i>
-              <span>{{ post.commentCount || 0 }}</span>
-            </div>
-            <div class="action-item">
-              <i class="el-icon-view"></i>
-              <span>{{ post.viewCount || 0 }}</span>
             </div>
           </div>
-          <div class="footer-right">
-            <el-button type="primary" size="small" plain @click.stop="goToPostDetail(post.id)" class="action-btn view-btn">
-              <i class="el-icon-view"></i> 查看
-            </el-button>
-            <el-button type="danger" size="small" plain @click.stop="removePostFavorite(post)" class="action-btn unfavorite-btn">
-              <i class="el-icon-star-off"></i> 取消收藏
-            </el-button>
+          <div class="post-image placeholder" v-else>
+            <i class="el-icon-document"></i>
+            <div class="favorite-badge" @click.stop="removePostFavorite(post)">
+              <i class="el-icon-star-on"></i>
+            </div>
+          </div>
+          <div class="post-info">
+            <h4 class="post-title">{{ post.title }}</h4>
+            <p class="post-desc">{{ truncateText(post.content, 40) }}</p>
+            <div class="post-footer">
+              <span><i class="el-icon-star-on"></i> {{ post.likeCount || 0 }}</span>
+              <span><i class="el-icon-chat-dot-round"></i> {{ post.commentCount || 0 }}</span>
+              <span><i class="el-icon-view"></i> {{ post.viewCount || 0 }}</span>
+            </div>
+            <div class="post-actions">
+              <el-button type="primary" size="small" plain @click.stop="goToPostDetail(post.id)" class="view-post-btn">
+                查看详情
+              </el-button>
+              <el-button type="danger" size="small" plain @click.stop="removePostFavorite(post)" class="unfavorite-post-btn">
+                取消收藏
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="empty-state" v-if="!loading && postList.length === 0">
-        <i class="el-icon-star-on"></i>
+        <i class="el-icon-document"></i>
         <p>暂无收藏的帖子</p>
         <el-button type="primary" size="small" @click="$router.push('/community')">去逛逛</el-button>
+      </div>
+
+      <div class="pagination" v-if="postTotal > postPageSize">
+        <el-pagination
+            @current-change="handlePostPageChange"
+            :current-page="postPage"
+            :page-size="postPageSize"
+            layout="prev, pager, next"
+            :total="postTotal"
+            background
+        ></el-pagination>
       </div>
     </div>
 
@@ -125,16 +129,54 @@
       </div>
     </div>
 
-    <!-- 帖子分页 -->
-    <div class="pagination" v-if="favoriteType === 'post' && postTotal > postPageSize">
-      <el-pagination
-          @current-change="handlePostPageChange"
-          :current-page="postPage"
-          :page-size="postPageSize"
-          layout="prev, pager, next"
-          :total="postTotal"
-          background
-      ></el-pagination>
+    <!-- 服务收藏列表 -->
+    <div class="favorites-list" v-loading="serviceLoading" v-if="favoriteType === 'service'">
+      <div class="service-grid">
+        <div class="service-card" v-for="service in serviceList" :key="service.id" @click="goToServiceDetail(service.serviceId)">
+          <div class="service-image">
+            <img :src="service.serviceImage" :alt="service.serviceName">
+            <div class="favorite-badge" @click.stop="removeServiceFavorite(service)">
+              <i class="el-icon-star-on"></i>
+            </div>
+          </div>
+          <div class="service-info">
+            <h4 class="service-name">{{ service.serviceName }}</h4>
+            <p class="service-desc">{{ truncateText(service.serviceDescription, 40) }}</p>
+            <div class="service-footer">
+              <span class="service-price">¥{{ service.servicePrice }}</span>
+              <span class="service-duration" v-if="service.serviceDuration">
+                <i class="el-icon-time"></i> {{ service.serviceDuration }}分钟
+              </span>
+            </div>
+            <div class="service-actions">
+              <el-button type="primary" size="small" plain @click.stop="goToServiceDetail(service.serviceId)" class="view-service-btn">
+                立即预约
+              </el-button>
+              <el-button type="danger" size="small" plain @click.stop="removeServiceFavorite(service)" class="unfavorite-service-btn">
+                取消收藏
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" v-if="!serviceLoading && serviceList.length === 0">
+        <i class="el-icon-service"></i>
+        <p>暂无收藏的服务</p>
+        <el-button type="primary" size="small" @click="$router.push('/services')">去逛逛</el-button>
+      </div>
+
+      <!-- 服务分页 -->
+      <div class="pagination" v-if="serviceTotal > servicePageSize">
+        <el-pagination
+            @current-change="handleServicePageChange"
+            :current-page="servicePage"
+            :page-size="servicePageSize"
+            layout="prev, pager, next"
+            :total="serviceTotal"
+            background
+        ></el-pagination>
+      </div>
     </div>
   </div>
 </template>
@@ -142,22 +184,34 @@
 <script>
 import { getFavorites, toggleFavorite } from '@/api/community';
 import { getProductFavorites, removeProductFavorite } from '@/api/product';
+import { getServiceFavorites, removeServiceFavorite } from '@/api/service';
 
 export default {
   name: 'Favorites',
   data() {
     return {
+      // 帖子收藏
       loading: false,
-      productLoading: false,
-      favoriteType: 'post',
       postList: [],
       postTotal: 0,
       postPage: 1,
       postPageSize: 10,
+
+      // 商品收藏
+      productLoading: false,
       productList: [],
       productTotal: 0,
       productPage: 1,
-      productPageSize: 12
+      productPageSize: 12,
+
+      // 服务收藏
+      serviceLoading: false,
+      serviceList: [],
+      serviceTotal: 0,
+      servicePage: 1,
+      servicePageSize: 12,
+
+      favoriteType: 'post'
     };
   },
   created() {
@@ -168,9 +222,26 @@ export default {
       if (val === 'product' && this.productList.length === 0) {
         this.loadProductFavorites();
       }
+      if (val === 'service' && this.serviceList.length === 0) {
+        this.loadServiceFavorites();
+      }
     }
   },
   methods: {
+
+    getFirstImage(images) {
+      if (!images) return '';
+      if (typeof images === 'string') {
+        const arr = images.split(',');
+        return arr[0] || '';
+      }
+      if (Array.isArray(images)) {
+        return images[0] || '';
+      }
+      return '';
+    },
+
+    // ========== 帖子收藏 ==========
     async loadPostFavorites() {
       this.loading = true;
       try {
@@ -183,21 +254,6 @@ export default {
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
-      }
-    },
-
-    async loadProductFavorites() {
-      this.productLoading = true;
-      try {
-        const res = await getProductFavorites({ page: this.productPage, pageSize: this.productPageSize });
-        if (res.code === 200) {
-          this.productList = res.data.list || [];
-          this.productTotal = res.data.total || 0;
-        }
-      } catch (error) {
-        this.$message.error('加载失败');
-      } finally {
-        this.productLoading = false;
       }
     },
 
@@ -215,6 +271,22 @@ export default {
       }
     },
 
+    // ========== 商品收藏 ==========
+    async loadProductFavorites() {
+      this.productLoading = true;
+      try {
+        const res = await getProductFavorites({ page: this.productPage, pageSize: this.productPageSize });
+        if (res.code === 200) {
+          this.productList = res.data.list || [];
+          this.productTotal = res.data.total || 0;
+        }
+      } catch (error) {
+        this.$message.error('加载失败');
+      } finally {
+        this.productLoading = false;
+      }
+    },
+
     async removeProductFavorite(product) {
       try {
         const res = await removeProductFavorite(product.id);
@@ -229,6 +301,37 @@ export default {
       }
     },
 
+    // ========== 服务收藏 ==========
+    async loadServiceFavorites() {
+      this.serviceLoading = true;
+      try {
+        const res = await getServiceFavorites({ page: this.servicePage, pageSize: this.servicePageSize });
+        if (res.code === 200) {
+          this.serviceList = res.data.list || [];
+          this.serviceTotal = res.data.total || 0;
+        }
+      } catch (error) {
+        this.$message.error('加载失败');
+      } finally {
+        this.serviceLoading = false;
+      }
+    },
+
+    async removeServiceFavorite(service) {
+      try {
+        const res = await removeServiceFavorite(service.serviceId);
+        if (res.code === 200) {
+          this.$message.success('已取消收藏');
+          this.loadServiceFavorites();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (error) {
+        this.$message.error('操作失败');
+      }
+    },
+
+    // ========== 导航方法 ==========
     goToPostDetail(id) {
       this.$router.push(`/community/post/${id}`);
     },
@@ -237,6 +340,27 @@ export default {
       this.$router.push(`/product/${id}`);
     },
 
+    goToServiceDetail(id) {
+      this.$router.push(`/service/${id}`);
+    },
+
+    // ========== 分页方法 ==========
+    handlePostPageChange(page) {
+      this.postPage = page;
+      this.loadPostFavorites();
+    },
+
+    handleProductPageChange(page) {
+      this.productPage = page;
+      this.loadProductFavorites();
+    },
+
+    handleServicePageChange(page) {
+      this.servicePage = page;
+      this.loadServiceFavorites();
+    },
+
+    // ========== 工具方法 ==========
     getAvatarColor(name) {
       if (!name) return 'linear-gradient(135deg, #667eea, #764ba2)';
       const colors = [
@@ -277,16 +401,6 @@ export default {
       if (!text) return '';
       if (text.length <= length) return text;
       return text.substring(0, length) + '...';
-    },
-
-    handlePostPageChange(page) {
-      this.postPage = page;
-      this.loadPostFavorites();
-    },
-
-    handleProductPageChange(page) {
-      this.productPage = page;
-      this.loadProductFavorites();
     }
   }
 };
@@ -305,6 +419,7 @@ export default {
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .tab-item {
@@ -343,6 +458,7 @@ export default {
   gap: 20px;
 }
 
+/* ========== 帖子收藏样式 ========== */
 .favorite-item {
   background: #fff;
   border-radius: 16px;
@@ -495,14 +611,16 @@ export default {
   border-color: #f56c6c;
 }
 
-/* 商品网格 */
-.product-grid {
+/* ========== 商品/服务网格样式 ========== */
+.product-grid,
+.service-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.product-card {
+.product-card,
+.service-card {
   background: #fff;
   border-radius: 16px;
   overflow: hidden;
@@ -512,25 +630,29 @@ export default {
   cursor: pointer;
 }
 
-.product-card:hover {
+.product-card:hover,
+.service-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.product-image {
+.product-image,
+.service-image {
   position: relative;
   height: 180px;
   overflow: hidden;
 }
 
-.product-image img {
+.product-image img,
+.service-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s;
 }
 
-.product-card:hover .product-image img {
+.product-card:hover .product-image img,
+.service-card:hover .service-image img {
   transform: scale(1.05);
 }
 
@@ -556,11 +678,13 @@ export default {
   color: white;
 }
 
-.product-info {
+.product-info,
+.service-info {
   padding: 16px;
 }
 
-.product-name {
+.product-name,
+.service-name {
   font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
@@ -570,48 +694,60 @@ export default {
   text-overflow: ellipsis;
 }
 
-.product-desc {
+.product-desc,
+.service-desc {
   font-size: 13px;
   color: #999;
   margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.product-footer {
+.product-footer,
+.service-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.product-price {
+.product-price,
+.service-price {
   font-size: 18px;
   font-weight: bold;
   color: #ff6b6b;
 }
 
-.product-sales {
+.product-sales,
+.service-duration {
   font-size: 12px;
   color: #999;
 }
 
-.product-actions {
+.product-actions,
+.service-actions {
   display: flex;
   gap: 8px;
 }
 
-.product-actions .el-button {
+.product-actions .el-button,
+.service-actions .el-button {
   flex: 1;
   padding: 6px 0;
   font-size: 12px;
 }
 
-.view-product-btn {
+.view-product-btn,
+.view-service-btn {
   color: #409EFF;
   border-color: #d9ecff;
   background: #ecf5ff;
 }
 
-.unfavorite-product-btn {
+.unfavorite-product-btn,
+.unfavorite-service-btn {
   color: #f56c6c;
   border-color: #fde2e2;
   background: #fef0f0;
@@ -642,8 +778,10 @@ export default {
   justify-content: center;
 }
 
+/* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .product-grid {
+  .product-grid,
+  .service-grid {
     grid-template-columns: 1fr;
   }
 
@@ -668,6 +806,128 @@ export default {
 
   .user-info {
     flex-wrap: wrap;
+  }
+
+  .favorites-tabs {
+    justify-content: center;
+  }
+}
+
+/* 帖子网格样式 */
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.post-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.post-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.post-image {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.post-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-image.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.post-image.placeholder i {
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.post-info {
+  padding: 16px;
+}
+
+.post-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-desc {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #999;
+}
+
+.post-footer span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-footer i {
+  font-size: 13px;
+}
+
+.post-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.post-actions .el-button {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.view-post-btn {
+  color: #409EFF;
+  border-color: #d9ecff;
+  background: #ecf5ff;
+}
+
+.unfavorite-post-btn {
+  color: #f56c6c;
+  border-color: #fde2e2;
+  background: #fef0f0;
+}
+
+@media (max-width: 768px) {
+  .post-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

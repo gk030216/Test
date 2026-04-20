@@ -1,8 +1,10 @@
 package com.pet.service.impl;
 
+import com.pet.entity.Inventory;
 import com.pet.entity.PetProfile;
 import com.pet.entity.PetVaccineRecord;
 import com.pet.entity.PetHealthRecord;
+import com.pet.mapper.InventoryMapper;
 import com.pet.mapper.PetProfileMapper;
 import com.pet.mapper.PetVaccineRecordMapper;
 import com.pet.mapper.PetHealthRecordMapper;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,9 @@ public class PetServiceImpl implements PetService {
 
     @Autowired
     private PetHealthRecordMapper healthRecordMapper;
+
+    @Autowired
+    private InventoryMapper inventoryMapper;
 
     // ========== 宠物档案 ==========
 
@@ -74,6 +80,11 @@ public class PetServiceImpl implements PetService {
             pet.setIsDefault(0);
         }
 
+        // 如果要设为默认，先清除该用户的其他默认宠物
+        if (pet.getIsDefault() == 1) {
+            petProfileMapper.clearDefault(pet.getUserId());
+        }
+
         // 检查该用户是否已有宠物，如果没有则自动设为默认
         int count = petProfileMapper.countByUserId(pet.getUserId());
         if (count == 0) {
@@ -86,9 +97,29 @@ public class PetServiceImpl implements PetService {
     @Override
     @Transactional
     public boolean updatePet(PetProfile pet, Integer currentUserId) {
-        // 管理员编辑时，使用前端传递的 userId
-        // 注意：如果前端没有传递 userId，则不修改主人ID
-        return petProfileMapper.update(pet) > 0;
+        // 1. 查询原宠物信息
+        PetProfile existingPet = petProfileMapper.getById(pet.getId(), null);
+        if (existingPet == null) {
+            throw new RuntimeException("宠物不存在");
+        }
+
+        // 2. 获取原宠物的 userId
+        Integer userId = existingPet.getUserId();
+
+        // 3. 如果要设为默认，先清除该用户的其他默认宠物
+        if (pet.getIsDefault() != null && pet.getIsDefault() == 1) {
+            petProfileMapper.clearDefault(userId);
+        }
+
+        // 4. 确保 userId 不被修改
+        pet.setUserId(userId);
+
+        // 5. 执行更新
+        int result = petProfileMapper.update(pet);
+
+        System.out.println("更新宠物结果: " + result + ", 宠物ID: " + pet.getId());
+
+        return result > 0;
     }
 
     @Override
@@ -112,10 +143,37 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
+    @Transactional
     public boolean addVaccineRecord(PetVaccineRecord record) {
-        return vaccineRecordMapper.insert(record) > 0;
-    }
+        // 1. 检查库存
+        if (record.getInventoryId() != null) {
+            Inventory inventory = inventoryMapper.getById(record.getInventoryId());
+            if (inventory == null) {
+                throw new RuntimeException("选择的疫苗不存在");
+            }
+            if (inventory.getStock() <= 0) {
+                throw new RuntimeException("疫苗【" + inventory.getItemName() + "】库存不足，请先入库");
+            }
+        }
 
+        // 2. 设置疫苗名称（从库存中获取）
+        if (record.getInventoryId() != null) {
+            Inventory inventory = inventoryMapper.getById(record.getInventoryId());
+            record.setVaccineName(inventory.getItemName());
+        }
+
+        // 3. 保存疫苗记录
+        int result = vaccineRecordMapper.insert(record);
+
+        if (result > 0) {
+            // 4. 扣减库存
+            if (record.getInventoryId() != null) {
+                inventoryMapper.updateStock(record.getInventoryId(), -1);
+            }
+        }
+
+        return result > 0;
+    }
     @Override
     public boolean updateVaccineRecord(PetVaccineRecord record) {
         return vaccineRecordMapper.update(record) > 0;
@@ -193,7 +251,7 @@ public class PetServiceImpl implements PetService {
         int totalPets = petProfileMapper.countAll();
         stats.put("totalPets", totalPets);
 
-        // 各类型宠物数量 - 修改为处理 List
+        // 各类型宠物数量
         List<Map<String, Object>> typeCountList = petProfileMapper.countByType();
         Map<String, Integer> typeCount = new HashMap<>();
 
@@ -215,6 +273,8 @@ public class PetServiceImpl implements PetService {
         }
 
         stats.put("typeCount", typeCount);
+        stats.put("dogCount", typeCount.getOrDefault("dog", 0));
+        stats.put("catCount", typeCount.getOrDefault("cat", 0));
 
         // 今日新增宠物数
         int todayNew = petProfileMapper.countTodayNew();
@@ -224,9 +284,9 @@ public class PetServiceImpl implements PetService {
         List<Map<String, Object>> trend = petProfileMapper.getWeeklyTrend();
         stats.put("weeklyTrend", trend);
 
-        // 额外添加 dogCount 和 catCount 方便前端直接使用
-        stats.put("dogCount", typeCount.getOrDefault("dog", 0));
-        stats.put("catCount", typeCount.getOrDefault("cat", 0));
+        //  添加性别统计
+        Map<String, Object> genderStats = petProfileMapper.countByGender();
+        stats.put("genderStats", genderStats);
 
         return stats;
     }
@@ -257,5 +317,44 @@ public class PetServiceImpl implements PetService {
         result.put("page", page);
         result.put("pageSize", pageSize);
         return result;
+    }
+
+    @Override
+    @Transactional
+    public boolean batchDeleteVaccineRecords(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+        return vaccineRecordMapper.batchDeleteByIds(ids) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean batchDeleteHealthRecords(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+        return healthRecordMapper.batchDeleteByIds(ids) > 0;
+    }
+
+    @Override
+    public int getUpcomingPetsCount() {
+        return vaccineRecordMapper.countUpcomingPets();
+    }
+
+    @Override
+    public int getDistinctPetsWithVaccineCount() {
+        return vaccineRecordMapper.countDistinctPetsWithVaccine();
+    }
+
+    @Override
+    public int getDistinctPetsWithHealthRecordCount() {
+        return healthRecordMapper.countDistinctPetsWithHealthRecord();
+    }
+
+    @Override
+    public BigDecimal getAvgWeight() {
+        BigDecimal avgWeight = healthRecordMapper.getAvgWeightByLatestRecord();
+        return avgWeight != null ? avgWeight : BigDecimal.ZERO;
     }
 }

@@ -258,14 +258,6 @@ export function restoreComment(id) {
     });
 }
 
-// 批量恢复评论
-export function batchRestoreComments(ids) {
-    return request({
-        url: '/admin/community/comments/batch-restore',
-        method: 'put',
-        params: { ids }
-    });
-}
 
 // 获取评论的回复列表
 export function getCommentReplies(commentId) {
@@ -274,3 +266,6 @@ export function getCommentReplies(commentId) {
         method: 'get'
     });
 }
+
+
+

@@ -12,6 +12,7 @@ public class User {
     private String avatar;
     private Integer role;
     private Integer status;
+    private String gender;  // 添加性别字段：男、女、保密
     private Date createTime;
     private Date updateTime;
     private Date lastLoginTime;
@@ -51,6 +52,9 @@ public class User {
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
 
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
 
@@ -78,6 +82,7 @@ public class User {
                 ", avatar='" + avatar + '\'' +
                 ", role=" + role +
                 ", status=" + status +
+                ", gender='" + gender + '\'' +
                 ", createTime=" + createTime +
                 ", updateTime=" + updateTime +
                 ", lastLoginTime=" + lastLoginTime +

@@ -18,10 +18,10 @@ public class CategoryServiceImpl implements CategoryService {
     private CategoryMapper categoryMapper;
 
     @Override
-    public Map<String, Object> getCategoryList(Integer page, Integer pageSize, String keyword, Integer status) {
+    public Map<String, Object> getCategoryList(Integer page, Integer pageSize, String keyword, Integer status, Integer parentId) {
         int offset = (page - 1) * pageSize;
-        List<Category> list = categoryMapper.getCategoryList(offset, pageSize, keyword, status);
-        int total = categoryMapper.countCategory(keyword, status);
+        List<Category> list = categoryMapper.getCategoryList(offset, pageSize, keyword, status, parentId);
+        int total = categoryMapper.countCategory(keyword, status, parentId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -44,7 +44,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public boolean addCategory(Category category) {
-        // 设置默认值
         if (category.getParentId() == null) {
             category.setParentId(0);
         }
@@ -72,7 +71,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public boolean deleteCategory(Integer id) {
-        // 检查是否有子分类
         int childrenCount = categoryMapper.countChildren(id);
         if (childrenCount > 0) {
             throw new RuntimeException("请先删除该分类下的子分类");
@@ -83,7 +81,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public boolean batchDelete(List<Integer> ids) {
-        // 检查是否有子分类
         for (Integer id : ids) {
             int childrenCount = categoryMapper.countChildren(id);
             if (childrenCount > 0) {
@@ -91,5 +88,16 @@ public class CategoryServiceImpl implements CategoryService {
             }
         }
         return categoryMapper.batchDelete(ids) > 0;
+    }
+
+    @Override
+    @Transactional
+    public void batchUpdateSort(List<Map<String, Integer>> sortList) {
+        if (sortList == null || sortList.isEmpty()) {
+            return;
+        }
+        for (Map<String, Integer> item : sortList) {
+            categoryMapper.updateSortOrder(item.get("id"), item.get("sortOrder"));
+        }
     }
 }

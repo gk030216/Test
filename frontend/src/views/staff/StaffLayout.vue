@@ -40,20 +40,41 @@
             <i class="el-icon-menu"></i>
             <span slot="title">宠物列表</span>
           </el-menu-item>
-          <el-menu-item index="pet-health">
+          <el-menu-item index="Staff-health-record">
             <i class="el-icon-first-aid-kit"></i>
-            <span slot="title">健康记录</span>
+            <span slot="title">体检记录</span>
+          </el-menu-item>
+          <el-menu-item index="Staff-vaccine-record">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">疫苗记录</span>
           </el-menu-item>
         </el-submenu>
-
+        <el-submenu index="inventory-menu">
+          <template slot="title">
+            <i class="el-icon-shopping-cart-2"></i>
+            <span>库存管理</span>
+          </template>
+          <el-menu-item index="vaccine-stock">
+            <i class="el-icon-first-aid-kit"></i>
+            <span>疫苗库存</span>
+          </el-menu-item>
+          <el-menu-item index="product-stock">
+            <i class="el-icon-goods"></i>
+            <span>商品库存</span>
+          </el-menu-item>
+        </el-submenu>
         <el-menu-item index="evaluations">
           <i class="el-icon-star-on"></i>
           <span slot="title">服务评价</span>
         </el-menu-item>
 
-        <el-menu-item index="feedback">
+        <el-menu-item index="feedback-manage">
           <i class="el-icon-warning"></i>
           <span slot="title">异常反馈</span>
+        </el-menu-item>
+        <el-menu-item index="profile">
+          <i class="el-icon-user"></i>
+          <span>个人资料</span>
         </el-menu-item>
       </el-menu>
     </aside>

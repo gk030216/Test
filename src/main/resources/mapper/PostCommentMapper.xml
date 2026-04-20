@@ -10,30 +10,39 @@
         <result column="reply_to_user_id" property="replyToUserId"/>
         <result column="reply_to_user_name" property="replyToUserName"/>
         <result column="content" property="content"/>
-        <result column="like_count" property="likeCount"/>
         <result column="status" property="status"/>
         <result column="create_time" property="createTime"/>
-        <!-- 评论者信息 -->
         <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>
         <result column="user_avatar" property="userAvatar"/>
-        <!-- 原帖信息 -->
         <result column="post_title" property="postTitle"/>
         <result column="post_content" property="postContent"/>
         <result column="post_create_time" property="postCreateTime"/>
         <result column="post_author_name" property="postAuthorName"/>
         <result column="post_author_avatar" property="postAuthorAvatar"/>
+        <result column="parent_comment_content" property="parentCommentContent"/>
+        <result column="parent_comment_author_name" property="parentCommentAuthorName"/>
     </resultMap>
 
     <!-- 获取顶级评论列表 -->
     <select id="getTopComments" resultMap="BaseResultMap">
         SELECT
-            c.*,
+            c.id,
+            c.post_id,
+            c.user_id,
+            c.parent_id,
+            c.reply_to_user_id,
+            c.reply_to_user_name,
+            c.content,
+            c.status,
+            c.create_time,
             u.username as user_name,
+            u.nickname as user_nickname,
             u.avatar as user_avatar
         FROM post_comment c
                  LEFT JOIN user u ON c.user_id = u.id
         WHERE c.post_id = #{postId} AND c.parent_id = 0 AND c.status = 1
-        ORDER BY c.like_count DESC, c.create_time DESC
+        ORDER BY c.create_time DESC
             LIMIT #{offset}, #{limit}
     </select>
 
@@ -46,8 +55,17 @@
     <!-- 获取子回复 -->
     <select id="getReplies" resultMap="BaseResultMap">
         SELECT
-            c.*,
+            c.id,
+            c.post_id,
+            c.user_id,
+            c.parent_id,
+            c.reply_to_user_id,
+            c.reply_to_user_name,
+            c.content,
+            c.status,
+            c.create_time,
             u.username as user_name,
+            u.nickname as user_nickname,
             u.avatar as user_avatar
         FROM post_comment c
                  LEFT JOIN user u ON c.user_id = u.id
@@ -55,7 +73,7 @@
         ORDER BY c.create_time ASC
     </select>
 
-    <!-- 获取用户评论列表 -->
+    <!-- 获取用户评论列表（包含主评论信息） -->
     <select id="getUserComments" resultMap="BaseResultMap">
         SELECT
             c.id,
@@ -65,21 +83,32 @@
             c.reply_to_user_id,
             c.reply_to_user_name,
             c.content,
-            c.like_count,
             c.status,
             c.create_time,
+            -- 评论者信息
             u.username as user_name,
+            u.nickname as user_nickname,
             u.avatar as user_avatar,
+            -- 原帖信息
             p.title as post_title,
             p.content as post_content,
             p.create_time as post_create_time,
             pu.username as post_author_name,
-            pu.avatar as post_author_avatar
+            pu.avatar as post_author_avatar,
+            -- 父评论内容
+            pc.content as parent_comment_content,
+            -- 父评论作者
+            pu2.username as parent_comment_author_name
         FROM post_comment c
                  LEFT JOIN user u ON c.user_id = u.id
                  LEFT JOIN post p ON c.post_id = p.id
                  LEFT JOIN user pu ON p.user_id = pu.id
-        WHERE c.user_id = #{userId} AND c.status = 1
+                 LEFT JOIN post_comment pc ON c.parent_id = pc.id AND pc.status = 1
+                 LEFT JOIN user pu2 ON pc.user_id = pu2.id
+        WHERE c.user_id = #{userId}
+          AND c.status = 1
+          AND p.status = 1
+          AND p.id IS NOT NULL
         ORDER BY c.create_time DESC
             LIMIT #{offset}, #{limit}
     </select>
@@ -87,8 +116,17 @@
     <!-- 根据ID获取评论 -->
     <select id="getById" resultMap="BaseResultMap">
         SELECT
-            c.*,
+            c.id,
+            c.post_id,
+            c.user_id,
+            c.parent_id,
+            c.reply_to_user_id,
+            c.reply_to_user_name,
+            c.content,
+            c.status,
+            c.create_time,
             u.username as user_name,
+            u.nickname as user_nickname,
             u.avatar as user_avatar
         FROM post_comment c
                  LEFT JOIN user u ON c.user_id = u.id
@@ -101,14 +139,10 @@
         VALUES (#{postId}, #{userId}, #{parentId}, #{replyToUserId}, #{replyToUserName}, #{content})
     </insert>
 
-    <!-- 真删除评论 -->
+    <!-- 删除评论 -->
     <delete id="deleteById">
         DELETE FROM post_comment WHERE id = #{id}
     </delete>
-    <!-- 更新点赞数 -->
-    <update id="updateLikeCount">
-        UPDATE post_comment SET like_count = like_count + #{delta} WHERE id = #{id}
-    </update>
 
     <!-- 统计用户评论数量 -->
     <select id="countUserComments" resultType="int">
@@ -119,8 +153,17 @@
     <!-- 获取评论列表（后台） -->
     <select id="getAdminCommentList" resultMap="BaseResultMap">
         SELECT
-        c.*,
+        c.id,
+        c.post_id,
+        c.user_id,
+        c.parent_id,
+        c.reply_to_user_id,
+        c.reply_to_user_name,
+        c.content,
+        c.status,
+        c.create_time,
         u.username as user_name,
+        u.nickname as user_nickname,
         u.avatar as user_avatar,
         p.title as post_title
         FROM post_comment c
@@ -166,5 +209,40 @@
     <select id="countToday" resultType="int">
         SELECT COUNT(*) FROM post_comment WHERE DATE(create_time) = CURDATE() AND status = 1
     </select>
+
+    <select id="getByPostId" resultMap="BaseResultMap">
+        SELECT
+            c.id, c.post_id, c.user_id, c.parent_id,
+            c.reply_to_user_id, c.reply_to_user_name, c.content,
+            c.status, c.create_time,
+            u.username as user_name,
+            u.nickname as user_nickname,
+            u.avatar as user_avatar
+        FROM post_comment c
+                 LEFT JOIN user u ON c.user_id = u.id
+        WHERE c.post_id = #{postId}
+    </select>
+
+    <delete id="deleteByParentId">
+        DELETE FROM post_comment WHERE parent_id = #{parentId}
+    </delete>
+
+    <select id="getAllChildIdsByParentId" resultType="int">
+        WITH RECURSIVE comment_tree AS (
+            SELECT id, parent_id FROM post_comment WHERE id = #{parentId}
+            UNION ALL
+            SELECT c.id, c.parent_id
+            FROM post_comment c
+                     INNER JOIN comment_tree ct ON c.parent_id = ct.id
+        )
+        SELECT id FROM comment_tree WHERE id != #{parentId}
+    </select>
+
+    <delete id="batchDeleteByIds">
+        DELETE FROM post_comment WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
 
 </mapper>

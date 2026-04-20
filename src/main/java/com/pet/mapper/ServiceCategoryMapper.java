@@ -2,15 +2,14 @@ package com.pet.mapper;
 
 import com.pet.entity.ServiceCategory;
 import org.apache.ibatis.annotations.Param;
-
 import java.util.List;
 
 public interface ServiceCategoryMapper {
 
-    // 获取所有启用的分类（前台）
+    // 获取所有启用的分类
     List<ServiceCategory> getEnabledCategories();
 
-    // 获取所有分类（后台）
+    // 获取所有分类（支持关键词搜索）
     List<ServiceCategory> getAllCategories(@Param("keyword") String keyword);
 
     // 获取分类列表（分页）
@@ -34,6 +33,9 @@ public interface ServiceCategoryMapper {
 
     // 更新
     int update(ServiceCategory category);
+
+    // 更新排序
+    int updateSortOrder(@Param("id") Integer id, @Param("sortOrder") Integer sortOrder);
 
     // 删除
     int deleteById(@Param("id") Integer id);

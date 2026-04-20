@@ -29,10 +29,11 @@ export function getOrderList(params) {
 }
 
 // 取消订单
-export function cancelOrder(orderNo) {
+export function cancelOrder(orderNo, reason) {
     return request({
         url: `/order/cancel/${orderNo}`,
-        method: 'put'
+        method: 'put',
+        data: { reason }
     });
 }
 
@@ -79,5 +80,24 @@ export function batchDeleteOrders(ids) {
         url: '/admin/order/batch-delete',
         method: 'delete',
         params: { ids }
+    });
+}
+
+// 申请退款
+export function refundOrder(orderNo, reason) {
+    return request({
+        url: `/order/refund/${orderNo}`,
+        method: 'post',
+        data: { reason }
+    });
+}
+
+// 导出订单列表
+export function exportOrderList(params) {
+    return request({
+        url: '/admin/order/export',
+        method: 'get',
+        params,
+        responseType: 'blob'
     });
 }

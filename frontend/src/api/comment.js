@@ -87,3 +87,21 @@ export function getProductRatingStats(productId) {
     });
 }
 
+// ============= 商品评价分析相关接口 =============
+
+// 获取指定商品的评价统计（用于商品评价分析页面）
+export function getProductCommentStatistics(productId) {
+    return request({
+        url: `/admin/comment/product/${productId}/statistics`,
+        method: 'get'
+    });
+}
+
+// 获取指定商品的评价列表（支持分页和评分筛选）
+export function getProductCommentsList(productId, params) {
+    return request({
+        url: `/admin/comment/product/${productId}/list`,
+        method: 'get',
+        params
+    });
+}

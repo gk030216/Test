@@ -44,6 +44,9 @@
         <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" size="medium" @change="handleSearch"></el-date-picker>
         <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">搜索</el-button>
         <el-button size="medium" @click="handleReset" class="reset-btn">重置</el-button>
+        <el-button type="success" size="medium" @click="handleExport" :loading="exportLoading" plain class="export-btn">
+          <i class="el-icon-download"></i> 导出
+        </el-button>
       </div>
     </div>
 
@@ -72,17 +75,43 @@
         <template slot-scope="scope"><span :class="getStatusClass(scope.row.status)">{{ getStatusText(scope.row.status) }}</span></template>
       </el-table-column>
       <el-table-column prop="createTime" label="下单时间" width="160"><template slot-scope="scope">{{ formatDateTime(scope.row.createTime) }}</template></el-table-column>
-      <el-table-column label="操作" width="260" fixed="right" align="center">
+      <el-table-column label="操作" width="280" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
-            <el-button size="small" type="primary" plain circle @click="handleDetail(scope.row)" title="详情"><i class="el-icon-view"></i></el-button>
-            <el-button v-if="scope.row.status === 0" size="small" type="success" plain circle @click="handleConfirm(scope.row)" title="确认"><i class="el-icon-check"></i></el-button>
-            <el-button v-if="scope.row.status === 1" size="small" type="primary" plain circle @click="handleStart(scope.row)" title="开始服务"><i class="el-icon-caret-right"></i></el-button>
-            <el-button v-if="scope.row.status === 2" size="small" type="success" plain circle @click="handleComplete(scope.row)" title="完成"><i class="el-icon-circle-check"></i></el-button>
-            <el-button v-if="scope.row.status === 0" size="small" type="danger" plain circle @click="handleReject(scope.row)" title="拒绝"><i class="el-icon-close"></i></el-button>
-            <el-button v-if="scope.row.status === 0 || scope.row.status === 1" size="small" type="warning" plain circle @click="handleCancel(scope.row)" title="取消"><i class="el-icon-switch-button"></i></el-button>
-            <!-- 管理员专属：重新分配按钮 -->
-            <el-button v-if="isAdmin && (scope.row.status === 1 || scope.row.status === 2)" size="small" type="info" plain circle @click="handleReassign(scope.row)" title="重新分配"><i class="el-icon-refresh"></i></el-button>
+            <!-- 详情 -->
+            <el-button size="small" type="primary" plain circle @click="handleDetail(scope.row)" title="详情">
+              <i class="el-icon-view"></i>
+            </el-button>
+
+            <!-- 确认（待确认状态） -->
+            <el-button v-if="scope.row.status === 0" size="small" type="success" plain circle @click="handleConfirm(scope.row)" title="确认">
+              <i class="el-icon-check"></i>
+            </el-button>
+
+            <!-- 开始服务（已确认状态） -->
+            <el-button v-if="scope.row.status === 1" size="small" type="primary" plain circle @click="handleStart(scope.row)" title="开始服务">
+              <i class="el-icon-caret-right"></i>
+            </el-button>
+
+            <!-- 完成服务（服务中状态） -->
+            <el-button v-if="scope.row.status === 2" size="small" type="success" plain circle @click="handleComplete(scope.row)" title="完成">
+              <i class="el-icon-circle-check"></i>
+            </el-button>
+
+            <!-- 拒绝（待确认状态）- 管理员/员工专用 -->
+            <el-button v-if="scope.row.status === 0 && (isAdmin || isStaff)" size="small" type="danger" plain circle @click="handleReject(scope.row)" title="拒绝">
+              <i class="el-icon-close"></i>
+            </el-button>
+
+            <!-- 取消（待确认/已确认状态）- 管理员/员工专用 -->
+            <el-button v-if="(scope.row.status === 0 || scope.row.status === 1) && (isAdmin || isStaff)" size="small" type="warning" plain circle @click="handleCancel(scope.row)" title="取消">
+              <i class="el-icon-switch-button"></i>
+            </el-button>
+
+            <!-- 重新分配（管理员专属） -->
+            <el-button v-if="isAdmin && (scope.row.status === 1 || scope.row.status === 2)" size="small" type="info" plain circle @click="handleReassign(scope.row)" title="重新分配">
+              <i class="el-icon-refresh"></i>
+            </el-button>
           </div>
         </template>
       </el-table-column>
@@ -111,43 +140,93 @@
       <span slot="footer"><el-button type="primary" @click="detailVisible = false">关闭</el-button></span>
     </el-dialog>
 
-    <!-- 确认预约对话框（管理员选择员工） -->
-    <el-dialog title="确认预约" :visible.sync="confirmVisible" width="450px" center>
+    <!-- 确认预约对话框 -->
+    <el-dialog title="确认预约" :visible.sync="confirmVisible" width="580px" center @opened="loadStaffList">
       <div class="confirm-content">
         <p class="confirm-desc">确认该预约后，需要分配给服务人员</p>
-        <el-form label-width="80px">
+
+        <!-- 员工列表为空时的提示 -->
+        <div v-if="staffListWithScore.length === 0 && !loadingStaff" class="empty-staff">
+          <i class="el-icon-info"></i>
+          <span>暂无可用员工</span>
+        </div>
+
+        <el-form label-width="80px" v-else>
           <el-form-item label="分配给">
             <el-select
                 v-model="selectedStaffId"
                 placeholder="请选择员工"
                 style="width: 100%"
                 filterable
+                :loading="loadingStaff"
+                popper-class="staff-select-popper"
             >
               <el-option
-                  v-for="staff in staffList"
+                  v-for="staff in staffListWithScore"
                   :key="staff.id"
-                  :label="staff.nickname || staff.username"
+                  :label="`${staff.nickname || staff.username} ${staff.hasConflict ? '⚠️时间冲突' : ''}`"
                   :value="staff.id"
+                  :disabled="staff.hasConflict"
               >
-                <span>{{ staff.nickname || staff.username }}</span>
-                <span style="float: right; color: #999; font-size: 12px;">
-                  ID: {{ staff.id }}
-                </span>
+                <div class="staff-option">
+                  <div class="staff-header">
+                    <span class="staff-name">{{ staff.nickname || staff.username }}</span>
+                    <el-tag
+                        :type="staff.hasConflict ? 'danger' : 'success'"
+                        size="mini"
+                        v-if="staff.hasConflict"
+                    >
+                      时间冲突
+                    </el-tag>
+                    <el-tag
+                        v-else-if="staff.matchScore >= 80"
+                        size="mini"
+                        type="success"
+                    >
+                      推荐
+                    </el-tag>
+                  </div>
+
+                  <!-- 匹配度进度条 -->
+                  <div class="match-score-row" :class="{ 'no-match': staff.matchScore === 0 }">
+                    <span class="match-label">匹配度：</span>
+                    <el-progress
+                        :percentage="staff.matchScore"
+                        :color="getMatchColor(staff.matchScore)"
+                        :stroke-width="8"
+                        :show-text="false"
+                        style="flex: 1; margin: 0 10px;"
+                    ></el-progress>
+                    <span class="match-value">{{ staff.matchScore || 0 }}%</span>
+                  </div>
+
+                  <!-- 员工统计信息 -->
+                  <div class="staff-stats">
+                    <el-tag size="mini" type="primary">
+                      <i class="el-icon-s-order"></i> 服务{{ staff.serviceCount || 0 }}次
+                    </el-tag>
+                    <el-tag size="mini" type="warning">
+                      <i class="el-icon-star-on"></i> 评分{{ staff.ratingAvg || 0 }}星
+                    </el-tag>
+                    <el-tag size="mini" type="success">
+                      <i class="el-icon-circle-check"></i> 完成{{ staff.completedCount || 0 }}单
+                    </el-tag>
+                  </div>
+                </div>
               </el-option>
             </el-select>
           </el-form-item>
         </el-form>
       </div>
       <span slot="footer">
-        <el-button @click="confirmVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitConfirm" :loading="confirmLoading">
-          确认分配
-        </el-button>
-      </span>
+    <el-button @click="confirmVisible = false">取消</el-button>
+    <el-button type="primary" @click="submitConfirm" :loading="confirmLoading" :disabled="!selectedStaffId">
+      确认分配
+    </el-button>
+  </span>
     </el-dialog>
-
     <!-- 重新分配对话框 -->
-    <el-dialog title="重新分配" :visible.sync="reassignVisible" width="450px" center>
+    <el-dialog title="重新分配" :visible.sync="reassignVisible" width="550px" center @opened="loadStaffList">
       <div class="reassign-content">
         <p class="reassign-desc">将预约重新分配给其他员工</p>
         <el-form label-width="80px">
@@ -160,28 +239,56 @@
                 placeholder="请选择员工"
                 style="width: 100%"
                 filterable
+                :loading="loadingStaff"
             >
               <el-option
-                  v-for="staff in staffList"
+                  v-for="staff in staffListWithScore"
                   :key="staff.id"
-                  :label="staff.nickname || staff.username"
+                  :label="`${staff.nickname || staff.username} ${staff.hasConflict ? '⚠️时间冲突' : ''}`"
                   :value="staff.id"
+                  :disabled="staff.hasConflict"
               >
-                <span>{{ staff.nickname || staff.username }}</span>
-                <span style="float: right; color: #999; font-size: 12px;">
-                  ID: {{ staff.id }}
-                </span>
+                <div class="staff-option">
+                  <div class="staff-header">
+                    <span class="staff-name">{{ staff.nickname || staff.username }}</span>
+                    <el-tag
+                        :type="staff.hasConflict ? 'danger' : 'success'"
+                        size="mini"
+                        v-if="staff.hasConflict"
+                    >
+                      时间冲突
+                    </el-tag>
+                  </div>
+
+                  <div class="match-score-row" v-if="staff.matchScore > 0">
+                    <span class="match-label">匹配度：</span>
+                    <el-progress
+                        :percentage="staff.matchScore"
+                        :color="getMatchColor(staff.matchScore)"
+                        :stroke-width="8"
+                        :show-text="false"
+                        style="flex: 1; margin: 0 10px;"
+                    ></el-progress>
+                    <span class="match-value">{{ staff.matchScore }}%</span>
+                  </div>
+
+                  <div class="staff-stats">
+                    <el-tag size="mini" type="primary">服务{{ staff.serviceCount || 0 }}次</el-tag>
+                    <el-tag size="mini" type="warning">评分{{ staff.ratingAvg || 0 }}星</el-tag>
+                    <el-tag size="mini" type="success">完成{{ staff.completedCount || 0 }}单</el-tag>
+                  </div>
+                </div>
               </el-option>
             </el-select>
           </el-form-item>
         </el-form>
       </div>
       <span slot="footer">
-        <el-button @click="reassignVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitReassign" :loading="reassignLoading">
-          确认分配
-        </el-button>
-      </span>
+    <el-button @click="reassignVisible = false">取消</el-button>
+    <el-button type="primary" @click="submitReassign" :loading="reassignLoading">
+      确认分配
+    </el-button>
+  </span>
     </el-dialog>
 
     <!-- 拒绝对话框 -->
@@ -207,7 +314,9 @@ import {
   completeAppointment,
   rejectAppointment,
   cancelAppointmentByAdmin,
-  getAppointmentStatistics
+  getAppointmentStatistics,
+  exportAppointmentList,
+  getStaffWithMatchScore
 } from '@/api/service';
 import { getAllStaff } from '@/api/user';
 
@@ -217,9 +326,12 @@ export default {
     return {
       loading: false,
       confirmLoading: false,
+      exportLoading: false,
       reassignLoading: false,
       rejectLoading: false,
       cancelLoading: false,
+      staffListWithScore: [],  // ✅ 添加带匹配度的员工列表
+      loadingStaff: false,      // ✅ 加载员工列表的状态
       appointmentList: [],
       total: 0,
       page: 1,
@@ -241,6 +353,14 @@ export default {
       selectedStaffId: null
     };
   },
+
+  created() {
+    this.loadList();
+    this.loadStatistics();
+    if (this.isAdmin) {
+      this.loadStaffList();
+    }
+  },
   computed: {
     isAdmin() {
       const userInfo = localStorage.getItem('userInfo');
@@ -250,13 +370,16 @@ export default {
       } catch (e) {
         return false;
       }
-    }
-  },
-  created() {
-    this.loadList();
-    this.loadStatistics();
-    if (this.isAdmin) {
-      this.loadStaffList();
+    },
+    // ✅ 添加 isStaff 判断
+    isStaff() {
+      const userInfo = localStorage.getItem('userInfo');
+      if (!userInfo) return false;
+      try {
+        return JSON.parse(userInfo).role === 2;
+      } catch (e) {
+        return false;
+      }
     }
   },
   methods: {
@@ -283,6 +406,47 @@ export default {
       }
     },
 
+    // 根据匹配度返回颜色
+    getMatchColor(score) {
+      if (score >= 80) return '#67c23a';  // 绿色 - 优秀
+      if (score >= 60) return '#409EFF';  // 蓝色 - 良好
+      if (score >= 40) return '#e6a23c';  // 橙色 - 一般
+      return '#f56c6c';                    // 红色 - 待提升
+    },
+
+    // ✅ 导出预约列表
+    async handleExport() {
+      this.exportLoading = true;
+      try {
+        // 构建查询参数
+        const params = {
+          keyword: this.searchKeyword || undefined,
+          status: this.searchStatus !== '' ? this.searchStatus : undefined,
+          startDate: this.dateRange?.[0],
+          endDate: this.dateRange?.[1]
+        };
+
+        const res = await exportAppointmentList(params);
+
+        // 创建下载链接
+        const url = window.URL.createObjectURL(res);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `预约列表_${new Date().getTime()}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        this.$message.success('导出成功');
+      } catch (error) {
+        console.error('导出失败', error);
+        this.$message.error('导出失败');
+      } finally {
+        this.exportLoading = false;
+      }
+    },
+
     async loadStatistics() {
       try {
         const res = await getAppointmentStatistics();
@@ -293,13 +457,70 @@ export default {
     },
 
     async loadStaffList() {
+      // 如果没有当前预约，只加载普通员工列表
+      if (!this.currentAppointment || !this.currentAppointment.id) {
+        try {
+          const res = await getAllStaff();
+          if (res.code === 200) {
+            this.staffList = res.data || [];
+            this.staffListWithScore = this.staffList.map(s => ({ ...s, matchScore: 0, hasConflict: false }));
+          }
+        } catch (error) {
+          console.error('加载员工列表失败', error);
+        }
+        return;
+      }
+
+      // 有预约时，加载带匹配度的员工列表
+      this.loadingStaff = true;
       try {
-        const res = await getAllStaff();
+        const appointment = this.currentAppointment;
+
+        // ✅ 修复：将时间戳转换为正确的日期格式 yyyy-MM-dd
+        let formattedDate = appointment.appointmentDate;
+        if (typeof appointment.appointmentDate === 'number') {
+          const date = new Date(appointment.appointmentDate);
+          formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        console.log('请求参数:', {
+          appointmentId: appointment.id,
+          appointmentDate: formattedDate,
+          appointmentTime: appointment.appointmentTime,
+          serviceId: appointment.serviceId
+        });
+
+        const res = await getStaffWithMatchScore({
+          appointmentId: appointment.id,
+          appointmentDate: formattedDate,
+          appointmentTime: appointment.appointmentTime,
+          serviceId: appointment.serviceId
+        });
+
         if (res.code === 200) {
-          this.staffList = res.data || [];
+          this.staffListWithScore = res.data;
+          this.staffList = res.data.map(s => ({
+            id: s.id,
+            username: s.username,
+            nickname: s.nickname
+          }));
+        } else {
+          // 降级处理
+          const fallbackRes = await getAllStaff();
+          if (fallbackRes.code === 200) {
+            this.staffList = fallbackRes.data || [];
+            this.staffListWithScore = this.staffList.map(s => ({ ...s, matchScore: 0, hasConflict: false }));
+          }
         }
       } catch (error) {
-        console.error('加载员工列表失败', error);
+        console.error('加载员工匹配度失败', error);
+        const fallbackRes = await getAllStaff();
+        if (fallbackRes.code === 200) {
+          this.staffList = fallbackRes.data || [];
+          this.staffListWithScore = this.staffList.map(s => ({ ...s, matchScore: 0, hasConflict: false }));
+        }
+      } finally {
+        this.loadingStaff = false;
       }
     },
 
@@ -358,10 +579,10 @@ export default {
     handleConfirm(row) {
       this.currentId = row.id;
       this.currentAppointment = row;
+      this.selectedStaffId = null;
 
       if (this.isAdmin) {
-        // 管理员：弹出选择员工对话框
-        this.selectedStaffId = null;
+        // 管理员：弹出选择员工对话框（会触发 @opened 事件加载匹配度）
         this.confirmVisible = true;
       } else {
         // 员工：直接确认（分配给自己）
@@ -531,5 +752,163 @@ export default {
   .action-bar { justify-content: center; }
   .search-input { width: 160px; }
   .action-right { justify-content: center; }
+}
+.staff-option {
+  padding: 8px 0;
+}
+
+.staff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.staff-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.match-score-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.match-label {
+  font-size: 12px;
+  color: #666;
+  width: 50px;
+}
+
+.match-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff6b6b;
+  width: 40px;
+  text-align: right;
+}
+
+.staff-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* 员工选项样式优化 */
+.staff-option {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.staff-option:last-child {
+  border-bottom: none;
+}
+
+.staff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.staff-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.match-score-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  background: #f8f9fc;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.match-label {
+  font-size: 12px;
+  color: #666;
+  width: 50px;
+  font-weight: 500;
+}
+
+.match-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff6b6b;
+  width: 45px;
+  text-align: right;
+}
+
+.staff-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.staff-stats .el-tag {
+  font-size: 11px;
+  padding: 0 8px;
+  height: 22px;
+  line-height: 21px;
+}
+
+/* 进度条样式优化 */
+.match-score-row .el-progress {
+  line-height: 1;
+}
+
+.match-score-row .el-progress-bar__outer {
+  background-color: #e8eaef;
+}
+
+/* 对话框内容区域 */
+.confirm-content, .reassign-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* 下拉框选项高度优化 */
+.el-select-dropdown__item {
+  height: auto !important;
+  padding: 8px 12px !important;
+  white-space: normal !important;
+  line-height: 1.4 !important;
+}
+
+/* 无匹配度时的样式 */
+.match-score-row.no-match {
+  background: #fef0f0;
+}
+
+.no-match .match-value {
+  color: #f56c6c;
+}
+.empty-staff {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-staff i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+}
+.export-btn {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+  color: white;
 }
 </style>

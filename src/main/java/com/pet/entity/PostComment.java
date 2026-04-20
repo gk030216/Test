@@ -11,24 +11,29 @@ public class PostComment {
     private Integer replyToUserId;
     private String replyToUserName;
     private String content;
-    private Integer likeCount;
     private Integer status;
     private Date createTime;
 
     // 关联字段
     private String userName;
+    private String userNickname;
     private String userAvatar;
     private List<PostComment> replies;
     private Boolean isLiked;
 
-    // 新增：原帖相关字段
-    private String postTitle;           // 帖子标题
-    private String postContent;         // 帖子内容
-    private Date postCreateTime;        // 帖子创建时间
-    private String postAuthorName;      // 帖子作者名
-    private String postAuthorAvatar;    // 帖子作者头像
+    // 原帖相关字段
+    private String postTitle;
+    private String postContent;
+    private Date postCreateTime;
+    private String postAuthorName;
+    private String postAuthorAvatar;
 
-    // getter/setter
+    // 父评论内容
+    private String parentCommentContent;
+    // 父评论作者
+    private String parentCommentAuthorName;
+
+    // getter/setter（删除 likeCount 相关）
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -50,9 +55,6 @@ public class PostComment {
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public Integer getLikeCount() { return likeCount; }
-    public void setLikeCount(Integer likeCount) { this.likeCount = likeCount; }
-
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
 
@@ -71,7 +73,6 @@ public class PostComment {
     public Boolean getIsLiked() { return isLiked; }
     public void setIsLiked(Boolean isLiked) { this.isLiked = isLiked; }
 
-    // 新增字段的 getter/setter
     public String getPostTitle() { return postTitle; }
     public void setPostTitle(String postTitle) { this.postTitle = postTitle; }
 
@@ -87,4 +88,12 @@ public class PostComment {
     public String getPostAuthorAvatar() { return postAuthorAvatar; }
     public void setPostAuthorAvatar(String postAuthorAvatar) { this.postAuthorAvatar = postAuthorAvatar; }
 
+    public String getParentCommentContent() { return parentCommentContent; }
+    public void setParentCommentContent(String parentCommentContent) { this.parentCommentContent = parentCommentContent; }
+
+    public String getParentCommentAuthorName() { return parentCommentAuthorName; }
+    public void setParentCommentAuthorName(String parentCommentAuthorName) { this.parentCommentAuthorName = parentCommentAuthorName; }
+
+    public String getUserNickname() { return userNickname; }
+    public void setUserNickname(String userNickname) { this.userNickname = userNickname; }
 }

@@ -21,6 +21,8 @@ public class Feedback {
     private Date createTime;
     private Date updateTime;
 
+    private String userAvatar;
+
     // getter/setter
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -56,4 +58,8 @@ public class Feedback {
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
+
+
+    public String getUserAvatar() { return userAvatar; }
+    public void setUserAvatar(String userAvatar) { this.userAvatar = userAvatar; }
 }

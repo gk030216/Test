@@ -12,8 +12,7 @@ public class PetHealthRecord {
     private BigDecimal temperature;
     private String healthStatus;
     private String diagnosis;
-    private String treatment;
-    private String doctor;
+    private String operatorName;
     private String remark;
     private Date createTime;
 
@@ -37,14 +36,17 @@ public class PetHealthRecord {
     public void setHealthStatus(String healthStatus) { this.healthStatus = healthStatus; }
     public String getDiagnosis() { return diagnosis; }
     public void setDiagnosis(String diagnosis) { this.diagnosis = diagnosis; }
-    public String getTreatment() { return treatment; }
-    public void setTreatment(String treatment) { this.treatment = treatment; }
-    public String getDoctor() { return doctor; }
-    public void setDoctor(String doctor) { this.doctor = doctor; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public String getPetName() { return petName; }
     public void setPetName(String petName) { this.petName = petName; }
+    public String getOperatorName() {
+        return operatorName;
+    }
+
+    public void setOperatorName(String operatorName) {
+        this.operatorName = operatorName;
+    }
 }

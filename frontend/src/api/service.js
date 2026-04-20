@@ -218,14 +218,32 @@ export function getAppointmentDetailForAdmin(id) {
     });
 }
 
-// 确认预约
-export function confirmAppointment(id) {
+// 确认预约（支持管理员分配员工）
+export function confirmAppointment(id, staffId) {
+    // 如果传入了 staffId，则放在请求体中
+    if (staffId) {
+        return request({
+            url: `/admin/service/appointment/confirm/${id}`,
+            method: 'put',
+            data: { staffId: staffId }  // ✅ 确保是 data，不是 params
+        });
+    } else {
+        // 员工自己确认，不传 staffId
+        return request({
+            url: `/admin/service/appointment/confirm/${id}`,
+            method: 'put'
+        });
+    }
+}
+
+/**
+ * 检查用户时间是否有冲突
+ */
+export function checkTimeConflict(data) {
     return request({
-        url: `/admin/service/appointment/confirm/${id}`,
-        method: 'put',
-        headers: {
-            'Content-Type': 'application/json'
-        }
+        url: '/service/check-time-conflict',
+        method: 'post',
+        data
     });
 }
 // 开始服务
@@ -313,7 +331,7 @@ export function getServiceCommentList(params) {
 // 获取服务评价统计
 export function getServiceCommentStatistics() {
     return request({
-        url: '/service/comment/admin/statistics',
+        url: '/admin/service/statistics',
         method: 'get'
     });
 }
@@ -357,6 +375,115 @@ export function batchDeleteServiceComments(ids) {
 export function getAppointmentDetailByNo(appointmentNo) {
     return request({
         url: `/service/appointment/no/${appointmentNo}`,
+        method: 'get'
+    });
+}
+
+// ========== 服务收藏 ==========
+
+// 收藏服务
+export function addServiceFavorite(serviceId) {
+    return request({
+        url: `/service/favorite/${serviceId}`,
+        method: 'post'
+    });
+}
+
+// 取消收藏服务
+export function removeServiceFavorite(serviceId) {
+    return request({
+        url: `/service/favorite/${serviceId}`,
+        method: 'delete'
+    });
+}
+
+// 检查服务收藏状态
+export function checkServiceFavorite(serviceId) {
+    return request({
+        url: `/service/favorite/${serviceId}/check`,
+        method: 'get'
+    });
+}
+
+// 获取服务收藏列表
+export function getServiceFavorites(params) {
+    return request({
+        url: '/service/favorite/list',
+        method: 'get',
+        params
+    });
+}
+
+// 批量更新服务分类排序
+export function batchUpdateServiceCategorySort(sortList) {
+    return request({
+        url: '/admin/service/category/batch-sort',
+        method: 'put',
+        data: sortList
+    });
+}
+// 批量更新服务分类状态
+export function batchUpdateServiceCategoryStatus(ids, status) {
+    return request({
+        url: '/admin/service/category/batch-status',
+        method: 'put',
+        params: { ids, status }
+    });
+}
+
+// 导出服务列表
+export function exportServiceList(params) {
+    return request({
+        url: '/admin/service/item/export',
+        method: 'get',
+        params: params,
+        responseType: 'blob',  // 必须设置
+        timeout: 30000  // 增加超时时间
+    });
+}
+
+// 导出预约列表
+export function exportAppointmentList(params) {
+    return request({
+        url: '/admin/service/appointment/export',
+        method: 'get',
+        params: params,
+        responseType: 'blob',
+        timeout: 30000
+    });
+}
+
+// 获取带匹配度的员工列表
+export function getStaffWithMatchScore(params) {
+    return request({
+        url: '/admin/service/staff/match',
+        method: 'get',
+        params: params
+    });
+}
+
+// ========== 服务评价分析接口 ==========
+
+// 获取服务评价统计（用于服务评价分析页面）
+export function getServiceCommentStatisticsById(serviceId) {
+    return request({
+        url: `/admin/service/comment/service/${serviceId}/statistics`,
+        method: 'get'
+    });
+}
+
+// 获取服务评价列表（用于服务评价分析页面）
+export function getServiceCommentsById(serviceId, params) {
+    return request({
+        url: `/admin/service/comment/service/${serviceId}/list`,
+        method: 'get',
+        params
+    });
+}
+// 员工获取服务评价统计
+export function getStaffServiceCommentStatistics() {
+    return request({
+        url: '/admin/service/statistics',  // 改为这个路径
         method: 'get'
     });
 }

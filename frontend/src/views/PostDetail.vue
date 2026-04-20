@@ -4,29 +4,31 @@
 
     <div class="post-detail-content">
       <div class="container">
-        <!-- 面包屑导航 -->
-        <el-breadcrumb separator="/" class="breadcrumb">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item :to="{ path: '/community' }">宠物社区</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ post.title }}</el-breadcrumb-item>
-        </el-breadcrumb>
+        <!-- 顶部导航栏：面包屑 + 返回按钮同一行 -->
+        <div class="top-nav">
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/community' }">宠物社区</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ post.title }}</el-breadcrumb-item>
+          </el-breadcrumb>
+          <el-button icon="el-icon-arrow-left" size="small" @click="$router.back()" class="back-btn">返回</el-button>
+        </div>
 
         <!-- 帖子内容 -->
         <div class="post-card" v-loading="loading">
           <div class="post-header">
             <div class="user-info">
-              <!-- 修复：使用数据库头像 -->
-              <el-avatar :size="50" :src="post.userAvatar" class="user-avatar" :style="post.userAvatar ? {} : { background: getAvatarColor(post.userName) }">
-                {{ !post.userAvatar ? getUserInitial(post.userName) : '' }}
+              <el-avatar :size="50" :src="post.userAvatar" class="user-avatar">
+                {{ !post.userAvatar ? getUserInitial(post.userNickname || post.userName) : '' }}
               </el-avatar>
               <div class="user-detail">
-                <span class="user-name">{{ post.userName || '匿名用户' }}</span>
+                <span class="user-name">{{ post.userNickname || post.userName || '匿名用户' }}</span>
                 <span class="post-time">{{ formatDate(post.createTime) }}</span>
               </div>
             </div>
             <div class="post-badges">
-              <el-tag v-if="post.isTop === 1" size="small" type="danger" effect="dark">置顶</el-tag>
-              <el-tag v-if="post.isEssence === 1" size="small" type="warning" effect="dark">精华</el-tag>
+              <el-tag v-if="post.isTop === 1" size="small" type="danger">置顶</el-tag>
+              <el-tag v-if="post.isEssence === 1" size="small" type="warning">精华</el-tag>
             </div>
           </div>
 
@@ -34,7 +36,6 @@
 
           <div class="post-content" v-html="formatContent(post.content)"></div>
 
-          <!-- 修复：图片显示 -->
           <div class="post-images" v-if="post.images && post.images.length > 0">
             <el-image
                 v-for="(img, idx) in getImageList(post.images)"
@@ -47,7 +48,6 @@
             >
               <div slot="error" class="image-slot">
                 <i class="el-icon-picture-outline"></i>
-                <span>加载失败</span>
               </div>
             </el-image>
           </div>
@@ -58,7 +58,7 @@
               <span>{{ post.likeCount || 0 }} 点赞</span>
             </div>
             <div class="action-item" @click="handleFavorite">
-              <i :class="['el-icon-collection', { favorited: post.isFavorited }]"></i>
+              <i :class="['el-icon-star-off', { favorited: post.isFavorited }]"></i>
               <span>{{ post.isFavorited ? '已收藏' : '收藏' }}</span>
             </div>
             <div class="action-item">
@@ -75,10 +75,9 @@
             评论 ({{ commentTotal }})
           </h3>
 
-          <!-- 评论输入框 -->
           <div class="comment-input-wrapper">
-            <el-avatar :size="40" :src="currentUserAvatar" class="comment-avatar" :style="currentUserAvatar ? {} : { background: getAvatarColor(currentUserName) }">
-              {{ !currentUserAvatar ? getUserInitial(currentUserName) : '' }}
+            <el-avatar :size="40" :src="currentUserAvatar" class="comment-avatar">
+              {{ !currentUserAvatar ? getUserInitial(currentUserNickname || currentUserName) : '' }}
             </el-avatar>
             <div class="comment-input-area">
               <el-input
@@ -97,15 +96,14 @@
             </div>
           </div>
 
-          <!-- 评论列表 -->
           <div class="comment-list" v-loading="commentListLoading">
             <div class="comment-item" v-for="comment in commentList" :key="comment.id">
-              <el-avatar :size="36" :src="comment.userAvatar" class="comment-avatar" :style="comment.userAvatar ? {} : { background: getAvatarColor(comment.userName) }">
-                {{ !comment.userAvatar ? getUserInitial(comment.userName) : '' }}
+              <el-avatar :size="36" :src="comment.userAvatar" class="comment-avatar">
+                {{ !comment.userAvatar ? getUserInitial(comment.userNickname || comment.userName) : '' }}
               </el-avatar>
               <div class="comment-body">
                 <div class="comment-header">
-                  <span class="user-name">{{ comment.userName || '匿名用户' }}</span>
+                  <span class="user-name">{{ comment.userNickname || comment.userName || '匿名用户' }}</span>
                   <span class="comment-time">{{ formatDate(comment.createTime) }}</span>
                 </div>
                 <div class="comment-content">{{ comment.content }}</div>
@@ -114,13 +112,12 @@
                   <span v-if="comment.userId === currentUserId" class="delete-btn" @click="deleteComment(comment.id)">删除</span>
                 </div>
 
-                <!-- 回复输入框 -->
                 <div class="reply-input-wrapper" v-if="replyTarget && replyTarget.id === comment.id">
                   <el-input
                       v-model="replyContent"
                       type="textarea"
                       :rows="2"
-                      :placeholder="`回复 ${comment.userName}：`"
+                      :placeholder="`回复 ${comment.userNickname || comment.userName}：`"
                       size="small"
                   ></el-input>
                   <div class="reply-actions">
@@ -131,11 +128,10 @@
                   </div>
                 </div>
 
-                <!-- 子回复列表 -->
                 <div class="reply-list" v-if="comment.replies && comment.replies.length">
                   <div class="reply-item" v-for="reply in comment.replies" :key="reply.id">
                     <div class="reply-header">
-                      <span class="reply-user">{{ reply.userName || '匿名用户' }}</span>
+                      <span class="reply-user">{{ reply.userNickname || reply.userName || '匿名用户' }}</span>
                       <span class="reply-to" v-if="reply.replyToUserName">
                         回复 @{{ reply.replyToUserName }}
                       </span>
@@ -147,13 +143,11 @@
               </div>
             </div>
 
-            <!-- 空状态 -->
             <div class="empty-comment" v-if="!commentListLoading && commentList.length === 0">
               <i class="el-icon-chat-dot-round"></i>
               <p>暂无评论，快来抢沙发！</p>
             </div>
 
-            <!-- 分页 -->
             <div class="comment-pagination" v-if="commentTotal > 10">
               <el-pagination
                   @current-change="handleCommentPageChange"
@@ -176,7 +170,14 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getPostDetail, toggleLike, toggleFavorite, getComments, addComment, deleteComment } from '@/api/community';
+import {
+  getPostDetail,
+  toggleLike,
+  toggleFavorite,
+  getComments,
+  addComment,
+  adminDeleteComment
+} from '@/api/community';
 
 export default {
   name: 'PostDetail',
@@ -193,6 +194,7 @@ export default {
         content: '',
         images: '',
         userName: '',
+        userNickname: '',
         userAvatar: '',
         likeCount: 0,
         viewCount: 0,
@@ -221,7 +223,11 @@ export default {
     },
     currentUserName() {
       const userInfo = localStorage.getItem('userInfo');
-      return userInfo ? (JSON.parse(userInfo).nickname || JSON.parse(userInfo).username) : '用户';
+      return userInfo ? JSON.parse(userInfo).username : '用户';
+    },
+    currentUserNickname() {
+      const userInfo = localStorage.getItem('userInfo');
+      return userInfo ? JSON.parse(userInfo).nickname : null;
     },
     currentUserAvatar() {
       const userInfo = localStorage.getItem('userInfo');
@@ -233,30 +239,12 @@ export default {
     this.loadComments();
   },
   methods: {
-    // 获取图片列表
     getImageList(images) {
       if (!images) return [];
       if (typeof images === 'string') {
         return images.split(',').filter(img => img && img.trim().length > 0);
       }
       return [];
-    },
-
-    getAvatarColor(name) {
-      if (!name) return 'linear-gradient(135deg, #667eea, #764ba2)';
-      const colors = [
-        'linear-gradient(135deg, #667eea, #764ba2)',
-        'linear-gradient(135deg, #f093fb, #f5576c)',
-        'linear-gradient(135deg, #4facfe, #00f2fe)',
-        'linear-gradient(135deg, #43e97b, #38f9d7)',
-        'linear-gradient(135deg, #fa709a, #fee140)',
-        'linear-gradient(135deg, #a18cd1, #fbc2eb)'
-      ];
-      let index = 0;
-      for (let i = 0; i < name.length; i++) {
-        index += name.charCodeAt(i);
-      }
-      return colors[index % colors.length];
     },
 
     getUserInitial(name) {
@@ -311,11 +299,8 @@ export default {
           this.post.isLiked = res.data.isLiked;
           this.post.likeCount += this.post.isLiked ? 1 : -1;
           this.$message.success(res.data.isLiked ? '点赞成功' : '取消点赞');
-        } else {
-          this.$message.error(res.message || '操作失败');
         }
       } catch (error) {
-        console.error('点赞操作失败', error);
         this.$message.error('操作失败');
       }
     },
@@ -326,11 +311,8 @@ export default {
         if (res.code === 200) {
           this.post.isFavorited = res.data.isFavorited;
           this.$message.success(res.data.isFavorited ? '收藏成功' : '取消收藏');
-        } else {
-          this.$message.error(res.message || '操作失败');
         }
       } catch (error) {
-        console.error('收藏操作失败', error);
         this.$message.error('操作失败');
       }
     },
@@ -357,7 +339,6 @@ export default {
           this.$message.error(res.message);
         }
       } catch (error) {
-        console.error('评论失败', error);
         this.$message.error('评论失败');
       } finally {
         this.commentLoading = false;
@@ -386,7 +367,7 @@ export default {
           content: this.replyContent,
           parentId: parentComment.id,
           replyToUserId: parentComment.userId,
-          replyToUserName: parentComment.userName
+          replyToUserName: parentComment.userNickname || parentComment.userName
         });
         if (res.code === 200) {
           this.$message.success('回复成功');
@@ -398,29 +379,24 @@ export default {
           this.$message.error(res.message);
         }
       } catch (error) {
-        console.error('回复失败', error);
         this.$message.error('回复失败');
       } finally {
         this.replyLoading = false;
       }
     },
 
-    async deleteComment(id) {
-      this.$confirm('确定要删除这条评论吗？', '提示', { type: 'warning' }).then(async () => {
-        try {
-          const res = await deleteComment(id);
-          if (res.code === 200) {
-            this.$message.success('删除成功');
-            this.loadComments();
-            this.loadPost();
-          } else {
-            this.$message.error(res.message);
-          }
-        } catch (error) {
-          console.error('删除评论失败', error);
-          this.$message.error('删除失败');
-        }
-      }).catch(() => {});
+    async deleteComment(commentId) {
+      this.$confirm('确定要删除这条评论吗？', '提示', { type: 'warning' })
+          .then(async () => {
+            const res = await adminDeleteComment(commentId);
+            if (res.code === 200) {
+              this.$message.success('删除成功');
+              this.loadComments();
+            } else {
+              this.$message.error(res.message || '删除失败');
+            }
+          })
+          .catch(() => {});
     },
 
     handleCommentPageChange(page) {
@@ -444,12 +420,11 @@ export default {
 </script>
 
 <style scoped>
-/* 保持原有样式，添加图片加载失败样式 */
 .post-detail-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .post-detail-content {
@@ -463,16 +438,44 @@ export default {
   padding: 0 20px;
 }
 
-.breadcrumb {
+/* 顶部导航栏：面包屑和返回按钮同一行 */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
 }
 
+.breadcrumb {
+  flex: 1;
+}
+
+.back-btn {
+  border-radius: 8px;
+  color: #606266;
+  background: white;
+  border: 1px solid #eef2f6;
+  padding: 8px 16px;
+  font-size: 13px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.back-btn:hover {
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
+}
+
+/* 帖子卡片 */
 .post-card {
   background: white;
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 30px;
   margin-bottom: 30px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
 }
 
 .post-header {
@@ -489,45 +492,52 @@ export default {
 }
 
 .user-avatar {
-  flex-shrink: 0;
+  background: #409EFF;
+  color: white;
 }
 
 .user-name {
   font-weight: 600;
   font-size: 16px;
-  color: #333;
+  color: #2c3e50;
 }
 
 .post-time {
   font-size: 13px;
-  color: #999;
+  color: #909399;
   margin-left: 10px;
 }
 
+.post-badges {
+  display: flex;
+  gap: 8px;
+}
+
 .post-title {
-  font-size: 26px;
+  font-size: 24px;
+  font-weight: 600;
   margin-bottom: 20px;
-  color: #333;
+  color: #2c3e50;
 }
 
 .post-content {
-  color: #555;
+  color: #606266;
   line-height: 1.8;
   margin-bottom: 20px;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .post-images {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
 .detail-img {
-  width: 200px;
-  height: 200px;
-  border-radius: 12px;
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
   object-fit: cover;
   cursor: pointer;
   background: #f5f5f5;
@@ -535,47 +545,51 @@ export default {
 
 .post-actions {
   display: flex;
-  gap: 40px;
+  gap: 30px;
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #eef2f6;
 }
 
 .action-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  color: #999;
+  color: #909399;
+  font-size: 14px;
   transition: color 0.3s;
 }
 
 .action-item:hover {
-  color: #667eea;
+  color: #409EFF;
 }
 
 .action-item i.liked {
-  color: #ff6b6b;
+  color: #f56c6c;
 }
 
 .action-item i.favorited {
-  color: #ff9900;
+  color: #409EFF;
 }
 
+/* 评论区域 */
 .comment-section {
   background: white;
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 30px;
+  border: 1px solid #eef2f6;
 }
 
 .comment-title {
   font-size: 18px;
+  font-weight: 600;
   margin-bottom: 20px;
-  color: #333;
+  color: #2c3e50;
 }
 
 .comment-title i {
   margin-right: 8px;
-  color: #667eea;
+  color: #409EFF;
 }
 
 .comment-input-wrapper {
@@ -583,10 +597,12 @@ export default {
   gap: 15px;
   margin-bottom: 30px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .comment-avatar {
+  background: #409EFF;
+  color: white;
   flex-shrink: 0;
 }
 
@@ -607,8 +623,12 @@ export default {
 .comment-item {
   display: flex;
   gap: 15px;
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 0;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
 }
 
 .comment-body {
@@ -620,38 +640,41 @@ export default {
   align-items: center;
   gap: 12px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .comment-header .user-name {
   font-weight: 600;
   font-size: 14px;
+  color: #2c3e50;
 }
 
 .comment-time {
   font-size: 12px;
-  color: #999;
+  color: #909399;
 }
 
 .comment-content {
-  color: #555;
+  color: #606266;
   line-height: 1.5;
   margin-bottom: 8px;
+  font-size: 14px;
 }
 
 .comment-footer {
   display: flex;
-  gap: 15px;
+  gap: 16px;
 }
 
 .reply-btn, .delete-btn {
   font-size: 12px;
-  color: #999;
+  color: #909399;
   cursor: pointer;
   transition: color 0.3s;
 }
 
 .reply-btn:hover {
-  color: #667eea;
+  color: #409EFF;
 }
 
 .delete-btn:hover {
@@ -661,8 +684,8 @@ export default {
 .reply-input-wrapper {
   margin-top: 12px;
   padding: 12px;
-  background: #f8f9fa;
-  border-radius: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
 }
 
 .reply-actions {
@@ -673,12 +696,16 @@ export default {
 .reply-list {
   margin-top: 12px;
   padding-left: 20px;
-  border-left: 2px solid #e0e0e0;
+  border-left: 2px solid #eef2f6;
 }
 
 .reply-item {
   padding: 10px 0;
   border-bottom: 1px solid #f5f5f5;
+}
+
+.reply-item:last-child {
+  border-bottom: none;
 }
 
 .reply-header {
@@ -692,32 +719,34 @@ export default {
 
 .reply-user {
   font-weight: 600;
-  color: #333;
+  color: #2c3e50;
 }
 
 .reply-to {
-  color: #667eea;
+  color: #409EFF;
 }
 
 .reply-time {
   font-size: 11px;
-  color: #999;
+  color: #909399;
 }
 
 .reply-content {
-  color: #666;
+  color: #606266;
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .empty-comment {
   text-align: center;
   padding: 40px;
-  color: #999;
+  color: #909399;
 }
 
 .empty-comment i {
   font-size: 48px;
   margin-bottom: 16px;
+  color: #c0c4cc;
 }
 
 .comment-pagination {
@@ -734,7 +763,7 @@ export default {
   width: 100%;
   height: 100%;
   background: #f5f5f5;
-  color: #999;
+  color: #909399;
   font-size: 12px;
 }
 
@@ -743,6 +772,7 @@ export default {
   margin-bottom: 4px;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
   .post-card {
     padding: 20px;
@@ -753,8 +783,8 @@ export default {
   }
 
   .detail-img {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
   }
 
   .comment-input-wrapper {
@@ -767,6 +797,24 @@ export default {
 
   .post-actions {
     gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .comment-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  /* 移动端返回按钮调整 */
+  .top-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .back-btn {
+    margin-left: 0;
+    padding: 6px 12px;
   }
 }
 </style>

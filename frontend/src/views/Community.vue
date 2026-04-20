@@ -6,14 +6,18 @@
       <div class="container">
         <!-- 页面头部 -->
         <div class="page-header">
-          <h2 class="page-title">🐾 宠物社区</h2>
-          <p class="page-desc">分享与宠物的温馨瞬间，交流养宠经验</p>
-          <el-button type="primary" size="medium" @click="showPostDialog = true" class="publish-btn">
-            <i class="el-icon-edit"></i> 发布新帖
-          </el-button>
+          <div class="header-content">
+            <div class="header-left">
+              <h2 class="page-title">宠物社区</h2>
+              <p class="page-desc">分享养宠经验，交流萌宠日常</p>
+            </div>
+            <el-button type="primary" size="large" @click="showPostDialog = true" class="publish-btn">
+              <i class="el-icon-edit"></i> 发布新帖
+            </el-button>
+          </div>
         </div>
 
-        <!-- 分类导航 - 添加"其他"分类 -->
+        <!-- 分类导航 -->
         <div class="category-nav">
           <div
               v-for="cat in categories"
@@ -47,9 +51,8 @@
                 @keyup.enter="handleSearch"
                 @clear="handleSearch"
                 style="width: 200px"
-            >
-              <i slot="prefix" class="el-icon-search"></i>
-            </el-input>
+                prefix-icon="el-icon-search"
+            ></el-input>
             <el-button size="small" type="primary" @click="handleSearch" style="margin-left: 8px;">搜索</el-button>
           </div>
         </div>
@@ -59,17 +62,17 @@
           <div class="post-item" v-for="post in postList" :key="post.id" @click="goToDetail(post.id)">
             <div class="post-header">
               <div class="user-info">
-                <el-avatar :size="40" :src="post.userAvatar" class="user-avatar" :style="post.userAvatar ? {} : { background: getAvatarColor(post.userName) }">
-                  {{ !post.userAvatar ? getUserInitial(post.userName) : '' }}
+                <el-avatar :size="40" :src="post.userAvatar" class="user-avatar">
+                  {{ !post.userAvatar ? getUserInitial(post.userNickname || post.userName) : '' }}
                 </el-avatar>
                 <div class="user-detail">
-                  <span class="user-name">{{ post.userName || '匿名用户' }}</span>
+                  <span class="user-name">{{ post.userNickname || post.userName || '匿名用户' }}</span>
                   <span class="post-time">{{ formatDate(post.createTime) }}</span>
                 </div>
               </div>
               <div class="post-badges">
-                <el-tag v-if="post.isTop === 1" size="mini" type="danger" effect="dark">置顶</el-tag>
-                <el-tag v-if="post.isEssence === 1" size="mini" type="warning" effect="dark">精华</el-tag>
+                <el-tag v-if="post.isTop === 1" size="mini" type="danger">置顶</el-tag>
+                <el-tag v-if="post.isEssence === 1" size="mini" type="warning">精华</el-tag>
               </div>
             </div>
 
@@ -88,7 +91,6 @@
                 >
                   <div slot="error" class="image-slot">
                     <i class="el-icon-picture-outline"></i>
-                    <span>加载失败</span>
                   </div>
                 </el-image>
                 <span v-if="getImageList(post.images).length > 3" class="more-images">
@@ -107,7 +109,7 @@
                 <span>{{ post.commentCount || 0 }}</span>
               </div>
               <div class="action-item" @click.stop="handleFavorite(post)">
-                <i :class="['el-icon-collection', { favorited: post.isFavorited }]"></i>
+                <i :class="['el-icon-star-off', { favorited: post.isFavorited }]"></i>
                 <span>{{ post.isFavorited ? '已收藏' : '收藏' }}</span>
               </div>
               <div class="action-item">
@@ -119,8 +121,9 @@
 
           <!-- 空状态 -->
           <div class="empty-state" v-if="!loading && postList.length === 0">
-            <i class="el-icon-chat-dot-round"></i>
-            <p>暂无帖子，快来发布第一条吧！</p>
+            <i class="el-icon-document"></i>
+            <p>暂无帖子</p>
+            <el-button type="primary" size="small" @click="showPostDialog = true">发布第一条</el-button>
           </div>
 
           <!-- 分页 -->
@@ -146,7 +149,7 @@
         </el-form-item>
 
         <el-form-item label="分类" prop="category">
-          <el-select v-model="postForm.category" placeholder="请选择分类">
+          <el-select v-model="postForm.category" placeholder="请选择分类" style="width: 100%">
             <el-option label="宠物日常" value="pet_daily"></el-option>
             <el-option label="健康分享" value="health"></el-option>
             <el-option label="美食分享" value="food"></el-option>
@@ -217,7 +220,6 @@ export default {
       currentCategory: 'all',
       currentSort: 'latest',
       searchKeyword: '',
-      // 添加"其他"分类到 categories 数组
       categories: [
         { value: 'all', label: '全部', icon: 'el-icon-menu' },
         { value: 'pet_daily', label: '宠物日常', icon: 'el-icon-camera' },
@@ -263,10 +265,12 @@ export default {
         };
         const res = await getPostList(params);
         if (res.code === 200) {
-          this.postList = res.data.list || [];
+          this.postList = (res.data.list || []).map(post => ({
+            ...post,
+            isLiked: post.isLiked === true || post.isLiked === 1,
+            isFavorited: post.isFavorited === true || post.isFavorited === 1
+          }));
           this.total = res.data.total || 0;
-        } else {
-          this.$message.error(res.message || '加载失败');
         }
       } catch (error) {
         console.error('加载失败', error);
@@ -306,25 +310,6 @@ export default {
       this.loadPosts();
     },
 
-    getAvatarColor(name) {
-      if (!name) return 'linear-gradient(135deg, #667eea, #764ba2)';
-      const colors = [
-        'linear-gradient(135deg, #667eea, #764ba2)',
-        'linear-gradient(135deg, #f093fb, #f5576c)',
-        'linear-gradient(135deg, #4facfe, #00f2fe)',
-        'linear-gradient(135deg, #43e97b, #38f9d7)',
-        'linear-gradient(135deg, #fa709a, #fee140)',
-        'linear-gradient(135deg, #a18cd1, #fbc2eb)'
-      ];
-      let index = 0;
-      if (name) {
-        for (let i = 0; i < name.length; i++) {
-          index += name.charCodeAt(i);
-        }
-      }
-      return colors[index % colors.length];
-    },
-
     getUserInitial(name) {
       if (!name) return 'U';
       return name.charAt(0).toUpperCase();
@@ -337,11 +322,8 @@ export default {
           post.isLiked = res.data.isLiked;
           post.likeCount += post.isLiked ? 1 : -1;
           this.$message.success(res.data.isLiked ? '点赞成功' : '取消点赞');
-        } else {
-          this.$message.error(res.message || '操作失败');
         }
       } catch (error) {
-        console.error('点赞操作失败', error);
         this.$message.error('操作失败');
       }
     },
@@ -350,8 +332,17 @@ export default {
       try {
         const res = await toggleFavorite(post.id);
         if (res.code === 200) {
-          post.isFavorited = res.data.isFavorited;
-          this.$message.success(res.data.isFavorited ? '收藏成功' : '取消收藏');
+          // ✅ 直接使用后端返回的状态
+          const newStatus = res.data.isFavorited;
+          post.isFavorited = newStatus;
+
+          // ✅ 同时更新列表中的状态
+          const targetIndex = this.postList.findIndex(p => p.id === post.id);
+          if (targetIndex !== -1) {
+            this.$set(this.postList[targetIndex], 'isFavorited', newStatus);
+          }
+
+          this.$message.success(newStatus ? '收藏成功' : '取消收藏');
         } else {
           this.$message.error(res.message || '操作失败');
         }
@@ -360,7 +351,6 @@ export default {
         this.$message.error('操作失败，请稍后重试');
       }
     },
-
     async uploadImage(file) {
       const formData = new FormData();
       formData.append('file', file.file);
@@ -370,16 +360,13 @@ export default {
         if (res.code === 200) {
           this.imageUrls.push(res.data.url);
           this.imageList.push({
-            uid: Date.now() + Math.random(),
+            uid: Date.now(),
             name: file.file.name,
             url: res.data.url
           });
           this.$message.success('上传成功');
-        } else {
-          this.$message.error(res.message || '上传失败');
         }
       } catch (error) {
-        console.error('上传失败', error);
         this.$message.error('上传失败');
       }
     },
@@ -389,7 +376,7 @@ export default {
       this.previewVisible = true;
     },
 
-    handleRemove(file, fileList) {
+    handleRemove(file) {
       const index = this.imageList.findIndex(f => f.uid === file.uid);
       if (index !== -1) {
         this.imageList.splice(index, 1);
@@ -415,11 +402,8 @@ export default {
             this.showPostDialog = false;
             this.resetForm();
             this.loadPosts();
-          } else {
-            this.$message.error(res.message);
           }
         } catch (error) {
-          console.error('发布失败', error);
           this.$message.error('发布失败');
         } finally {
           this.postLoading = false;
@@ -435,9 +419,11 @@ export default {
       };
       this.imageList = [];
       this.imageUrls = [];
-      if (this.$refs.postForm) {
-        this.$refs.postForm.clearValidate();
-      }
+      this.$nextTick(() => {
+        if (this.$refs.postForm) {
+          this.$refs.postForm.clearValidate();
+        }
+      });
     },
 
     goToDetail(id) {
@@ -466,12 +452,11 @@ export default {
 </script>
 
 <style scoped>
-/* 样式保持不变 */
 .community-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .community-content {
@@ -485,37 +470,60 @@ export default {
   padding: 0 20px;
 }
 
+/* 页面头部 */
 .page-header {
-  text-align: center;
   margin-bottom: 30px;
 }
 
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-left {
+  flex: 1;
+}
+
 .page-title {
-  font-size: 32px;
-  color: #333;
-  margin-bottom: 10px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 4px 0;
 }
 
 .page-desc {
-  color: #999;
-  margin-bottom: 20px;
+  font-size: 13px;
+  color: #909399;
+  margin: 0;
 }
 
 .publish-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   border: none;
   padding: 10px 24px;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
 }
 
+.publish-btn:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+/* 分类导航 */
 .category-nav {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   background: white;
-  padding: 15px 20px;
-  border-radius: 50px;
+  padding: 12px 20px;
+  border-radius: 12px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
   flex-wrap: wrap;
 }
 
@@ -523,23 +531,26 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
-  border-radius: 30px;
+  padding: 6px 16px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s;
-  color: #666;
+  color: #606266;
+  font-size: 13px;
+  background: #f5f7fa;
 }
 
 .category-item:hover {
-  background: #f0f0f0;
+  background: #ecf5ff;
+  color: #409EFF;
 }
 
 .category-item.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   color: white;
-  box-shadow: 0 4px 12px rgba(102,126,234,0.3);
 }
 
+/* 排序栏 */
 .sort-bar {
   display: flex;
   justify-content: space-between;
@@ -549,17 +560,19 @@ export default {
 
 .sort-left {
   display: flex;
-  gap: 20px;
+  gap: 24px;
 }
 
 .sort-item {
   cursor: pointer;
-  color: #999;
+  color: #909399;
+  font-size: 14px;
   transition: color 0.3s;
 }
 
-.sort-item:hover, .sort-item.active {
-  color: #667eea;
+.sort-item:hover,
+.sort-item.active {
+  color: #409EFF;
 }
 
 .sort-right {
@@ -567,31 +580,38 @@ export default {
   align-items: center;
 }
 
+.sort-right .el-input {
+  width: 200px;
+}
+
+/* 帖子列表 */
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .post-item {
   background: white;
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 20px;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
 }
 
 .post-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d0d0d0;
 }
 
 .post-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .user-info {
@@ -601,128 +621,144 @@ export default {
 }
 
 .user-avatar {
-  flex-shrink: 0;
+  background: #409EFF;
+  color: white;
 }
 
 .user-name {
   font-weight: 500;
-  color: #333;
+  color: #2c3e50;
+  font-size: 14px;
 }
 
 .post-time {
   font-size: 12px;
-  color: #999;
+  color: #909399;
   margin-left: 8px;
 }
 
 .post-badges {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .post-title {
-  font-size: 18px;
-  margin-bottom: 12px;
-  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #2c3e50;
 }
 
 .post-text {
-  color: #666;
+  color: #606266;
   line-height: 1.6;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
+  font-size: 14px;
 }
 
 .post-images {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 
 .post-img {
-  width: 120px;
-  height: 120px;
-  border-radius: 12px;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
   object-fit: cover;
   cursor: pointer;
   background: #f5f5f5;
+  border: 1px solid #eef2f6;
 }
 
 .more-images {
-  width: 120px;
-  height: 120px;
-  border-radius: 12px;
-  background: #f0f0f0;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  background: #f5f5f5;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: #909399;
+  font-size: 14px;
+  border: 1px solid #eef2f6;
 }
 
 .post-footer {
   display: flex;
-  gap: 30px;
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #f0f0f0;
+  gap: 24px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2f6;
 }
 
 .action-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #999;
+  color: #909399;
+  font-size: 13px;
   cursor: pointer;
   transition: color 0.3s;
 }
 
 .action-item:hover {
-  color: #667eea;
+  color: #409EFF;
 }
 
 .action-item i.liked {
-  color: #ff6b6b;
+  color: #f56c6c;
 }
 
 .action-item i.favorited {
-  color: #ff9900;
+  color: #409EFF;
 }
 
+/* 空状态 */
 .empty-state {
   text-align: center;
   padding: 60px;
   background: white;
-  border-radius: 20px;
-  color: #999;
+  border-radius: 12px;
+  color: #909399;
+  border: 1px solid #eef2f6;
 }
 
 .empty-state i {
   font-size: 64px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  color: #c0c4cc;
 }
 
+/* 分页 */
 .pagination {
   margin-top: 30px;
   display: flex;
   justify-content: center;
 }
 
+/* 对话框 */
 .post-dialog ::v-deep .el-dialog {
-  border-radius: 20px;
+  border-radius: 16px;
 }
 
 .post-dialog ::v-deep .el-dialog__header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   padding: 20px;
   margin: 0;
+  border-radius: 16px 16px 0 0;
 }
 
 .post-dialog ::v-deep .el-dialog__title {
   color: white;
+  font-weight: 500;
 }
 
 .upload-tip {
   font-size: 12px;
-  color: #999;
+  color: #909399;
   margin-top: 8px;
 }
 
@@ -734,7 +770,7 @@ export default {
   width: 100%;
   height: 100%;
   background: #f5f5f5;
-  color: #999;
+  color: #909399;
   font-size: 12px;
 }
 
@@ -743,19 +779,41 @@ export default {
   margin-bottom: 4px;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .header-left {
+    text-align: center;
+  }
+
   .category-nav {
-    flex-wrap: wrap;
-    border-radius: 20px;
+    border-radius: 8px;
+    padding: 10px 16px;
+  }
+
+  .category-item {
+    padding: 4px 12px;
+    font-size: 12px;
   }
 
   .post-img {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
+  }
+
+  .more-images {
+    width: 80px;
+    height: 80px;
+    font-size: 12px;
   }
 
   .post-footer {
-    gap: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
   }
 
   .sort-bar {
@@ -768,7 +826,28 @@ export default {
   }
 
   .sort-right .el-input {
-    flex: 1;
+    width: 100%;
   }
+
+  .empty-state {
+    padding: 40px;
+  }
+}
+
+/* 对话框关闭按钮白色 */
+.post-dialog ::v-deep .el-dialog__headerbtn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.post-dialog ::v-deep .el-dialog__headerbtn .el-dialog__close {
+  color: white !important;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.post-dialog ::v-deep .el-dialog__headerbtn .el-dialog__close:hover {
+  color: #f0f0f0 !important;
 }
 </style>

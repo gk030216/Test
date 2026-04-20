@@ -317,10 +317,11 @@ public class AIServiceImpl implements AIService {
     }
 
     @Override
-    public Map<String, Object> getFaqList(Integer page, Integer pageSize, String keyword) {
+    public Map<String, Object> getFaqList(Integer page, Integer pageSize, String keyword, String category, Integer status) {
         int offset = (page - 1) * pageSize;
-        List<Map<String, Object>> list = faqMapper.getList(offset, pageSize, keyword);
-        int total = faqMapper.countList(keyword);
+        // ✅ 传递 category 和 status 参数
+        List<Map<String, Object>> list = faqMapper.getList(offset, pageSize, keyword, category, status);
+        int total = faqMapper.countList(keyword, category, status);
 
         // 格式化日期
         List<Map<String, Object>> formattedList = new ArrayList<>();
@@ -376,6 +377,7 @@ public class AIServiceImpl implements AIService {
             formatted.put("id", item.get("id"));
             formatted.put("userId", item.get("userId"));
             formatted.put("userName", item.get("userName"));
+            formatted.put("userAvatar", item.get("userAvatar"));  // ✅ 添加这一行
             formatted.put("userQuestion", item.get("userQuestion"));
             formatted.put("answerSource", item.get("answerSource"));
             formatted.put("aiAnswer", item.get("aiAnswer"));
@@ -394,6 +396,10 @@ public class AIServiceImpl implements AIService {
         return result;
     }
 
+    @Override
+    public List<Map<String, Object>> getUserListWithHistory(String keyword) {
+        return chatHistoryMapper.getUserListWithHistory(keyword);
+    }
     @Override
     public boolean deleteChatHistory(Integer id) {
         return chatHistoryMapper.deleteById(id) > 0;
@@ -529,5 +535,19 @@ public class AIServiceImpl implements AIService {
             e.printStackTrace();
             return "";
         }
+    }
+
+    @Override
+    public String generateContent(String title, String category) {
+        String prompt = String.format(
+                "为以下标题生成简短知识内容（100-150字）：%s",
+                title
+        );
+        return callDeepSeekAPIWithPrompt(prompt);
+    }
+
+    @Override
+    public Map<String, Object> checkFaqExists(String question) {
+        return faqMapper.findByQuestion(question);
     }
 }

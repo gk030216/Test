@@ -1,5 +1,7 @@
 <template>
   <div class="my-appointments">
+    <h2 class="page-title">我的预约</h2>
+
     <!-- 标签页切换 -->
     <div class="appointment-tabs">
       <div
@@ -13,14 +15,8 @@
       </div>
     </div>
 
-    <!-- 预约列表 -->
-    <div class="appointment-list" v-loading="loading">
-      <div class="empty-state" v-if="appointmentList.length === 0">
-        <i class="el-icon-s-order"></i>
-        <p>暂无预约记录</p>
-        <el-button type="primary" size="small" @click="$router.push('/services')">去预约服务</el-button>
-      </div>
-
+    <!-- 预约网格 -->
+    <div class="appointments-grid" v-loading="loading">
       <div class="appointment-card" v-for="item in appointmentList" :key="item.id">
         <!-- 卡片头部 -->
         <div class="card-header">
@@ -40,116 +36,114 @@
 
         <!-- 卡片内容 -->
         <div class="card-body">
-          <div class="service-info">
-            <div class="service-image-wrapper">
-              <el-image
-                  v-if="item.serviceImage"
-                  :src="item.serviceImage"
-                  fit="cover"
-                  class="service-image"
-              >
-                <div slot="error" class="image-slot">
-                  <i class="el-icon-picture-outline"></i>
-                </div>
-              </el-image>
-              <div v-else class="service-image-placeholder">
-                <i class="el-icon-service"></i>
-              </div>
-            </div>
-            <div class="service-detail">
-              <h4>{{ item.serviceName }}</h4>
-              <div class="service-meta">
-                <span><i class="el-icon-s-custom"></i> {{ item.petName || '未指定' }}</span>
-                <span class="price"><i class="el-icon-money"></i> ¥{{ item.servicePrice }}</span>
-              </div>
+          <div class="service-image">
+            <img v-if="item.serviceImage" :src="item.serviceImage" :alt="item.serviceName">
+            <div v-else class="image-placeholder">
+              <i class="el-icon-service"></i>
             </div>
           </div>
-
-          <div class="appointment-detail">
-            <div class="detail-item highlight">
+          <div class="service-info">
+            <h4 class="service-name">{{ item.serviceName }}</h4>
+            <div class="service-meta">
+              <span><i class="el-icon-s-custom"></i> {{ item.petName || '未指定' }}</span>
+              <span class="price"><i class="el-icon-money"></i> ¥{{ item.servicePrice }}</span>
+            </div>
+            <div class="appointment-time-info">
               <i class="el-icon-date"></i>
               <span>{{ formatDate(item.appointmentDate) }} {{ item.appointmentTime }}</span>
             </div>
-            <div class="detail-item" v-if="item.staffName">
+            <div class="staff-info" v-if="item.staffName">
               <i class="el-icon-user"></i>
               <span>{{ item.staffName }}</span>
             </div>
-            <div class="detail-item" v-if="item.remark">
+            <div class="remark-info" v-if="item.remark">
               <i class="el-icon-edit"></i>
-              <span class="remark-text">{{ item.remark }}</span>
+              <span>{{ item.remark }}</span>
             </div>
-            <div class="detail-item cancel-reason" v-if="item.cancelReason">
+            <div class="cancel-reason" v-if="item.status === 4 && item.cancelReason">
               <i class="el-icon-info"></i>
-              <span>{{ item.cancelReason }}</span>
+              <span>取消原因：{{ item.cancelReason }}</span>
+            </div>
+            <div class="cancel-reason" v-if="item.status === 5 && item.cancelReason">
+              <i class="el-icon-info"></i>
+              <span>拒绝原因：{{ item.cancelReason }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 卡片底部 -->
+        <!-- 卡片底部按钮 -->
         <div class="card-footer">
-          <div class="footer-left">
-            <span class="create-date">{{ formatDate(item.createTime) }}</span>
-          </div>
-          <div class="footer-right">
-            <el-button
-                v-if="item.status === 0"
-                type="danger"
-                size="small"
-                plain
-                @click="cancelAppointment(item)"
-                class="action-btn cancel-btn"
-            >
-              <i class="el-icon-close"></i> 取消预约
-            </el-button>
-
-            <!-- 已完成且未评价 -->
-            <el-button
-                v-if="item.status === 3 && !item.comment"
-                type="warning"
-                size="small"
-                @click="openCommentDialog(item)"
-                class="action-btn comment-btn"
-            >
-              <i class="el-icon-edit"></i> 评价服务
-            </el-button>
-
-            <!-- 已评价 - 显示查看评价按钮 -->
-            <el-button
-                v-if="item.status === 3 && item.comment"
-                type="info"
-                size="small"
-                plain
-                @click="viewComment(item)"
-                class="action-btn view-comment-btn"
-            >
-              <i class="el-icon-view"></i> 查看评价
-            </el-button>
-
-            <el-button
-                type="primary"
-                size="small"
-                plain
-                @click="viewDetail(item)"
-                class="action-btn view-btn"
-            >
-              <i class="el-icon-document"></i> 查看详情
-            </el-button>
-          </div>
+          <el-button
+              v-if="item.status === 0 && item.payStatus !== 1"
+              size="small"
+              type="danger"
+              plain
+              @click="cancelAppointment(item)"
+          >
+            <i class="el-icon-close"></i> 取消预约
+          </el-button>
+          <el-button
+              v-if="item.status === 0 && item.payStatus === 1"
+              size="small"
+              type="danger"
+              plain
+              @click="cancelAppointment(item)"
+          >
+            <i class="el-icon-close"></i> 申请退款
+          </el-button>
+          <el-button
+              v-if="item.status === 1 && item.payStatus === 1"
+              size="small"
+              type="danger"
+              plain
+              @click="cancelAppointment(item)"
+          >
+            <i class="el-icon-close"></i> 申请退款
+          </el-button>
+          <el-button
+              v-if="item.status === 3 && !item.comment"
+              size="small"
+              type="warning"
+              plain
+              @click="openCommentDialog(item)"
+          >
+            <i class="el-icon-edit"></i> 评价服务
+          </el-button>
+          <el-button
+              v-if="item.status === 3 && item.comment"
+              size="small"
+              type="info"
+              plain
+              @click="viewServiceComment(item)"
+          >
+            <i class="el-icon-view"></i> 查看评价
+          </el-button>
+          <el-button
+              size="small"
+              plain
+              @click="viewDetail(item)"
+          >
+            <i class="el-icon-document"></i> 查看详情
+          </el-button>
         </div>
       </div>
-    </div>
 
-    <!-- 分页 -->
-    <div class="pagination" v-if="total > pageSize">
-      <el-pagination
-          @current-change="handlePageChange"
-          :current-page="page"
-          :page-size="pageSize"
-          layout="prev, pager, next"
-          :total="total"
-          background
-      >
-      </el-pagination>
+      <div class="empty-state" v-if="!loading && appointmentList.length === 0">
+        <i class="el-icon-s-order"></i>
+        <p>暂无预约记录</p>
+        <el-button type="primary" size="small" @click="$router.push('/services')">去预约服务</el-button>
+      </div>
+
+      <div class="pagination" v-if="total > pageSize">
+        <el-pagination
+            @current-change="handlePageChange"
+            :current-page="page"
+            :page-size="pageSize"
+            layout="prev, pager, next"
+            :total="total"
+            background
+        />
+      </div>
     </div>
 
     <!-- 评价对话框 -->
@@ -164,50 +158,21 @@
       <div class="comment-dialog-content">
         <div class="comment-service" v-if="currentAppointment">
           <div class="service-image-wrapper">
-            <el-image
-                v-if="currentAppointment.serviceImage"
-                :src="currentAppointment.serviceImage"
-                fit="cover"
-                class="service-image"
-            >
-              <div slot="error" class="image-slot">
-                <i class="el-icon-picture-outline"></i>
-              </div>
-            </el-image>
-            <div v-else class="service-image-placeholder">
-              <i class="el-icon-service"></i>
-            </div>
+            <img v-if="currentAppointment.serviceImage" :src="currentAppointment.serviceImage" class="service-img">
+            <div v-else class="image-placeholder"><i class="el-icon-service"></i></div>
           </div>
           <div class="service-info">
             <h4>{{ currentAppointment.serviceName }}</h4>
-            <div class="service-meta">
-              <span><i class="el-icon-s-custom"></i> {{ currentAppointment.petName }}</span>
-              <span class="price"><i class="el-icon-money"></i> ¥{{ currentAppointment.servicePrice }}</span>
-            </div>
+            <div class="service-meta"><span><i class="el-icon-s-custom"></i> {{ currentAppointment.petName }}</span><span class="price">¥{{ currentAppointment.servicePrice }}</span></div>
           </div>
         </div>
 
         <el-form :model="commentForm" :rules="commentRules" ref="commentForm" label-width="80px">
           <el-form-item label="评分" prop="rating">
-            <div class="rating-wrapper">
-              <el-rate
-                  v-model="commentForm.rating"
-                  :texts="['很差', '较差', '一般', '推荐', '超赞']"
-                  show-text
-                  :colors="['#f56c6c', '#e6a23c', '#67c23a']"
-              ></el-rate>
-            </div>
+            <div class="rating-wrapper"><el-rate v-model="commentForm.rating" :texts="['很差', '较差', '一般', '推荐', '超赞']" show-text :colors="['#f56c6c', '#e6a23c', '#67c23a']" /></div>
           </el-form-item>
-
           <el-form-item label="评价内容" prop="content">
-            <el-input
-                type="textarea"
-                v-model="commentForm.content"
-                rows="4"
-                placeholder="说说你的服务体验..."
-                maxlength="500"
-                show-word-limit
-            ></el-input>
+            <el-input type="textarea" v-model="commentForm.content" rows="4" placeholder="说说你的服务体验..." maxlength="500" show-word-limit />
           </el-form-item>
         </el-form>
       </div>
@@ -220,37 +185,35 @@
       </span>
     </el-dialog>
 
-    <!-- 查看评价对话框 -->
+    <!-- 服务预约查看评价对话框 - 与 Orders.vue 完全一致 -->
     <el-dialog
         title="我的评价"
-        :visible.sync="viewCommentDialogVisible"
-        width="450px"
+        :visible.sync="viewServiceCommentVisible"
+        width="500px"
         center
         class="view-comment-dialog"
     >
-      <div class="view-comment-content" v-if="currentAppointment && currentAppointment.comment">
-        <div class="comment-rating">
-          <el-rate
-              v-model="currentAppointment.comment.rating"
-              disabled
-              show-score
-              text-color="#ff9900"
-          ></el-rate>
-        </div>
-        <div class="comment-text">{{ currentAppointment.comment.content }}</div>
-        <div class="comment-time">{{ formatDateTime(currentAppointment.comment.createTime) }}</div>
-        <div class="comment-reply" v-if="currentAppointment.comment.reply">
-          <div class="reply-header">
-            <i class="el-icon-chat-dot-round"></i>
-            <span>商家回复</span>
+      <div class="view-comment-content" v-if="viewServiceCommentData">
+        <div class="view-product">
+          <img v-if="viewServiceCommentData.serviceImage" :src="viewServiceCommentData.serviceImage" :alt="viewServiceCommentData.serviceName">
+          <div v-else class="image-placeholder"><i class="el-icon-service"></i></div>
+          <div class="product-info">
+            <h4>{{ viewServiceCommentData.serviceName }}</h4>
+            <div class="product-price">¥{{ viewServiceCommentData.servicePrice }}</div>
           </div>
-          <div class="reply-content">{{ currentAppointment.comment.reply }}</div>
-          <div class="reply-time">{{ formatDateTime(currentAppointment.comment.replyTime) }}</div>
+        </div>
+        <div class="view-comment">
+          <div class="comment-rating"><el-rate v-model="viewServiceCommentData.rating" disabled show-score text-color="#ff9900" /></div>
+          <div class="comment-text">{{ viewServiceCommentData.content }}</div>
+          <div class="comment-time">{{ formatDate(viewServiceCommentData.createTime) }}</div>
+          <div class="comment-reply" v-if="viewServiceCommentData.reply">
+            <div class="reply-header"><i class="el-icon-chat-dot-round"></i><span>商家回复</span></div>
+            <div class="reply-content">{{ viewServiceCommentData.reply }}</div>
+            <div class="reply-time">{{ formatDate(viewServiceCommentData.replyTime) }}</div>
+          </div>
         </div>
       </div>
-      <span slot="footer">
-        <el-button type="primary" @click="viewCommentDialogVisible = false">关闭</el-button>
-      </span>
+      <span slot="footer"><el-button type="primary" @click="viewServiceCommentVisible = false">关闭</el-button></span>
     </el-dialog>
 
     <!-- 取消预约对话框 -->
@@ -264,10 +227,10 @@
       <el-form :model="cancelForm" label-width="80px">
         <el-form-item label="取消原因">
           <el-select v-model="cancelForm.reason" placeholder="请选择取消原因" style="width: 100%">
-            <el-option label="时间冲突，改天再约" value="时间冲突，改天再约"></el-option>
-            <el-option label="宠物身体不适" value="宠物身体不适"></el-option>
-            <el-option label="已经找到其他服务" value="已经找到其他服务"></el-option>
-            <el-option label="其他原因" value="其他原因"></el-option>
+            <el-option label="时间冲突，改天再约" value="时间冲突，改天再约" />
+            <el-option label="宠物身体不适" value="宠物身体不适" />
+            <el-option label="已经找到其他服务" value="已经找到其他服务" />
+            <el-option label="其他原因" value="其他原因" />
           </el-select>
         </el-form-item>
         <el-form-item label="详细说明" v-if="cancelForm.reason === '其他原因'">
@@ -278,7 +241,7 @@
               placeholder="请输入取消原因"
               maxlength="200"
               show-word-limit
-          ></el-input>
+          />
         </el-form-item>
       </el-form>
       <span slot="footer">
@@ -341,7 +304,7 @@ export default {
       appointmentList: [],
       total: 0,
       page: 1,
-      pageSize: 10,
+      pageSize: 12,
       activeTab: '',
       tabs: [
         { value: '', label: '全部' },
@@ -349,13 +312,15 @@ export default {
         { value: 1, label: '已确认' },
         { value: 2, label: '服务中' },
         { value: 3, label: '已完成' },
-        { value: 4, label: '已取消' }
+        { value: 4, label: '已取消' },
+        { value: 5, label: '已拒绝' }
       ],
       cancelDialogVisible: false,
       detailDialogVisible: false,
       commentDialogVisible: false,
-      viewCommentDialogVisible: false,
+      viewServiceCommentVisible: false,
       currentAppointment: null,
+      viewServiceCommentData: null,
       cancelForm: {
         reason: '',
         customReason: ''
@@ -383,10 +348,11 @@ export default {
     async loadAppointments() {
       this.loading = true;
       try {
+        const statusParam = this.activeTab !== '' ? this.activeTab : undefined;
         const res = await getUserAppointments({
           page: this.page,
           pageSize: this.pageSize,
-          status: this.activeTab !== '' ? this.activeTab : undefined
+          status: statusParam
         });
         if (res.code === 200) {
           this.appointmentList = res.data.list || [];
@@ -495,15 +461,17 @@ export default {
     },
 
     async confirmCancel() {
-      let reason = this.cancelForm.reason;
-      if (reason === '其他原因') {
+      let reason = '';
+
+      if (this.cancelForm.reason === '其他原因') {
         reason = this.cancelForm.customReason;
-        if (!reason) {
+        if (!reason || reason.trim() === '') {
           this.$message.warning('请输入取消原因');
           return;
         }
-      }
-      if (!reason) {
+      } else if (this.cancelForm.reason) {
+        reason = this.cancelForm.reason;
+      } else {
         this.$message.warning('请选择取消原因');
         return;
       }
@@ -544,9 +512,14 @@ export default {
       });
     },
 
-    viewComment(item) {
-      this.currentAppointment = item;
-      this.viewCommentDialogVisible = true;
+    viewServiceComment(appointment) {
+      this.viewServiceCommentData = appointment.comment;
+      if (this.viewServiceCommentData) {
+        this.viewServiceCommentData.serviceImage = appointment.serviceImage;
+        this.viewServiceCommentData.serviceName = appointment.serviceName;
+        this.viewServiceCommentData.servicePrice = appointment.servicePrice;
+      }
+      this.viewServiceCommentVisible = true;
     },
 
     async submitComment() {
@@ -565,11 +538,6 @@ export default {
           if (res.code === 200) {
             this.$message.success('感谢你的评价！');
             this.commentDialogVisible = false;
-            this.currentAppointment.comment = {
-              rating: this.commentForm.rating,
-              content: this.commentForm.content,
-              createTime: new Date()
-            };
             await this.loadAppointments();
           } else {
             this.$message.error(res.message || '评价失败');
@@ -593,13 +561,20 @@ export default {
   min-height: 400px;
 }
 
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
 .appointment-tabs {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 24px;
   flex-wrap: wrap;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .tab-item {
@@ -607,19 +582,21 @@ export default {
   border-radius: 30px;
   cursor: pointer;
   transition: all 0.3s;
-  color: #666;
   font-size: 14px;
-  background: #f5f5f5;
   font-weight: 500;
+  color: #666;
+  background: #fff;
+  border: 1px solid #e0e0e0;
 }
 
 .tab-item:hover {
-  background: #e8e8e8;
+  border-color: #667eea;
   color: #667eea;
 }
 
 .tab-item.active {
   background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: transparent;
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
@@ -632,57 +609,75 @@ export default {
   border-radius: 20px;
 }
 
+.appointments-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
 .appointment-card {
   background: #fff;
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 20px;
-  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
   transition: all 0.3s;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
 }
 
 .appointment-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: #e0e0e0;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  padding: 12px 16px;
+  background: #fafbfc;
   border-bottom: 1px solid #f0f0f0;
+  flex-wrap: nowrap;
 }
 
 .appointment-info {
   display: flex;
-  gap: 20px;
-  color: #666;
-  font-size: 13px;
-}
-
-.appointment-info i {
-  margin-right: 6px;
-  color: #667eea;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .appointment-no {
   font-weight: 600;
   color: #2c3e50;
+  font-size: 12px;
+}
+
+.appointment-no i {
+  margin-right: 4px;
+  color: #667eea;
+}
+
+.appointment-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.appointment-time i {
+  margin-right: 4px;
 }
 
 .appointment-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  font-size: 14px;
-  padding: 4px 12px;
+  gap: 4px;
+  font-weight: 500;
+  font-size: 11px;
+  padding: 4px 10px;
   border-radius: 20px;
-  background: #f5f5f5;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-pending { color: #e6a23c; background: #fdf6ec; }
@@ -693,276 +688,165 @@ export default {
 
 .card-body {
   display: flex;
-  gap: 30px;
-  flex-wrap: wrap;
-}
-
-.service-info {
-  display: flex;
+  padding: 16px;
   gap: 16px;
-  flex: 2;
-  min-width: 280px;
-}
-
-.service-image-wrapper {
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
+  flex: 1;
 }
 
 .service-image {
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
   background: #f5f5f5;
 }
 
-.service-image-placeholder {
+.service-image img {
   width: 100%;
   height: 100%;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+  object-fit: cover;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  font-size: 28px;
+  background: linear-gradient(135deg, #f5f7fa, #e8eaef);
+  color: #bbb;
+  font-size: 32px;
 }
 
-.image-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  color: #999;
-  font-size: 28px;
+.service-info {
+  flex: 1;
 }
 
-.service-detail h4 {
-  font-size: 16px;
+.service-name {
+  font-size: 15px;
   font-weight: 600;
-  margin-bottom: 10px;
   color: #2c3e50;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .service-meta {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  font-size: 12px;
   color: #666;
-  font-size: 13px;
+  margin-bottom: 8px;
 }
 
 .service-meta i {
-  margin-right: 6px;
+  margin-right: 4px;
   color: #667eea;
-  width: 18px;
 }
 
 .service-meta .price {
   color: #ff6b6b;
-  font-weight: 600;
-}
-
-.appointment-detail {
-  flex: 3;
-  min-width: 280px;
-}
-
-.detail-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  color: #666;
-  font-size: 13px;
-}
-
-.detail-item i {
-  width: 20px;
-  color: #667eea;
-}
-
-.detail-item.highlight {
-  color: #2c3e50;
   font-weight: 500;
 }
 
-.detail-item.highlight i {
-  color: #409EFF;
+.appointment-time-info,
+.staff-info,
+.remark-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 4px;
 }
 
-.detail-item .remark-text {
-  color: #909399;
-  font-style: italic;
+.appointment-time-info i,
+.staff-info i,
+.remark-info i {
+  color: #667eea;
 }
 
-.detail-item.cancel-reason {
+.cancel-reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
   color: #f56c6c;
 }
 
-.detail-item.cancel-reason i {
+.cancel-reason i {
   color: #f56c6c;
 }
 
 .card-footer {
-  margin-top: 20px;
-  padding-top: 16px;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
   border-top: 1px solid #f0f0f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.footer-left .create-date {
+.card-footer .el-button {
+  flex: 1;
+  padding: 6px 0;
   font-size: 12px;
-  color: #999;
-}
-
-.footer-right {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.action-btn {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.action-btn i {
-  margin-right: 4px;
-  font-size: 13px;
-}
-
-.view-btn {
-  color: #409EFF;
-  border-color: #d9ecff;
-  background: #ecf5ff;
-}
-
-.view-btn:hover {
-  color: white;
-  background: #409EFF;
-  border-color: #409EFF;
-}
-
-.cancel-btn {
-  color: #f56c6c;
-  border-color: #fde2e2;
-  background: #fef0f0;
-}
-
-.cancel-btn:hover {
-  color: white;
-  background: #f56c6c;
-  border-color: #f56c6c;
-}
-
-.comment-btn {
-  color: #e6a23c;
-  border-color: #faecd8;
-  background: #fdf6ec;
-}
-
-.comment-btn:hover {
-  color: white;
-  background: #e6a23c;
-  border-color: #e6a23c;
-}
-
-.view-comment-btn {
-  color: #67c23a;
-  border-color: #e1f3d8;
-  background: #f0f9f4;
-}
-
-.view-comment-btn:hover {
-  color: white;
-  background: #67c23a;
-  border-color: #67c23a;
 }
 
 .empty-state {
+  grid-column: 1 / -1;
   text-align: center;
-  padding: 80px 20px;
+  padding: 60px;
   background: #fff;
-  border-radius: 20px;
+  border-radius: 12px;
   color: #999;
 }
 
 .empty-state i {
   font-size: 64px;
-  margin-bottom: 20px;
-  color: #dcdfe6;
-}
-
-.empty-state p {
-  margin-bottom: 20px;
-  font-size: 16px;
+  margin-bottom: 16px;
+  color: #ddd;
 }
 
 .pagination {
-  margin-top: 30px;
+  grid-column: 1 / -1;
   display: flex;
   justify-content: center;
+  margin-top: 20px;
 }
 
-.detail-content {
-  padding: 10px;
-}
-
-.detail-price {
-  color: #ff6b6b;
-  font-weight: 600;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-badge.status-pending { background: #fdf6ec; color: #e6a23c; }
-.status-badge.status-confirmed { background: #ecf5ff; color: #409EFF; }
-.status-badge.status-servicing { background: #f0f9f4; color: #67c23a; }
-.status-badge.status-completed { background: #f4f4f5; color: #909399; }
-.status-badge.status-cancelled,
-.status-badge.status-rejected { background: #fef0f0; color: #f56c6c; }
-
-.cancel-reason-text {
-  color: #f56c6c;
-}
-
-/* 评价对话框 */
+/* 对话框样式 */
 .comment-dialog ::v-deep .el-dialog,
-.view-comment-dialog ::v-deep .el-dialog {
+.view-comment-dialog ::v-deep .el-dialog,
+.cancel-dialog ::v-deep .el-dialog,
+.detail-dialog ::v-deep .el-dialog {
   border-radius: 20px;
   overflow: hidden;
 }
 
 .comment-dialog ::v-deep .el-dialog__header,
-.view-comment-dialog ::v-deep .el-dialog__header {
+.view-comment-dialog ::v-deep .el-dialog__header,
+.cancel-dialog ::v-deep .el-dialog__header,
+.detail-dialog ::v-deep .el-dialog__header {
   background: linear-gradient(135deg, #667eea, #764ba2);
   padding: 20px 24px;
   margin: 0;
 }
 
 .comment-dialog ::v-deep .el-dialog__title,
-.view-comment-dialog ::v-deep .el-dialog__title {
+.view-comment-dialog ::v-deep .el-dialog__title,
+.cancel-dialog ::v-deep .el-dialog__title,
+.detail-dialog ::v-deep .el-dialog__title {
   color: white;
   font-weight: 600;
   font-size: 18px;
 }
 
 .comment-dialog ::v-deep .el-dialog__close,
-.view-comment-dialog ::v-deep .el-dialog__close {
+.view-comment-dialog ::v-deep .el-dialog__close,
+.cancel-dialog ::v-deep .el-dialog__close,
+.detail-dialog ::v-deep .el-dialog__close {
   color: white;
 }
 
@@ -982,16 +866,16 @@ export default {
 .comment-service .service-image-wrapper {
   width: 70px;
   height: 70px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f5f5;
 }
 
 .comment-service .service-info h4 {
   font-size: 15px;
   margin-bottom: 6px;
   color: #2c3e50;
-}
-
-.comment-service .service-meta {
-  gap: 4px;
 }
 
 .rating-wrapper {
@@ -1003,132 +887,83 @@ export default {
   padding-top: 10px;
 }
 
-.view-comment-content {
-  padding: 10px 0;
+.detail-content {
+  padding: 10px;
 }
 
-.view-comment-content .comment-rating {
-  margin-bottom: 16px;
+.detail-price {
+  color: #ff6b6b;
+  font-weight: 600;
 }
 
-.view-comment-content .comment-text {
-  color: #5a6874;
-  line-height: 1.6;
-  font-size: 14px;
-  padding: 12px;
-  background: #f8f9fc;
-  border-radius: 12px;
-  margin-bottom: 12px;
-}
-
-.view-comment-content .comment-time {
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
   font-size: 12px;
-  color: #999;
-  text-align: right;
-  margin-bottom: 16px;
+  font-weight: 500;
 }
 
-.view-comment-content .comment-reply {
-  background: #f0f9f4;
+.cancel-reason-text {
+  color: #f56c6c;
+}
+
+/* 查看评价对话框 - 限制服务图片大小 */
+.view-comment-dialog ::v-deep .view-product img {
+  width: 70px !important;
+  height: 70px !important;
+  min-width: 70px;
+  max-width: 70px;
+  min-height: 70px;
+  max-height: 70px;
   border-radius: 12px;
-  padding: 12px 16px;
-  border-left: 3px solid #67c23a;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
-.view-comment-content .reply-header {
+.view-comment-dialog ::v-deep .view-product .image-placeholder {
+  width: 70px;
+  height: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  min-height: 70px;
+  max-height: 70px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  color: #67c23a;
-  margin-bottom: 8px;
-  font-size: 13px;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa, #e8eaef);
+  color: #bbb;
+  font-size: 32px;
+  flex-shrink: 0;
 }
 
-.view-comment-content .reply-content {
-  color: #5a6874;
-  line-height: 1.5;
-  margin-bottom: 6px;
-  font-size: 13px;
+@media (max-width: 900px) {
+  .appointments-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-.view-comment-content .reply-time {
-  font-size: 11px;
-  color: #999;
-  text-align: right;
-}
-
-/* 对话框样式 */
-.cancel-dialog ::v-deep .el-dialog,
-.detail-dialog ::v-deep .el-dialog {
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.cancel-dialog ::v-deep .el-dialog__header,
-.detail-dialog ::v-deep .el-dialog__header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  padding: 20px 24px;
-  margin: 0;
-}
-
-.cancel-dialog ::v-deep .el-dialog__title,
-.detail-dialog ::v-deep .el-dialog__title {
-  color: white;
-  font-weight: 600;
-  font-size: 18px;
-}
-
-.cancel-dialog ::v-deep .el-dialog__close,
-.detail-dialog ::v-deep .el-dialog__close {
-  color: white;
-}
-
-/* 响应式 */
-@media (max-width: 768px) {
-  .appointment-card {
-    padding: 16px;
+@media (max-width: 600px) {
+  .appointments-grid {
+    grid-template-columns: 1fr;
   }
 
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .appointment-info {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .card-footer {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-
-  .footer-right {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .service-info {
+  .card-body {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
 
   .service-meta {
-    align-items: center;
+    justify-content: center;
   }
 
-  .comment-service {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .comment-service .service-image-wrapper {
-    margin: 0 auto;
+  .appointment-time-info,
+  .staff-info,
+  .remark-info,
+  .cancel-reason {
+    justify-content: center;
   }
 }
 </style>

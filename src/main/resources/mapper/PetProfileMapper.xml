@@ -51,7 +51,10 @@
         SELECT <include refid="Base_Column_List"/>
         FROM pet_profile p
         LEFT JOIN user u ON p.user_id = u.id
-        WHERE p.id = #{id} AND p.user_id = #{userId} AND p.status = 1
+        WHERE p.id = #{id} AND p.status = 1
+        <if test="userId != null">
+            AND p.user_id = #{userId}
+        </if>
     </select>
 
     <!-- 插入 -->
@@ -180,6 +183,16 @@
     <!-- 根据宠物ID获取宠物名称 -->
     <select id="getPetNameById" resultType="String">
         SELECT name FROM pet_profile WHERE id = #{id} AND status = 1
+    </select>
+
+    <!-- 按性别统计宠物数量 -->
+    <select id="countByGender" resultType="java.util.HashMap">
+        SELECT
+            SUM(CASE WHEN gender = 1 THEN 1 ELSE 0 END) as male,
+            SUM(CASE WHEN gender = 2 THEN 1 ELSE 0 END) as female,
+            SUM(CASE WHEN gender = 0 OR gender IS NULL THEN 1 ELSE 0 END) as unknown
+        FROM pet_profile
+        WHERE status = 1
     </select>
 
 </mapper>

@@ -3,8 +3,13 @@ package com.pet.controller;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.pet.config.AlipayConfig;
+import com.pet.entity.Appointment;
+import com.pet.entity.User;
 import com.pet.mapper.AppointmentMapper;
+import com.pet.mapper.UserMapper;
 import com.pet.service.OrderService;
+import com.pet.service.NotificationService;  // ✅ 新增
+import com.pet.util.EmailUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +32,15 @@ public class AlipayNotifyController {
 
     @Autowired
     private AppointmentMapper appointmentMapper;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private EmailUtil emailUtil;
+
+    @Autowired
+    private NotificationService notificationService;  // ✅ 新增
 
     @PostMapping("/notify")
     public String notify(HttpServletRequest request) {
@@ -64,14 +78,49 @@ public class AlipayNotifyController {
                 if ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus)) {
                     boolean result;
 
-                    // 根据订单号前缀判断类型
                     if (outTradeNo.startsWith("AP")) {
-                        // 服务预约：更新预约支付状态
+                        // 1. 更新预约支付状态
                         int updateResult = appointmentMapper.updatePayStatus(outTradeNo, 1, tradeNo, new Date());
                         result = updateResult > 0;
+
+                        // 2. 支付成功后发送通知
+                        if (result) {
+                            Appointment appointment = appointmentMapper.getByAppointmentNo(outTradeNo);
+                            if (appointment != null) {
+                                // 获取用户信息
+                                User user = userMapper.findById(appointment.getUserId());
+
+                                // ✅ 发送邮件通知
+                                if (user != null && user.getEmail() != null && !user.getEmail().isEmpty()) {
+                                    emailUtil.sendAppointmentPaymentSuccess(
+                                            user.getEmail(),
+                                            user.getNickname() != null ? user.getNickname() : user.getUsername(),
+                                            appointment.getServiceName(),
+                                            appointment.getAppointmentDate(),
+                                            appointment.getAppointmentTime(),
+                                            appointment.getPetName(),
+                                            appointment.getAppointmentNo()
+                                    );
+                                    System.out.println("✅ 支付成功邮件已发送至: " + user.getEmail());
+                                }
+
+                                // ✅ 发送站内消息通知
+                                if (user != null) {
+                                    notificationService.sendNotification(
+                                            appointment.getUserId(),
+                                            "appointment",
+                                            "预约支付成功",
+                                            "您的服务【" + appointment.getServiceName() + "】已支付成功，请等待商家确认。",
+                                            "/personal/appointments"
+                                    );
+                                    System.out.println("✅ 站内消息已发送至用户: " + appointment.getUserId());
+                                }
+                            }
+                        }
+
                         System.out.println("预约支付回调处理结果: " + (result ? "成功" : "失败"));
                     } else {
-                        // 商品订单：调用订单服务处理
+                        // 商品订单
                         result = orderService.handlePayCallback(outTradeNo, tradeNo);
                         System.out.println("商品订单支付回调处理结果: " + (result ? "成功" : "失败"));
                     }

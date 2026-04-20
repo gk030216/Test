@@ -31,8 +31,18 @@
             <i class="el-icon-user"></i>
             <span slot="title">用户管理</span>
           </template>
-          <el-menu-item index="user-list">用户列表</el-menu-item>
-          <el-menu-item index="staff-list">员工列表</el-menu-item>
+          <el-menu-item index="user-list">
+            <i class="el-icon-user-solid"></i>
+            <span slot="title">用户列表</span>
+          </el-menu-item>
+          <el-menu-item index="staff-list">
+            <i class="el-icon-s-custom"></i>
+            <span slot="title">员工列表</span>
+          </el-menu-item>
+          <el-menu-item index="user-analysis">
+            <i class="el-icon-data-line"></i>
+            <span>用户分析</span>
+          </el-menu-item>
         </el-submenu>
 
         <el-submenu index="service">
@@ -40,12 +50,27 @@
             <i class="el-icon-s-order"></i>
             <span slot="title">服务管理</span>
           </template>
-          <el-menu-item index="service-category">服务分类</el-menu-item>
-          <el-menu-item index="service-list">服务列表</el-menu-item>
-          <el-menu-item index="appointment-list">预约管理</el-menu-item>
-          <el-menu-item index="service-comment-list">服务评价</el-menu-item>
+          <el-menu-item index="service-category">
+            <i class="el-icon-folder"></i>
+            <span slot="title">服务分类</span>
+          </el-menu-item>
+          <el-menu-item index="service-list">
+            <i class="el-icon-service"></i>
+            <span slot="title">服务列表</span>
+          </el-menu-item>
+          <el-menu-item index="appointment-list">
+            <i class="el-icon-time"></i>
+            <span slot="title">预约管理</span>
+          </el-menu-item>
+          <el-menu-item index="service-comment-list">
+            <i class="el-icon-star-on"></i>
+            <span slot="title">服务评价</span>
+          </el-menu-item>
+          <el-menu-item index="service-analysis">
+            <i class="el-icon-service"></i>
+            <span>服务数据分析</span>
+          </el-menu-item>
         </el-submenu>
-
         <el-submenu index="pet">
           <template slot="title">
             <i class="el-icon-s-custom"></i>
@@ -55,9 +80,13 @@
             <i class="el-icon-menu"></i>
             <span slot="title">宠物列表</span>
           </el-menu-item>
-          <el-menu-item index="pet-health">
+          <el-menu-item index="health-record">
+            <i class="el-icon-document"></i>
+            <span slot="title">体检记录</span>
+          </el-menu-item>
+          <el-menu-item index="vaccine-record">
             <i class="el-icon-first-aid-kit"></i>
-            <span slot="title">健康记录</span>
+            <span slot="title">疫苗记录</span>
           </el-menu-item>
           <el-menu-item index="pet-statistics">
             <i class="el-icon-data-line"></i>
@@ -84,7 +113,7 @@
           </el-menu-item>
           <el-menu-item index="comment-list">
             <i class="el-icon-chat-dot-round"></i>
-            <span slot="title">评价管理</span>
+            <span slot="title">商品评价</span>
           </el-menu-item>
           <el-menu-item index="data-analysis">
             <i class="el-icon-data-line"></i>
@@ -107,6 +136,21 @@
           </el-menu-item>
         </el-submenu>
 
+        <el-submenu index="inventory">
+          <template slot="title">
+            <i class="el-icon-shopping-cart-2"></i>
+            <span slot="title">库存管理</span>
+          </template>
+          <el-menu-item index="vaccine-stock">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">疫苗库存</span>
+          </el-menu-item>
+          <el-menu-item index="product-stock">
+            <i class="el-icon-goods"></i>
+            <span slot="title">商品库存</span>
+          </el-menu-item>
+        </el-submenu>
+
         <el-menu-item index="carousel">
           <i class="el-icon-picture"></i>
           <span slot="title">轮播图管理</span>
@@ -117,13 +161,17 @@
             <i class="el-icon-cpu"></i>
             <span slot="title">AI咨询管理</span>
           </template>
+          <el-menu-item index="faq-list">
+            <i class="el-icon-question"></i>
+            <span slot="title">常见问题管理</span>
+          </el-menu-item>
           <el-menu-item index="knowledge-list">
             <i class="el-icon-document"></i>
             <span slot="title">知识库管理</span>
           </el-menu-item>
-          <el-menu-item index="faq-list">
-            <i class="el-icon-question"></i>
-            <span slot="title">常见问题管理</span>
+          <el-menu-item index="user-chat-history">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>对话历史</span>
           </el-menu-item>
           <el-menu-item index="chat-history">
             <i class="el-icon-chat-dot-round"></i>
@@ -131,7 +179,7 @@
           </el-menu-item>
         </el-submenu>
 
-        <el-menu-item index="feedback-manage">
+        <el-menu-item index="feedback">
           <i class="el-icon-warning"></i>
           <span slot="title">异常反馈</span>
         </el-menu-item>
@@ -139,6 +187,11 @@
         <el-menu-item index="settings">
           <i class="el-icon-setting"></i>
           <span slot="title">系统设置</span>
+        </el-menu-item>
+
+        <el-menu-item index="profile">
+          <i class="el-icon-user"></i>
+          <span>个人资料</span>
         </el-menu-item>
       </el-menu>
     </aside>

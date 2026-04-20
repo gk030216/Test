@@ -137,7 +137,7 @@ export function getRecommendProducts(productId, limit = 8) {
 // 获取商品收藏列表
 export function getProductFavorites(params) {
     return request({
-        url: '/product/favorites',
+        url: '/product/favorites/detail',  // 确保这个接口地址正确
         method: 'get',
         params
     });
@@ -148,5 +148,31 @@ export function removeProductFavorite(productId) {
     return request({
         url: `/product/favorite/${productId}`,
         method: 'delete'
+    });
+}
+
+// 导出商品列表
+export function exportProductList(params) {
+    return request({
+        url: '/admin/product/export',
+        method: 'get',
+        params,
+        responseType: 'blob'  // 重要：处理文件下载
+    });
+}
+// 获取商品统计数据
+export function getProductStatistics() {
+    return request({
+        url: '/admin/product/statistics',
+        method: 'get'
+    });
+}
+
+// 获取热销商品
+export function getAdminHotProducts(limit = 8) {
+    return request({
+        url: '/admin/product/hot',
+        method: 'get',
+        params: { limit }
     });
 }

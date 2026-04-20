@@ -4,6 +4,7 @@ import com.pet.entity.Product;
 import com.pet.entity.ProductComment;
 import com.pet.mapper.ProductCommentMapper;
 import com.pet.mapper.ProductMapper;
+import com.pet.service.NotificationService;
 import com.pet.service.ProductCommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,9 @@ public class ProductCommentServiceImpl implements ProductCommentService {
     @Autowired
     private ProductMapper productMapper;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     @Transactional
     public boolean addComment(ProductComment comment) {
@@ -36,9 +41,20 @@ public class ProductCommentServiceImpl implements ProductCommentService {
                 int totalCount = Integer.parseInt(stats.get("total_count").toString());
                 productMapper.updateRating(comment.getProductId(), avgRating, totalCount);
             }
+
+            // ✅ 发送评价成功站内消息
+            notificationService.sendNotification(
+                    comment.getUserId(),
+                    "comment",
+                    "评价成功",
+                    "感谢您对【" + comment.getProductName() + "】的评价，您的反馈对我们很重要！",
+                    "/personal/orders"
+            );
+            System.out.println("✅ 评价成功站内消息已发送");
         }
         return result > 0;
     }
+
 
     @Override
     public Map<String, Object> getCommentList(Integer productId, Integer page, Integer pageSize) {
@@ -157,5 +173,89 @@ public class ProductCommentServiceImpl implements ProductCommentService {
             map.put("createTime", c.getCreateTime());
             return map;
         }).collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * ✅ 新增：根据ID获取评价
+     */
+    @Override
+    public ProductComment getById(Integer id) {
+        return commentMapper.getById(id);
+    }
+
+    @Override
+    public Map<String, Object> getProductCommentStatistics(Integer productId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 获取评分统计
+        Map<String, Object> stats = commentMapper.getRatingStats(productId);
+
+        // 获取评分分布
+        List<Map<String, Object>> ratingDistribution = getProductRatingDistribution(productId);
+
+        // 获取近7天评价趋势
+        List<Map<String, Object>> commentTrend = getProductCommentTrend(productId);
+
+        int totalComments = 0;
+        double avgRating = 0;
+        if (stats != null && stats.get("total_count") != null) {
+            totalComments = Integer.parseInt(stats.get("total_count").toString());
+            avgRating = stats.get("avg_rating") != null ? Double.parseDouble(stats.get("avg_rating").toString()) : 0;
+        }
+
+        // 计算好评率（4星及以上）
+        int positiveCount = 0;
+        if (ratingDistribution != null) {
+            for (Map<String, Object> item : ratingDistribution) {
+                int rating = Integer.parseInt(item.get("rating").toString());
+                int count = Integer.parseInt(item.get("count").toString());
+                if (rating >= 4) {
+                    positiveCount += count;
+                }
+            }
+        }
+        double positiveRate = totalComments > 0 ? (positiveCount * 100.0 / totalComments) : 0;
+
+        // 计算回复率
+        int repliedCount = getProductRepliedCommentCount(productId);
+        double replyRate = totalComments > 0 ? (repliedCount * 100.0 / totalComments) : 0;
+
+        result.put("totalComments", totalComments);
+        result.put("avgRating", Math.round(avgRating * 10) / 10.0);
+        result.put("positiveRate", Math.round(positiveRate));
+        result.put("replyRate", Math.round(replyRate));
+        result.put("ratingDistribution", ratingDistribution != null ? ratingDistribution : new ArrayList<>());
+        result.put("commentTrend", commentTrend != null ? commentTrend : new ArrayList<>());
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getProductCommentsList(Integer productId, Integer page, Integer pageSize, Integer rating) {
+        int offset = (page - 1) * pageSize;
+        List<ProductComment> list = commentMapper.getCommentListWithRating(productId, offset, pageSize, rating);
+        int total = commentMapper.countCommentWithRating(productId, rating);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
+    // 辅助方法：获取商品评分分布
+    private List<Map<String, Object>> getProductRatingDistribution(Integer productId) {
+        return commentMapper.getProductRatingDistribution(productId);
+    }
+
+    // 辅助方法：获取商品近7天评价趋势
+    private List<Map<String, Object>> getProductCommentTrend(Integer productId) {
+        return commentMapper.getProductCommentTrend(productId);
+    }
+
+    // 辅助方法：获取商品已回复评价数量
+    private int getProductRepliedCommentCount(Integer productId) {
+        return commentMapper.getProductRepliedCommentCount(productId);
     }
 }

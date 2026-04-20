@@ -13,6 +13,7 @@ public class ServiceCategory {
 
     // 非数据库字段
     private Integer serviceCount;  // 服务数量
+    private String statusName;
 
     // getter/setter
     public Integer getId() { return id; }
@@ -29,4 +30,6 @@ public class ServiceCategory {
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
     public Integer getServiceCount() { return serviceCount; }
     public void setServiceCount(Integer serviceCount) { this.serviceCount = serviceCount; }
+    public String getStatusName() { return statusName; }
+    public void setStatusName(String statusName) { this.statusName = statusName; }
 }

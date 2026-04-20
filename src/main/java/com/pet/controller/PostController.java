@@ -3,6 +3,7 @@ package com.pet.controller;
 import com.pet.entity.Post;
 import com.pet.entity.PostComment;
 import com.pet.service.PostService;
+import com.pet.util.JwtUtil;
 import com.pet.util.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -20,19 +21,31 @@ public class PostController {
     private PostService postService;
 
     private Integer getUserId(HttpServletRequest request) {
+        // 先从 attribute 获取（JwtInterceptor 已解析）
         Integer userId = (Integer) request.getAttribute("userId");
-        if (userId == null) {
-            throw new RuntimeException("请先登录");
+        if (userId != null) {
+            System.out.println("从 attribute 获取 userId: " + userId);
+            return userId;
         }
-        return userId;
+
+        // 如果 attribute 中没有，从 token 手动解析
+        String token = request.getHeader("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            userId = JwtUtil.getUserIdFromToken(token);
+            System.out.println("从 token 解析 userId: " + userId);
+        }
+
+        return userId;  // 未登录时返回 null
     }
+
 
     private String getUserName(HttpServletRequest request) {
         return (String) request.getAttribute("username");
     }
 
     /**
-     * 获取帖子列表
+     * 获取帖子列表 - 未登录也可以访问
      */
     @GetMapping("/posts")
     public Result<Map<String, Object>> getPostList(
@@ -43,7 +56,7 @@ public class PostController {
             @RequestParam(defaultValue = "latest") String sort,
             HttpServletRequest request) {
         try {
-            Integer userId = getUserId(request);
+            Integer userId = getUserId(request);  // 未登录时为 null
             Map<String, Object> result = postService.getPostList(page, pageSize, category, keyword, sort, userId);
             return Result.success(result);
         } catch (Exception e) {

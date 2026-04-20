@@ -6,6 +6,7 @@
         <id column="id" property="id"/>
         <result column="user_id" property="userId"/>
         <result column="user_name" property="userName"/>
+        <result column="user_avatar" property="userAvatar"/>
         <result column="title" property="title"/>
         <result column="content" property="content"/>
         <result column="images" property="images"/>
@@ -48,37 +49,47 @@
     </update>
 
     <select id="getById" resultMap="BaseResultMap">
-        SELECT * FROM feedback WHERE id = #{id}
+        SELECT f.*, u.avatar as user_avatar
+        FROM feedback f
+                 LEFT JOIN user u ON f.user_id = u.id
+        WHERE f.id = #{id}
     </select>
 
     <select id="getList" resultMap="BaseResultMap">
-        SELECT * FROM feedback
+        SELECT f.*, u.avatar as user_avatar
+        FROM feedback f
+        LEFT JOIN user u ON f.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+                AND (f.title LIKE CONCAT('%', #{keyword}, '%')
+                OR f.content LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="type != null and type != ''">
-                AND type = #{type}
+                AND f.type = #{type}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND f.status = #{status}
             </if>
         </where>
-        ORDER BY status ASC, create_time DESC
+        ORDER BY f.status ASC, f.create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
     <select id="countList" resultType="int">
-        SELECT COUNT(*) FROM feedback
+        SELECT COUNT(*) FROM feedback f
+        LEFT JOIN user u ON f.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+                AND (f.title LIKE CONCAT('%', #{keyword}, '%')
+                OR f.content LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="type != null and type != ''">
-                AND type = #{type}
+                AND f.type = #{type}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND f.status = #{status}
             </if>
         </where>
     </select>
@@ -92,9 +103,65 @@
     </select>
 
     <select id="getUserFeedbacks" resultMap="BaseResultMap">
-        SELECT * FROM feedback WHERE user_id = #{userId}
-        ORDER BY create_time DESC
+        SELECT f.*, u.avatar as user_avatar
+        FROM feedback f
+                 LEFT JOIN user u ON f.user_id = u.id
+        WHERE f.user_id = #{userId}
+        ORDER BY f.create_time DESC
             LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 员工获取反馈列表（待处理 + 自己处理的） -->
+    <select id="getStaffList" resultMap="BaseResultMap">
+        SELECT f.*, u.avatar as user_avatar
+        FROM feedback f
+        LEFT JOIN user u ON f.user_id = u.id
+        WHERE
+        (f.status = 0)  <!-- 所有待处理的 -->
+        OR (f.handler_id = #{handlerId})  <!-- 自己处理过的（处理中或已解决） -->
+        <if test="keyword != null and keyword != ''">
+            AND (f.title LIKE CONCAT('%', #{keyword}, '%')
+            OR f.content LIKE CONCAT('%', #{keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="type != null and type != ''">
+            AND f.type = #{type}
+        </if>
+        <if test="status != null">
+            AND f.status = #{status}
+        </if>
+        ORDER BY
+        CASE WHEN f.status = 0 THEN 0 ELSE 1 END,  <!-- 待处理优先 -->
+        f.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countStaffList" resultType="int">
+        SELECT COUNT(*)
+        FROM feedback f
+        LEFT JOIN user u ON f.user_id = u.id
+        WHERE
+        (f.status = 0)
+        OR (f.handler_id = #{handlerId})
+        <if test="keyword != null and keyword != ''">
+            AND (f.title LIKE CONCAT('%', #{keyword}, '%')
+            OR f.content LIKE CONCAT('%', #{keyword}, '%')
+            OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="type != null and type != ''">
+            AND f.type = #{type}
+        </if>
+        <if test="status != null">
+            AND f.status = #{status}
+        </if>
+    </select>
+
+    <!-- 根据状态和处理人统计 -->
+    <select id="countByStatusAndHandler" resultType="int">
+        SELECT COUNT(*)
+        FROM feedback
+        WHERE status = #{status}
+          AND handler_id = #{handlerId}
     </select>
 
 </mapper>

@@ -64,7 +64,7 @@
 
     <!-- 获取用户收藏的商品列表 -->
     <select id="getFavoriteProducts" resultType="com.pet.entity.Product">
-        SELECT p.id, p.name, p.description, p.price, p.original_price, p.stock,
+        SELECT p.id, p.name, p.description, p.price, p.original_price,
                p.category_id, p.category_name, p.image, p.images, p.sales,
                p.status, p.is_hot, p.is_new, p.create_time, p.update_time
         FROM product_favorite pf

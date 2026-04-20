@@ -92,6 +92,7 @@ public interface PostMapper {
     List<Post> getAdminPostList(@Param("offset") Integer offset,
                                 @Param("limit") Integer limit,
                                 @Param("keyword") String keyword,
+                                @Param("category") String category,
                                 @Param("status") Integer status,
                                 @Param("isTop") Integer isTop,
                                 @Param("isEssence") Integer isEssence);
@@ -100,10 +101,10 @@ public interface PostMapper {
      * 管理员获取帖子总数
      */
     int countAdminPost(@Param("keyword") String keyword,
+                       @Param("category") String category,
                        @Param("status") Integer status,
                        @Param("isTop") Integer isTop,
                        @Param("isEssence") Integer isEssence);
-
     /**
      * 更新帖子状态（管理员用）
      */
@@ -119,5 +120,18 @@ public interface PostMapper {
      */
     int updateEssence(@Param("id") Integer id, @Param("isEssence") Integer isEssence);
 
+    /**
+     * 统计今日新增帖子数
+     */
     int countToday();
+
+    /**
+     * 统计总浏览量
+     */
+    Integer sumViewCount();
+
+    /**
+     * 真正删除帖子（物理删除）
+     */
+    int physicallyDeleteById(@Param("id") Integer id);
 }

@@ -32,4 +32,19 @@ public interface PetVaccineRecordMapper {
 
     // 统计所有疫苗记录
     int countAllVaccineRecords(@Param("keyword") String keyword);
+
+    /**
+     * 批量删除疫苗记录
+     */
+    int batchDeleteByIds(@Param("ids") List<Integer> ids);
+
+    /**
+     * 获取即将到期的宠物数量（7天内需要接种疫苗的宠物，按宠物去重）
+     */
+    int countUpcomingPets();
+
+    /**
+     * 统计有疫苗记录的正常宠物数量（去重）
+     */
+    int countDistinctPetsWithVaccine();
 }

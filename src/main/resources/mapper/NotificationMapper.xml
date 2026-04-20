@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pet.mapper.NotificationMapper">
+
+    <resultMap id="BaseResultMap" type="com.pet.entity.Notification">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="type" property="type"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="link" property="link"/>
+        <result column="is_read" property="isRead"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, type, title, content, link, is_read, create_time, update_time
+    </sql>
+
+    <!-- 插入消息 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notification (user_id, type, title, content, link, is_read)
+        VALUES (#{userId}, #{type}, #{title}, #{content}, #{link}, 0)
+    </insert>
+
+    <!-- 批量插入消息 -->
+    <insert id="batchInsert">
+        INSERT INTO notification (user_id, type, title, content, link, is_read)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userId}, #{item.type}, #{item.title}, #{item.content}, #{item.link}, 0)
+        </foreach>
+    </insert>
+
+    <!-- 获取用户消息列表 -->
+    <select id="getByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM notification
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计用户消息总数 -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM notification WHERE user_id = #{userId}
+    </select>
+
+    <!-- 获取未读消息数量 -->
+    <select id="countUnread" resultType="int">
+        SELECT COUNT(*) FROM notification
+        WHERE user_id = #{userId} AND is_read = 0
+    </select>
+
+    <!-- 标记单条消息为已读 -->
+    <update id="markAsRead">
+        UPDATE notification SET is_read = 1, update_time = NOW()
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <!-- 标记所有消息为已读 -->
+    <update id="markAllAsRead">
+        UPDATE notification SET is_read = 1, update_time = NOW()
+        WHERE user_id = #{userId} AND is_read = 0
+    </update>
+
+    <!-- 删除消息 -->
+    <delete id="deleteById">
+        DELETE FROM notification WHERE id = #{id} AND user_id = #{userId}
+    </delete>
+
+</mapper>

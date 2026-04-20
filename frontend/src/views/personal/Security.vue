@@ -60,7 +60,7 @@
                 placeholder="请输入原密码"
                 prefix-icon="el-icon-lock"
                 show-password
-            ></el-input>
+            />
           </el-form-item>
           <el-form-item label="新密码" prop="newPassword">
             <el-input
@@ -69,7 +69,7 @@
                 placeholder="请输入新密码（6-20位）"
                 prefix-icon="el-icon-key"
                 show-password
-            ></el-input>
+            />
           </el-form-item>
           <el-form-item label="确认密码" prop="confirmPassword">
             <el-input
@@ -78,7 +78,7 @@
                 placeholder="请再次输入新密码"
                 prefix-icon="el-icon-check"
                 show-password
-            ></el-input>
+            />
           </el-form-item>
         </el-form>
       </div>
@@ -94,7 +94,7 @@
     <el-dialog
         :title="userInfo.email ? '更换邮箱' : '绑定邮箱'"
         :visible.sync="showEmailDialog"
-        width="480px"
+        width="500px"
         center
         class="security-dialog"
         :close-on-click-modal="false"
@@ -103,8 +103,8 @@
       <div class="dialog-content">
         <!-- 步骤条 -->
         <el-steps :active="emailStep" align-center finish-status="success" class="email-steps">
-          <el-step title="验证身份" icon="el-icon-user"></el-step>
-          <el-step title="输入新邮箱" icon="el-icon-message"></el-step>
+          <el-step title="验证身份" />
+          <el-step title="输入新邮箱" />
         </el-steps>
 
         <!-- 步骤1：验证身份 -->
@@ -115,15 +115,11 @@
           </div>
           <el-form :model="verifyForm" :rules="verifyRules" ref="verifyForm" label-width="80px">
             <el-form-item label="当前邮箱">
-              <el-input v-model="userInfo.email" disabled></el-input>
+              <el-input v-model="userInfo.email" disabled />
             </el-form-item>
             <el-form-item label="验证码" prop="code">
               <div class="code-wrapper">
-                <el-input
-                    v-model="verifyForm.code"
-                    placeholder="请输入验证码"
-                    maxlength="6"
-                ></el-input>
+                <el-input v-model="verifyForm.code" placeholder="请输入验证码" maxlength="6" />
                 <el-button
                     :disabled="!canSendVerifyCode"
                     @click="sendVerifyCode"
@@ -151,11 +147,7 @@
           </div>
           <el-form :model="emailForm" :rules="emailRules" ref="emailForm" label-width="80px">
             <el-form-item label="新邮箱" prop="email">
-              <el-input
-                  v-model="emailForm.email"
-                  placeholder="请输入新邮箱"
-                  prefix-icon="el-icon-message"
-              ></el-input>
+              <el-input v-model="emailForm.email" placeholder="请输入新邮箱" prefix-icon="el-icon-message" />
             </el-form-item>
           </el-form>
           <div class="step-actions">
@@ -261,7 +253,6 @@ export default {
       }
     },
 
-    // ========== 修改密码 ==========
     async handleChangePassword() {
       this.$refs.passwordForm.validate(async (valid) => {
         if (!valid) return;
@@ -301,7 +292,6 @@ export default {
 
       this.verifyCodeSending = true;
       try {
-        // 使用 sendEmailCode 代替 sendVerifyCode
         const res = await sendEmailCode(this.userInfo.email);
         if (res.code === 200) {
           this.$message.success('验证码已发送，请查收邮件');
@@ -334,9 +324,6 @@ export default {
     async nextToNewEmail() {
       this.$refs.verifyForm.validate(async (valid) => {
         if (!valid) return;
-
-        // 直接进入下一步，不在此处验证
-        // 验证码的正确性在最终提交时由后端检查
         this.emailStep = 1;
       });
     },
@@ -352,11 +339,10 @@ export default {
 
         this.emailLoading = true;
         try {
-          // 传递正确的参数
           const res = await updateEmail({
-            currentEmail: this.userInfo.email,  // 当前邮箱（用于验证验证码）
-            newEmail: this.emailForm.email,     // 新邮箱
-            code: this.verifyForm.code          // 验证码
+            currentEmail: this.userInfo.email,
+            newEmail: this.emailForm.email,
+            code: this.verifyForm.code
           });
 
           if (res.code === 200) {
@@ -408,7 +394,7 @@ export default {
   font-size: 20px;
   font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 8px;
+  margin: 0 0 4px 0;
 }
 
 .page-desc {
@@ -448,17 +434,18 @@ export default {
 }
 
 .item-icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .item-icon i {
-  font-size: 20px;
+  font-size: 24px;
   color: white;
 }
 
@@ -476,7 +463,7 @@ export default {
 
 .item-desc {
   font-size: 13px;
-  color: #999;
+  color: #909399;
 }
 
 .email-text {
@@ -531,6 +518,10 @@ export default {
   margin-bottom: 30px;
 }
 
+.email-steps ::v-deep .el-step__title {
+  font-size: 14px;
+}
+
 .step-desc {
   background: #f0f7ff;
   border-left: 4px solid #667eea;
@@ -569,6 +560,7 @@ export default {
 
 .code-btn {
   min-width: 110px;
+  border-radius: 8px;
 }
 
 .security-dialog ::v-deep .el-form-item {
@@ -608,10 +600,17 @@ export default {
   border: none;
 }
 
+.dialog-footer .el-button--primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .section-item {
     padding: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
   .item-info {
@@ -619,12 +618,12 @@ export default {
   }
 
   .item-icon {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
 
   .item-icon i {
-    font-size: 16px;
+    font-size: 20px;
   }
 
   .item-title {
@@ -636,6 +635,14 @@ export default {
   }
 
   .code-btn {
+    width: 100%;
+  }
+
+  .step-actions {
+    flex-direction: column;
+  }
+
+  .step-actions .el-button {
     width: 100%;
   }
 }

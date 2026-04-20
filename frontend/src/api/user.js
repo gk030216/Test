@@ -185,3 +185,46 @@ export function getAllStaff() {
     method: 'get'
   });
 }
+
+// ============= 用户分析接口 =============
+
+// 获取用户统计数据
+export function getUserStatistics() {
+  return request({
+    url: '/admin/user/statistics',
+    method: 'get'
+  });
+}
+
+// 获取用户增长趋势
+export function getUserTrend(params) {
+  return request({
+    url: '/admin/user/trend',
+    method: 'get',
+    params
+  });
+}
+
+// 获取用户角色分布
+export function getUserRoleDistribution() {
+  return request({
+    url: '/admin/user/role-distribution',
+    method: 'get'
+  });
+}
+
+// 获取用户性别分布
+export function getUserGenderDistribution() {
+  return request({
+    url: '/admin/user/gender-distribution',
+    method: 'get'
+  });
+}
+
+// 获取用户活跃度分布
+export function getUserActivityDistribution() {
+  return request({
+    url: '/admin/user/activity-distribution',
+    method: 'get'
+  });
+}

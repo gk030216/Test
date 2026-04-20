@@ -41,6 +41,9 @@
         <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" size="medium" @change="handleSearch"></el-date-picker>
         <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">搜索</el-button>
         <el-button size="medium" @click="handleReset" class="reset-btn">重置</el-button>
+        <el-button type="success" size="medium" @click="handleExport" :loading="exportLoading" plain class="export-btn">
+          <i class="el-icon-download"></i> 导出
+        </el-button>
       </div>
     </div>
 
@@ -113,13 +116,13 @@
 </template>
 
 <script>
-import { getAdminAppointmentList, getAppointmentDetailForAdmin, confirmAppointment, startAppointment, completeAppointment, rejectAppointment, cancelAppointmentByAdmin, getAppointmentStatistics } from '@/api/service';
+import { getAdminAppointmentList, getAppointmentDetailForAdmin,exportAppointmentList, confirmAppointment, startAppointment, completeAppointment, rejectAppointment, cancelAppointmentByAdmin, getAppointmentStatistics } from '@/api/service';
 
 export default {
   name: 'AppointmentList',
   data() {
     return {
-      loading: false, rejectLoading: false, cancelLoading: false,
+      loading: false, rejectLoading: false, cancelLoading: false,exportLoading: false,
       appointmentList: [], total: 0, page: 1, pageSize: 10,
       searchKeyword: '', searchStatus: '', dateRange: [],
       statistics: { total: 0, pending: 0, confirmed: 0, totalIncome: 0 },
@@ -137,6 +140,37 @@ export default {
         if (res.code === 200) { this.appointmentList = res.data.list || []; this.total = res.data.total || 0; }
       } catch (error) { this.$message.error('加载失败'); }
       finally { this.loading = false; }
+    },
+
+    // 导出预约列表
+    async handleExport() {
+      this.exportLoading = true;
+      try {
+        const params = {
+          keyword: this.searchKeyword || undefined,
+          status: this.searchStatus !== '' ? this.searchStatus : undefined,
+          startDate: this.dateRange?.[0],
+          endDate: this.dateRange?.[1]
+        };
+
+        const res = await exportAppointmentList(params);
+
+        const url = window.URL.createObjectURL(res);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `预约列表_${new Date().getTime()}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        this.$message.success('导出成功');
+      } catch (error) {
+        console.error('导出失败', error);
+        this.$message.error('导出失败');
+      } finally {
+        this.exportLoading = false;
+      }
     },
     async loadStatistics() {
       try { const res = await getAppointmentStatistics(); if (res.code === 200) this.statistics = res.data; } catch (error) {}
@@ -202,4 +236,26 @@ export default {
 .detail-row .value { flex: 1; color: #2c3e50; }
 .detail-row .value.price { color: #ff6b6b; font-weight: bold; }
 @media (max-width: 768px) { .appointment-list { padding: 12px; } .action-bar { justify-content: center; } .search-input { width: 160px; } .action-right { justify-content: center; } }
+.staff-name {
+  color: #409EFF;
+  font-weight: 500;
+}
+.no-staff {
+  color: #e6a23c;
+}
+.export-btn {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+  color: white;
+}
 </style>

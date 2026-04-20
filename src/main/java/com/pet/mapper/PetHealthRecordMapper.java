@@ -3,6 +3,7 @@ package com.pet.mapper;
 import com.pet.entity.PetHealthRecord;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -29,4 +30,19 @@ public interface PetHealthRecordMapper {
 
     // 统计所有体检记录
     int countAllHealthRecords(@Param("keyword") String keyword);
+
+    /**
+     * 批量删除体检记录
+     */
+    int batchDeleteByIds(@Param("ids") List<Integer> ids);
+
+    /**
+     * 统计有体检记录的正常宠物数量（去重）
+     */
+    int countDistinctPetsWithHealthRecord();
+
+    /**
+     * 获取正常宠物的平均体重（基于每只宠物的最新体重）
+     */
+    BigDecimal getAvgWeightByLatestRecord();
 }

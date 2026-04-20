@@ -33,4 +33,13 @@ public interface ProductCommentService {
 
     // 获取最新评价
     List<Map<String, Object>> getRecentComments(Integer limit);
+
+    ProductComment getById(Integer id);
+
+    // 获取指定商品的评价统计
+    Map<String, Object> getProductCommentStatistics(Integer productId);
+
+    // 获取指定商品的评价列表
+    Map<String, Object> getProductCommentsList(Integer productId, Integer page, Integer pageSize, Integer rating);
+
 }

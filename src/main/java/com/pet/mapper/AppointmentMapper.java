@@ -3,6 +3,7 @@ package com.pet.mapper;
 import com.pet.entity.Appointment;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -92,5 +93,36 @@ public interface AppointmentMapper {
     /**
      * 更新退款状态
      */
-    int updateRefundStatus(@Param("appointmentNo") String appointmentNo, @Param("status") Integer status);
+    int updateRefundStatus(@Param("appointmentNo") String appointmentNo,
+                           @Param("status") Integer status,
+                           @Param("reason") String reason);
+    /**
+     * 检查员工时间冲突
+     */
+    int checkStaffTimeConflict(@Param("staffId") Integer staffId,
+                               @Param("appointmentDate") Date appointmentDate,
+                               @Param("appointmentTime") String appointmentTime,
+                               @Param("excludeId") Integer excludeId);
+
+    /**
+     * 检查宠物时间冲突
+     */
+    int checkPetTimeConflict(@Param("petId") Integer petId,
+                             @Param("appointmentDate") Date appointmentDate,
+                             @Param("appointmentTime") String appointmentTime,
+                             @Param("excludeId") Integer excludeId);
+
+    /**
+     * 检查用户时间冲突（同一用户同一时间段不能有多个预约）
+     */
+    int checkUserTimeConflict(@Param("userId") Integer userId,
+                              @Param("appointmentDate") Date appointmentDate,
+                              @Param("appointmentTime") String appointmentTime,
+                              @Param("excludeId") Integer excludeId);
+
+    // 统计今日收入
+    BigDecimal countTodayIncome();
+
+    // 根据状态统计数量
+    int countByStatus(@Param("status") Integer status);
 }

@@ -9,7 +9,6 @@ public class Product {
     private String description;
     private BigDecimal price;
     private BigDecimal originalPrice;
-    private Integer stock;
     private Integer categoryId;
     private String categoryName;
     private String image;
@@ -20,6 +19,13 @@ public class Product {
     private Integer isNew;
     private Date createTime;
     private Date updateTime;
+
+    // 临时字段，用于显示库存（不从数据库映射）
+    private Integer stock;
+
+    // ✅ 新增：用于接收前端传递的库存ID
+    private Integer inventoryId;
+    private BigDecimal avgRating;  // 平均评分
 
     // getter和setter
     public Integer getId() { return id; }
@@ -36,9 +42,6 @@ public class Product {
 
     public BigDecimal getOriginalPrice() { return originalPrice; }
     public void setOriginalPrice(BigDecimal originalPrice) { this.originalPrice = originalPrice; }
-
-    public Integer getStock() { return stock; }
-    public void setStock(Integer stock) { this.stock = stock; }
 
     public Integer getCategoryId() { return categoryId; }
     public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
@@ -69,4 +72,14 @@ public class Product {
 
     public Date getUpdateTime() { return updateTime; }
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
+
+    public Integer getStock() { return stock; }
+    public void setStock(Integer stock) { this.stock = stock; }
+
+    // ✅ inventoryId 的 getter/setter
+    public Integer getInventoryId() { return inventoryId; }
+    public void setInventoryId(Integer inventoryId) { this.inventoryId = inventoryId; }
+
+    public BigDecimal getAvgRating() { return avgRating; }
+    public void setAvgRating(BigDecimal avgRating) { this.avgRating = avgRating; }
 }

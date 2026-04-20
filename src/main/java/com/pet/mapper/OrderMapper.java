@@ -36,7 +36,9 @@ public interface OrderMapper {
                         @Param("orderStatus") Integer orderStatus,
                         @Param("tradeNo") String tradeNo);
 
-    int updateOrderStatus(@Param("orderNo") String orderNo, @Param("orderStatus") Integer orderStatus);
+    int updateOrderStatus(@Param("orderNo") String orderNo,
+                          @Param("orderStatus") Integer orderStatus,
+                          @Param("reason") String reason);
 
     int deleteById(@Param("id") Integer id);
 

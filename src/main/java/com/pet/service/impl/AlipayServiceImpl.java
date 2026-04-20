@@ -117,9 +117,9 @@ public class AlipayServiceImpl implements AlipayService {
 
             // 更新预约退款状态
             if (orderNo.startsWith("AP")) {
-                appointmentMapper.updateRefundStatus(orderNo, 5); // status=5 已退款
+                appointmentMapper.updateRefundStatus(orderNo, 4, reason);// status=5 已退款
             } else {
-                orderMapper.updateOrderStatus(orderNo, 5);
+                orderMapper.updateOrderStatus(orderNo, 5, reason);
             }
             return true;
         } else {

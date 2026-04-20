@@ -8,6 +8,7 @@
           <div v-if="loading" class="loading-state">
             <i class="el-icon-loading"></i>
             <p>正在验证支付结果...</p>
+            <p class="loading-tip">请稍候，正在确认中</p>
           </div>
 
           <div v-else-if="success" class="success-state">
@@ -17,11 +18,15 @@
             <div class="order-info" v-if="orderInfo">
               <div class="info-item">
                 <span>{{ orderType === 'service' ? '预约编号：' : '订单号：' }}</span>
-                <span>{{ orderInfo.orderNo || orderInfo.appointmentNo }}</span>
+                <span>{{ orderInfo.appointmentNo || orderInfo.orderNo }}</span>
               </div>
               <div class="info-item">
                 <span>支付金额：</span>
-                <span class="amount">¥{{ orderInfo.payAmount || orderInfo.servicePrice }}</span>
+                <span class="amount">¥{{ orderInfo.servicePrice || orderInfo.payAmount }}</span>
+              </div>
+              <div class="info-item">
+                <span>支付时间：</span>
+                <span>{{ orderInfo.payTime ? formatDateTime(orderInfo.payTime) : '刚刚' }}</span>
               </div>
             </div>
             <div class="actions">
@@ -36,11 +41,29 @@
 
           <div v-else class="failed-state">
             <i class="el-icon-warning"></i>
-            <h2>支付失败</h2>
-            <p>{{ errorMessage || '支付遇到问题，请重试或联系客服' }}</p>
+            <h2>支付处理中</h2>
+            <p>{{ errorMessage || '支付已提交，正在处理中，请稍后查看订单状态' }}</p>
+            <div class="order-info" v-if="orderInfo">
+              <div class="info-item">
+                <span>{{ orderType === 'service' ? '预约编号：' : '订单号：' }}</span>
+                <span>{{ orderInfo.appointmentNo || orderInfo.orderNo }}</span>
+              </div>
+              <div class="info-item">
+                <span>支付金额：</span>
+                <span class="amount">¥{{ orderInfo.servicePrice || orderInfo.payAmount }}</span>
+              </div>
+            </div>
             <div class="actions">
-              <el-button type="primary" @click="retryPay">重新支付</el-button>
-              <el-button @click="goToOrders">查看订单</el-button>
+              <el-button type="primary" @click="retryQuery" :loading="retrying">
+                <i class="el-icon-refresh"></i> 重新查询
+              </el-button>
+              <el-button @click="goToOrders">
+                {{ orderType === 'service' ? '查看预约' : '查看订单' }}
+              </el-button>
+            </div>
+            <div class="tip-text">
+              <i class="el-icon-info"></i>
+              如果长时间未更新，请联系客服处理
             </div>
           </div>
         </div>
@@ -54,7 +77,7 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getOrderDetail, payOrder } from '@/api/order';
+import { getOrderDetail } from '@/api/order';
 import { getAppointmentDetailByNo } from '@/api/service';
 
 export default {
@@ -63,17 +86,26 @@ export default {
   data() {
     return {
       loading: true,
+      retrying: false,
       success: false,
       errorMessage: '',
       orderInfo: null,
       orderType: 'product',
       successMessage: '',
       orderNo: '',
-      tradeNo: ''
+      tradeNo: '',
+      retryCount: 0,
+      maxRetry: 8,
+      retryTimer: null
     };
   },
   created() {
     this.checkPayResult();
+  },
+  beforeDestroy() {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+    }
   },
   methods: {
     async checkPayResult() {
@@ -84,6 +116,7 @@ export default {
       this.tradeNo = urlParams.get('trade_no');
 
       console.log('解析到的订单号:', this.orderNo);
+      console.log('解析到的交易号:', this.tradeNo);
 
       if (!this.orderNo) {
         this.orderNo = localStorage.getItem('lastOrderNo');
@@ -97,72 +130,199 @@ export default {
         return;
       }
 
+      // 保存订单号到 localStorage，供后续查询使用
+      localStorage.setItem('lastOrderNo', this.orderNo);
+
       // 判断订单类型
       if (this.orderNo.startsWith('AP')) {
         this.orderType = 'service';
         this.successMessage = '您的预约已支付成功，请等待商家确认';
-        await this.checkAppointmentResult();
+        await this.checkAppointmentResultWithRetry();
       } else {
         this.orderType = 'product';
         this.successMessage = '您的订单已支付成功，我们将尽快为您发货';
-        await this.checkOrderResult();
+        await this.checkOrderResultWithRetry();
       }
     },
 
-    async checkOrderResult() {
-      try {
-        console.log('查询商品订单:', this.orderNo);
-        const res = await getOrderDetail(this.orderNo);
-        console.log('订单详情响应:', res);
-
-        if (res.code === 200) {
-          this.orderInfo = res.data;
-          if (this.orderInfo.payStatus === 1) {
-            this.success = true;
-            localStorage.removeItem('lastOrderNo');
-          } else {
-            this.success = false;
-            this.errorMessage = this.orderInfo.orderStatus === 4 ? '订单已取消' : '订单未支付';
-          }
-        } else {
-          this.success = false;
-          this.errorMessage = res.message || '查询订单失败';
-        }
-      } catch (error) {
-        console.error('查询订单异常:', error);
-        this.success = false;
-        this.errorMessage = '查询订单失败，请稍后查看订单列表';
-      } finally {
-        this.loading = false;
-      }
+    async checkAppointmentResultWithRetry() {
+      this.retryCount = 0;
+      await this.doCheckAppointmentResult();
     },
 
-    async checkAppointmentResult() {
+    async doCheckAppointmentResult() {
       try {
-        console.log('查询服务预约:', this.orderNo);
+        console.log(`查询服务预约 (第${this.retryCount + 1}次):`, this.orderNo);
         const res = await getAppointmentDetailByNo(this.orderNo);
         console.log('预约详情响应:', res);
 
-        if (res.code === 200) {
+        if (res.code === 200 && res.data) {
           this.orderInfo = res.data;
-          if (this.orderInfo.payStatus === 1) {
+
+          // 检查支付状态
+          if (res.data.payStatus === 1) {
             this.success = true;
+            this.loading = false;
             localStorage.removeItem('lastOrderNo');
-          } else {
-            this.success = false;
-            this.errorMessage = this.orderInfo.status === 4 ? '预约已取消' : '预约未支付';
+            console.log('✅ 预约支付成功！');
+            return;
           }
+
+          // 检查预约状态是否为已取消或已拒绝
+          if (res.data.status === 4 || res.data.status === 5) {
+            this.loading = false;
+            this.success = false;
+            this.errorMessage = res.data.status === 4 ? '预约已取消' : '预约已被拒绝';
+            console.log('❌ 预约状态异常:', res.data.status);
+            return;
+          }
+        }
+
+        // 未支付成功，尝试重试
+        this.retryCount++;
+        if (this.retryCount < this.maxRetry) {
+          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
+          console.log(`支付状态未更新，${delay}ms后重试...`);
+          this.retryTimer = setTimeout(() => {
+            this.doCheckAppointmentResult();
+          }, delay);
         } else {
+          // 重试次数用尽，显示处理中状态
+          this.loading = false;
           this.success = false;
-          this.errorMessage = res.message || '查询预约失败';
+          this.errorMessage = '支付处理中，请稍后查看订单状态';
+          console.log('重试次数用尽，请稍后查看');
         }
       } catch (error) {
         console.error('查询预约异常:', error);
-        this.success = false;
-        this.errorMessage = '查询预约失败，请稍后查看预约列表';
-      } finally {
-        this.loading = false;
+        this.retryCount++;
+        if (this.retryCount < this.maxRetry) {
+          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
+          this.retryTimer = setTimeout(() => {
+            this.doCheckAppointmentResult();
+          }, delay);
+        } else {
+          this.loading = false;
+          this.success = false;
+          this.errorMessage = '查询支付状态失败，请稍后查看订单状态';
+        }
       }
+    },
+
+    async checkOrderResultWithRetry() {
+      this.retryCount = 0;
+      await this.doCheckOrderResult();
+    },
+
+    async doCheckOrderResult() {
+      try {
+        console.log(`查询商品订单 (第${this.retryCount + 1}次):`, this.orderNo);
+        const res = await getOrderDetail(this.orderNo);
+        console.log('订单详情响应:', res);
+
+        if (res.code === 200 && res.data) {
+          this.orderInfo = res.data;
+
+          if (res.data.payStatus === 1) {
+            this.success = true;
+            this.loading = false;
+            localStorage.removeItem('lastOrderNo');
+            console.log('✅ 订单支付成功！');
+            return;
+          }
+
+          if (res.data.orderStatus === 4) {
+            this.loading = false;
+            this.success = false;
+            this.errorMessage = '订单已取消';
+            return;
+          }
+        }
+
+        this.retryCount++;
+        if (this.retryCount < this.maxRetry) {
+          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
+          console.log(`支付状态未更新，${delay}ms后重试...`);
+          this.retryTimer = setTimeout(() => {
+            this.doCheckOrderResult();
+          }, delay);
+        } else {
+          this.loading = false;
+          this.success = false;
+          this.errorMessage = '支付处理中，请稍后查看订单状态';
+        }
+      } catch (error) {
+        console.error('查询订单异常:', error);
+        this.retryCount++;
+        if (this.retryCount < this.maxRetry) {
+          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
+          this.retryTimer = setTimeout(() => {
+            this.doCheckOrderResult();
+          }, delay);
+        } else {
+          this.loading = false;
+          this.success = false;
+          this.errorMessage = '查询支付状态失败，请稍后查看订单状态';
+        }
+      }
+    },
+
+    async retryQuery() {
+      this.retrying = true;
+      this.loading = true;
+      this.success = false;
+      this.retryCount = 0;
+
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer);
+      }
+
+      try {
+        if (this.orderType === 'service') {
+          const res = await getAppointmentDetailByNo(this.orderNo);
+          if (res.code === 200 && res.data) {
+            this.orderInfo = res.data;
+            if (res.data.payStatus === 1) {
+              this.success = true;
+              this.loading = false;
+              localStorage.removeItem('lastOrderNo');
+              this.$message.success('支付成功！');
+              this.retrying = false;
+              return;
+            }
+          }
+        } else {
+          const res = await getOrderDetail(this.orderNo);
+          if (res.code === 200 && res.data) {
+            this.orderInfo = res.data;
+            if (res.data.payStatus === 1) {
+              this.success = true;
+              this.loading = false;
+              localStorage.removeItem('lastOrderNo');
+              this.$message.success('支付成功！');
+              this.retrying = false;
+              return;
+            }
+          }
+        }
+
+        this.loading = false;
+        this.success = false;
+        this.errorMessage = '支付状态未更新，请稍后查看';
+        this.$message.warning('支付状态未更新，请稍后在订单列表中查看');
+      } catch (error) {
+        this.loading = false;
+        this.success = false;
+        this.errorMessage = '查询失败，请稍后重试';
+      } finally {
+        this.retrying = false;
+      }
+    },
+
+    formatDateTime(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
     },
 
     goToOrders() {
@@ -179,13 +339,6 @@ export default {
       } else {
         this.$router.push('/shop');
       }
-    },
-
-    async retryPay() {
-      if (!this.orderNo) return;
-
-      // 根据类型跳转到对应的支付页面
-      this.$router.push(`/pay/${this.orderNo}`);
     }
   }
 };
@@ -215,7 +368,7 @@ export default {
   border-radius: 24px;
   padding: 60px 40px;
   text-align: center;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
 .loading-state i,
@@ -241,6 +394,12 @@ export default {
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.loading-tip {
+  font-size: 13px;
+  color: #999;
+  margin-top: 8px;
 }
 
 .return-card h2 {
@@ -279,6 +438,16 @@ export default {
   gap: 20px;
   justify-content: center;
   margin-top: 20px;
+}
+
+.tip-text {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #999;
+}
+
+.tip-text i {
+  margin-right: 4px;
 }
 
 @media (max-width: 768px) {

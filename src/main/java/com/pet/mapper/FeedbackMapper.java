@@ -20,4 +20,21 @@ public interface FeedbackMapper {
     int countByStatus(@Param("status") Integer status);
     List<Feedback> getUserFeedbacks(@Param("userId") Integer userId, @Param("offset") Integer offset,
                                     @Param("limit") Integer limit);
+
+    // 员工获取反馈列表（待处理 + 自己处理的）
+    List<Feedback> getStaffList(@Param("offset") Integer offset,
+                                @Param("limit") Integer limit,
+                                @Param("keyword") String keyword,
+                                @Param("type") String type,
+                                @Param("status") Integer status,
+                                @Param("handlerId") Integer handlerId);
+
+    // 员工获取反馈总数
+    int countStaffList(@Param("keyword") String keyword,
+                       @Param("type") String type,
+                       @Param("status") Integer status,
+                       @Param("handlerId") Integer handlerId);
+
+    // 根据状态和处理人统计
+    int countByStatusAndHandler(@Param("status") Integer status, @Param("handlerId") Integer handlerId);
 }

@@ -4,6 +4,7 @@ import com.pet.entity.PetProfile;
 import com.pet.entity.PetVaccineRecord;
 import com.pet.entity.PetHealthRecord;
 import com.pet.entity.User;
+import com.pet.mapper.PetProfileMapper;
 import com.pet.mapper.UserMapper;
 import com.pet.service.PetService;
 import com.pet.util.Result;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,10 @@ public class AdminPetController {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private PetProfileMapper petProfileMapper;
+
 
     private Integer getUserId(HttpServletRequest request) {
         Integer userId = (Integer) request.getAttribute("userId");
@@ -94,20 +100,22 @@ public class AdminPetController {
         try {
             Integer currentUserId = getUserId(request);
             Integer role = getUserRole(request);
-            // 修改：允许员工和管理员访问
             if (role != 2 && role != 3) {
                 return Result.error(403, "无权限访问");
             }
 
-            // 验证用户ID是否存在
             if (pet.getUserId() == null || pet.getUserId() <= 0) {
                 return Result.error("请选择所属用户");
             }
 
-            // 检查用户是否存在
             User user = userMapper.findById(pet.getUserId());
             if (user == null) {
                 return Result.error("选择的用户不存在");
+            }
+
+            // 如果要设为默认，先清除该用户的其他默认宠物
+            if (pet.getIsDefault() != null && pet.getIsDefault() == 1) {
+                petProfileMapper.clearDefault(pet.getUserId());
             }
 
             boolean success = petService.addPet(pet, currentUserId);
@@ -121,7 +129,6 @@ public class AdminPetController {
             return Result.error(e.getMessage());
         }
     }
-
     /**
      * 更新宠物（管理员和员工）
      */
@@ -389,6 +396,144 @@ public class AdminPetController {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 更新疫苗记录
+     */
+    @PutMapping("/vaccine/update")
+    public Result<?> updateVaccineRecord(@RequestBody PetVaccineRecord record) {
+        try {
+            boolean success = petService.updateVaccineRecord(record);
+            return success ? Result.success("更新成功") : Result.error("更新失败");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 更新体检记录
+     */
+    @PutMapping("/health/update")
+    public Result<?> updateHealthRecord(@RequestBody PetHealthRecord record) {
+        try {
+            boolean success = petService.updateHealthRecord(record);
+            return success ? Result.success("更新成功") : Result.error("更新失败");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除疫苗记录
+     */
+    @DeleteMapping("/vaccine/batch-delete")
+    public Result<?> batchDeleteVaccineRecords(@RequestBody List<Integer> ids, HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            boolean success = petService.batchDeleteVaccineRecords(ids);
+            if (success) {
+                return Result.success("批量删除成功，共删除 " + ids.size() + " 条记录");
+            } else {
+                return Result.error("批量删除失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除体检记录
+     */
+    @DeleteMapping("/health/batch-delete")
+    public Result<?> batchDeleteHealthRecords(@RequestBody List<Integer> ids, HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            boolean success = petService.batchDeleteHealthRecords(ids);
+            if (success) {
+                return Result.success("批量删除成功，共删除 " + ids.size() + " 条记录");
+            } else {
+                return Result.error("批量删除失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取即将到期的宠物数量（7天内需要接种疫苗的宠物）
+     */
+    @GetMapping("/vaccine/upcoming/pets/count")
+    public Result<Integer> getUpcomingPetsCount(HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            int count = petService.getUpcomingPetsCount();
+            return Result.success(count);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取有疫苗记录的正常宠物数量（去重）
+     */
+    @GetMapping("/vaccine/pets/count")
+    public Result<Integer> getDistinctPetsWithVaccineCount(HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            int count = petService.getDistinctPetsWithVaccineCount();
+            return Result.success(count);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取有体检记录的正常宠物数量（去重）
+     */
+    @GetMapping("/health/pets/count")
+    public Result<Integer> getDistinctPetsWithHealthRecordCount(HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            int count = petService.getDistinctPetsWithHealthRecordCount();
+            return Result.success(count);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取正常宠物的平均体重
+     */
+    @GetMapping("/health/avg-weight")
+    public Result<BigDecimal> getAvgWeight(HttpServletRequest request) {
+        try {
+            Integer role = getUserRole(request);
+            if (role != 2 && role != 3) {
+                return Result.error(403, "无权限访问");
+            }
+            BigDecimal avgWeight = petService.getAvgWeight();
+            return Result.success(avgWeight);
+        } catch (Exception e) {
             return Result.error(e.getMessage());
         }
     }

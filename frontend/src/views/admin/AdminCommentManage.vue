@@ -12,15 +12,6 @@
         >
           <i class="el-icon-delete"></i> 批量删除 ({{ selectedRows.length }})
         </el-button>
-        <el-button
-            v-if="selectedRows.length > 0"
-            type="success"
-            plain
-            @click="handleBatchRestore"
-            class="batch-btn"
-        >
-          <i class="el-icon-refresh"></i> 批量恢复 ({{ selectedRows.length }})
-        </el-button>
       </div>
       <div class="action-right">
         <div class="search-wrapper">
@@ -43,7 +34,7 @@
             @change="handleSearch"
         >
           <el-option label="正常" :value="1"></el-option>
-          <el-option label="已删除" :value="0"></el-option>
+          <el-option label="已隐藏" :value="0"></el-option>
         </el-select>
         <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">
           搜索
@@ -76,13 +67,17 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="评论用户" width="140">
+      <!-- ✅ 修改：评论用户列，显示昵称 -->
+      <el-table-column label="评论用户" width="160">
         <template slot-scope="scope">
           <div class="user-info">
             <el-avatar :size="32" :src="scope.row.userAvatar" class="user-avatar">
-              {{ scope.row.userName ? scope.row.userName.charAt(0).toUpperCase() : 'U' }}
+              {{ (scope.row.userNickname || scope.row.userName) ? (scope.row.userNickname || scope.row.userName).charAt(0).toUpperCase() : 'U' }}
             </el-avatar>
-            <span class="user-name">{{ scope.row.userName }}</span>
+            <div class="user-detail">
+              <span class="user-name">{{ scope.row.userNickname || scope.row.userName || '匿名用户' }}</span>
+              <span class="user-id">ID: {{ scope.row.userId }}</span>
+            </div>
           </div>
         </template>
       </el-table-column>
@@ -199,12 +194,13 @@
           </div>
           <div class="comment-card">
             <div class="comment-header">
+              <!-- ✅ 修改：显示昵称 -->
               <div class="user-info">
                 <el-avatar :size="36" :src="currentComment.userAvatar">
-                  {{ currentComment.userName ? currentComment.userName.charAt(0).toUpperCase() : 'U' }}
+                  {{ (currentComment.userNickname || currentComment.userName) ? (currentComment.userNickname || currentComment.userName).charAt(0).toUpperCase() : 'U' }}
                 </el-avatar>
                 <div class="user-detail">
-                  <span class="user-name">{{ currentComment.userName }}</span>
+                  <span class="user-name">{{ currentComment.userNickname || currentComment.userName || '匿名用户' }}</span>
                   <span class="user-id">ID: {{ currentComment.userId }}</span>
                 </div>
               </div>
@@ -225,8 +221,9 @@
           </div>
           <div class="replies-list">
             <div class="reply-item" v-for="reply in replies" :key="reply.id">
+              <!-- ✅ 修改：显示昵称 -->
               <div class="reply-header">
-                <span class="reply-user">{{ reply.userName }}</span>
+                <span class="reply-user">{{ reply.userNickname || reply.userName || '匿名用户' }}</span>
                 <span class="reply-to" v-if="reply.replyToUserName">
                   回复 @{{ reply.replyToUserName }}
                 </span>
@@ -271,7 +268,6 @@ import {
   adminDeleteComment,
   batchDeleteComments,
   restoreComment,
-  batchRestoreComments,
   getCommentReplies
 } from '@/api/community';
 
@@ -449,32 +445,12 @@ export default {
             }
           }).catch(() => {});
     },
-
-    async handleBatchRestore() {
-      if (this.selectedRows.length === 0) return;
-
-      const ids = this.selectedRows.map(row => row.id).join(',');
-      this.$confirm(`确定要恢复选中的 ${this.selectedRows.length} 条评论吗？`, '提示', { type: 'info' })
-          .then(async () => {
-            try {
-              const res = await batchRestoreComments(ids);
-              if (res.code === 200) {
-                this.$message.success(res.message);
-                this.selectedRows = [];
-                this.loadList();
-              } else {
-                this.$message.error(res.message);
-              }
-            } catch (error) {
-              this.$message.error('批量恢复失败');
-            }
-          }).catch(() => {});
-    }
   }
 };
 </script>
 
 <style scoped>
+/* 样式保持不变，添加用户详情样式 */
 .admin-comment-manage {
   padding: 20px;
   background: #f5f7fa;
@@ -582,17 +558,30 @@ export default {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .user-avatar {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
+  flex-shrink: 0;
+}
+
+.user-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .user-name {
   font-weight: 500;
   color: #2c3e50;
+  font-size: 13px;
+}
+
+.user-id {
+  font-size: 11px;
+  color: #999;
 }
 
 .comment-content {
@@ -710,21 +699,12 @@ export default {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .comment-header .user-info {
   gap: 12px;
-}
-
-.user-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.user-id {
-  font-size: 11px;
-  color: #999;
 }
 
 .comment-time {

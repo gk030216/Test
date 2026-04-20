@@ -66,12 +66,22 @@ public interface AIService {
      */
     List<Map<String, Object>> searchKnowledge(String keyword, Integer limit);
 
+    /**
+     * 根据标题生成内容
+     */
+    String generateContent(String title, String category);
+
+    /**
+     * 检查常见问题是否已存在
+     */
+    Map<String, Object> checkFaqExists(String question);
+
     // ============= 常见问题管理 =============
 
     /**
      * 获取常见问题列表（后台分页）
      */
-    Map<String, Object> getFaqList(Integer page, Integer pageSize, String keyword);
+    Map<String, Object> getFaqList(Integer page, Integer pageSize, String keyword, String category, Integer status);
 
     /**
      * 添加常见问题
@@ -87,6 +97,11 @@ public interface AIService {
      * 更新常见问题状态
      */
     boolean updateFaqStatus(Integer id, Integer status);
+
+    /**
+     * 获取有对话记录的用户列表
+     */
+    List<Map<String, Object>> getUserListWithHistory(String keyword);
 
     /**
      * 删除常见问题

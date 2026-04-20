@@ -102,4 +102,8 @@
         DELETE FROM service_category WHERE id = #{id}
     </delete>
 
+    <update id="updateSortOrder">
+        UPDATE service_category SET sort_order = #{sortOrder} WHERE id = #{id}
+    </update>
+
 </mapper>

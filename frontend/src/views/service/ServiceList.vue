@@ -1,33 +1,48 @@
 <template>
   <div class="service-container">
-    <!-- 导航栏 -->
     <Navbar />
 
     <div class="service-content">
       <div class="container">
         <!-- 页面头部 -->
         <div class="page-header">
-          <h2 class="page-title">🐾 宠物服务</h2>
-          <p class="page-desc">专业、贴心、全方位的宠物服务</p>
+          <div class="header-content">
+            <div class="header-left">
+              <h2 class="page-title">宠物服务</h2>
+              <p class="page-desc">专业、贴心、全方位的宠物服务</p>
+            </div>
+          </div>
         </div>
 
-        <!-- 分类导航 -->
+        <!-- 分类导航 + 搜索框（同一行） -->
         <div class="category-nav">
-          <div
-              :class="['category-item', { active: currentCategory === null }]"
-              @click="handleCategoryChange(null)"
-          >
-            <i class="el-icon-menu"></i>
-            <span>全部</span>
+          <div class="category-list">
+            <div
+                :class="['category-item', { active: currentCategory === null }]"
+                @click="handleCategoryChange(null)"
+            >
+              全部
+            </div>
+            <div
+                v-for="cat in categories"
+                :key="cat.id"
+                :class="['category-item', { active: currentCategory === cat.id }]"
+                @click="handleCategoryChange(cat.id)"
+            >
+              {{ cat.name }}
+            </div>
           </div>
-          <div
-              v-for="cat in categories"
-              :key="cat.id"
-              :class="['category-item', { active: currentCategory === cat.id }]"
-              @click="handleCategoryChange(cat.id)"
-          >
-            <i class="el-icon-star-on"></i>
-            <span>{{ cat.name }}</span>
+          <div class="search-box">
+            <el-input
+                v-model="keyword"
+                placeholder="搜索服务"
+                size="medium"
+                @keyup.enter="handleSearch"
+                clearable
+                prefix-icon="el-icon-search"
+            >
+              <el-button slot="append" @click="handleSearch">搜索</el-button>
+            </el-input>
           </div>
         </div>
 
@@ -50,23 +65,6 @@
                 :class="['sort-item', { active: currentSort === 'sales' }]"
                 @click="handleSortChange('sales')"
             >销量</span>
-            <span
-                :class="['sort-item', { active: currentSort === 'hot' }]"
-                @click="handleSortChange('hot')"
-            >热门</span>
-          </div>
-          <div class="sort-right">
-            <el-input
-                v-model="keyword"
-                placeholder="搜索服务"
-                size="small"
-                clearable
-                @keyup.enter="handleSearch"
-                style="width: 200px"
-            >
-              <i slot="prefix" class="el-icon-search"></i>
-            </el-input>
-            <el-button size="small" type="primary" @click="handleSearch" style="margin-left: 8px;">搜索</el-button>
           </div>
         </div>
 
@@ -91,9 +89,9 @@
                 </div>
                 <div class="service-meta">
                   <span><i class="el-icon-time"></i> {{ service.duration }}分钟</span>
-                  <span><i class="el-icon-s-order"></i> 已售{{ service.sales || 0 }}</span>
+                  <span><i class="el-icon-s-order"></i> 已售 {{ service.sales || 0 }}</span>
                 </div>
-                <el-button type="primary" size="small" @click.stop="goToBooking(service)" class="book-btn">
+                <el-button type="primary" size="small" plain @click.stop="goToBooking(service)" class="book-btn">
                   立即预约
                 </el-button>
               </div>
@@ -116,7 +114,7 @@
               layout="prev, pager, next"
               :total="total"
               background
-          ></el-pagination>
+          />
         </div>
       </div>
     </div>
@@ -231,7 +229,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .service-content {
@@ -247,59 +245,91 @@ export default {
 
 /* 页面头部 */
 .page-header {
-  text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .page-title {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 10px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  margin: 0 0 4px 0;
 }
 
 .page-desc {
-  font-size: 16px;
-  color: #7f8c8d;
+  font-size: 13px;
+  color: #909399;
+  margin: 0;
 }
 
-/* 分类导航 */
+/* 分类导航 + 搜索框（同一行） */
 .category-nav {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 30px;
+  gap: 20px;
   background: white;
-  padding: 15px 25px;
-  border-radius: 50px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
+}
+
+.category-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
 .category-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
-  border-radius: 30px;
+  padding: 6px 16px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s;
-  color: #666;
-  font-size: 14px;
+  color: #606266;
+  font-size: 13px;
 }
 
 .category-item:hover {
-  background: #f0f0f0;
-  color: #667eea;
+  background: #ecf5ff;
+  color: #409EFF;
 }
 
 .category-item.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #409EFF;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.search-box {
+  width: 260px;
+}
+
+.search-box ::v-deep .el-input-group__append {
+  background: #409EFF;
+  border-color: #409EFF;
+}
+
+.search-box ::v-deep .el-input-group__append .el-button {
+  background: #409EFF;
+  border: none;
+  color: white;
+}
+
+.search-box ::v-deep .el-input-group__append .el-button:hover {
+  background: #66b1ff;
 }
 
 /* 排序栏 */
@@ -307,53 +337,58 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .sort-left {
   display: flex;
-  gap: 25px;
+  gap: 24px;
 }
 
 .sort-item {
   cursor: pointer;
-  color: #999;
+  color: #909399;
   transition: color 0.3s;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .sort-item:hover,
 .sort-item.active {
-  color: #667eea;
+  color: #409EFF;
 }
 
 /* 服务网格 */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .service-card {
   background: white;
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   transition: all 0.3s;
   cursor: pointer;
+  border: 1px solid #eef2f6;
 }
 
 .service-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #e0e0e0;
 }
 
 .service-image {
   position: relative;
-  height: 200px;
+  height: 180px;
   overflow: hidden;
+  background: #f5f7fa;
 }
 
 .service-img {
@@ -368,22 +403,21 @@ export default {
 
 .service-tag {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  top: 10px;
+  left: 10px;
+  background: #f56c6c;
   color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
 }
 
 .service-info {
-  padding: 18px;
+  padding: 16px;
 }
 
 .service-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 8px;
@@ -393,8 +427,8 @@ export default {
 }
 
 .service-desc {
-  font-size: 13px;
-  color: #7f8c8d;
+  font-size: 12px;
+  color: #909399;
   line-height: 1.5;
   margin-bottom: 12px;
   display: -webkit-box;
@@ -404,51 +438,54 @@ export default {
 }
 
 .service-footer {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .service-price {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .current-price {
-  color: #ff6b6b;
-  font-size: 20px;
+  color: #f56c6c;
+  font-size: 18px;
   font-weight: bold;
 }
 
 .original-price {
-  color: #999;
+  color: #c0c4cc;
   text-decoration: line-through;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .service-meta {
   display: flex;
-  gap: 15px;
-  font-size: 12px;
-  color: #999;
+  gap: 12px;
+  font-size: 11px;
+  color: #c0c4cc;
   margin-bottom: 12px;
 }
 
 .service-meta i {
-  margin-right: 4px;
+  margin-right: 2px;
 }
 
 .book-btn {
   width: 100%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border: none;
-  border-radius: 25px;
-  padding: 8px 0;
+  background: white;
+  border-color: #409EFF;
+  color: #409EFF;
+  border-radius: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  transition: all 0.3s;
 }
 
 .book-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: #ecf5ff;
+  transform: translateY(-1px);
 }
 
 /* 空状态 */
@@ -456,18 +493,20 @@ export default {
   text-align: center;
   padding: 60px;
   background: white;
-  border-radius: 20px;
-  color: #999;
+  border-radius: 12px;
+  color: #909399;
+  border: 1px solid #eef2f6;
 }
 
 .empty-state i {
   font-size: 64px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  color: #c0c4cc;
 }
 
 /* 分页 */
 .pagination {
-  margin-top: 40px;
+  margin-top: 30px;
   display: flex;
   justify-content: center;
 }
@@ -478,24 +517,33 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
-  color: #999;
+  background: #f5f7fa;
+  color: #c0c4cc;
   font-size: 24px;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
-  .category-nav {
-    flex-wrap: wrap;
-    border-radius: 20px;
+  .service-content {
+    padding: 20px 0 40px;
   }
 
-  .category-item {
-    padding: 6px 15px;
-    font-size: 12px;
+  .category-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .category-list {
+    justify-content: center;
+  }
+
+  .search-box {
+    width: 100%;
   }
 
   .sort-bar {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .sort-left {
@@ -505,6 +553,10 @@ export default {
 
   .services-grid {
     grid-template-columns: 1fr;
+  }
+
+  .service-image {
+    height: 160px;
   }
 }
 </style>

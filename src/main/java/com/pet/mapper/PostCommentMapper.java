@@ -52,4 +52,26 @@ public interface PostCommentMapper {
     int updateStatus(@Param("id") Integer id, @Param("status") Integer status);
 
     int countToday();
+
+    /**
+     * 根据帖子ID获取所有评论
+     */
+    List<PostComment> getByPostId(@Param("postId") Integer postId);
+
+    /**
+     * 根据父评论ID删除所有子回复
+     */
+    int deleteByParentId(@Param("parentId") Integer parentId);
+
+    /**
+     * 根据父评论ID递归获取所有子评论ID
+     */
+    List<Integer> getAllChildIdsByParentId(@Param("parentId") Integer parentId);
+
+    /**
+     * 批量删除评论
+     */
+    int batchDeleteByIds(@Param("ids") List<Integer> ids);
+
+
 }

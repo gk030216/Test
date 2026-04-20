@@ -4,12 +4,15 @@
 
     <div class="service-detail-content">
       <div class="container">
-        <!-- 面包屑导航 -->
-        <el-breadcrumb separator="/" class="breadcrumb">
-          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-          <el-breadcrumb-item :to="{ path: '/services' }">宠物服务</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ service.name }}</el-breadcrumb-item>
-        </el-breadcrumb>
+        <!-- 顶部导航栏：面包屑 + 返回按钮同一行 -->
+        <div class="top-nav">
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: '/services' }">宠物服务</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ service.name }}</el-breadcrumb-item>
+          </el-breadcrumb>
+          <el-button icon="el-icon-arrow-left" size="small" @click="$router.back()" class="back-btn">返回</el-button>
+        </div>
 
         <!-- 服务信息 -->
         <div class="service-info" v-loading="loading">
@@ -34,23 +37,29 @@
           </div>
 
           <div class="service-details">
-            <h1 class="service-name">{{ service.name }}</h1>
+            <div class="product-header">
+              <h1 class="service-name">{{ service.name }}</h1>
+              <div class="favorite-btn" @click="toggleFavorite">
+                <i :class="['el-icon-star-on', { favorited: isFavorited }]"></i>
+                <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
+              </div>
+            </div>
             <div class="service-price">
               <span class="price-label">价格：</span>
               <span class="current-price">¥{{ service.price }}</span>
               <span class="original-price" v-if="service.originalPrice">¥{{ service.originalPrice }}</span>
             </div>
             <div class="service-meta">
-              <span><i class="el-icon-time"></i> 服务时长：{{ service.duration }}分钟</span>
-              <span><i class="el-icon-s-order"></i> 已售：{{ service.sales || 0 }}次</span>
-              <span class="hot-tag" v-if="service.isHot === 1"><i class="el-icon-star-on"></i> 热门推荐</span>
+              <span><i class="el-icon-time"></i> {{ service.duration }}分钟</span>
+              <span><i class="el-icon-s-order"></i> 已售 {{ service.sales || 0 }}</span>
+              <span class="hot-tag" v-if="service.isHot === 1"><i class="el-icon-star-on"></i> 热门</span>
             </div>
             <div class="service-suitable">
               <span class="suitable-label">适用对象：</span>
               <span class="suitable-value">{{ getSuitableText(service.suitableFor) }}</span>
             </div>
             <div class="service-description">
-              <div class="desc-label">服务介绍：</div>
+              <div class="desc-label">服务介绍</div>
               <div class="desc-content">{{ service.description }}</div>
             </div>
             <div class="service-actions">
@@ -83,27 +92,6 @@
             </div>
           </div>
         </div>
-
-        <!-- 猜你喜欢 -->
-        <div class="recommend-section" v-if="recommendServices.length">
-          <h3>猜你喜欢</h3>
-          <div class="recommend-grid">
-            <div
-                v-for="item in recommendServices"
-                :key="item.id"
-                class="recommend-card"
-                @click="goToDetail(item.id)"
-            >
-              <el-image :src="item.image" fit="cover" class="recommend-img">
-                <div slot="error" class="image-slot"><i class="el-icon-picture-outline"></i></div>
-              </el-image>
-              <div class="recommend-info">
-                <h4>{{ item.name }}</h4>
-                <span class="price">¥{{ item.price }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -115,6 +103,7 @@
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
 import { getServiceDetail, getHotServices } from '@/api/service';
+import { addServiceFavorite, removeServiceFavorite, checkServiceFavorite } from '@/api/service';
 
 export default {
   name: 'ServiceDetail',
@@ -124,7 +113,8 @@ export default {
       loading: false,
       service: {},
       currentImage: '',
-      recommendServices: []
+      recommendServices: [],
+      isFavorited: false
     };
   },
   computed: {
@@ -150,6 +140,7 @@ export default {
   created() {
     this.loadService();
     this.loadRecommend();
+    this.checkFavoriteStatus();
   },
   methods: {
     async loadService() {
@@ -169,6 +160,7 @@ export default {
         this.loading = false;
       }
     },
+
     async loadRecommend() {
       try {
         const res = await getHotServices();
@@ -179,10 +171,59 @@ export default {
         console.error('加载推荐失败', error);
       }
     },
+
+    async checkFavoriteStatus() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const res = await checkServiceFavorite(this.serviceId);
+        if (res.code === 200) {
+          this.isFavorited = res.data;
+        }
+      } catch (error) {
+        console.error('检查收藏状态失败', error);
+      }
+    },
+
+    async toggleFavorite() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录，才能收藏服务', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        }).catch(() => {});
+        return;
+      }
+
+      try {
+        let res;
+        if (this.isFavorited) {
+          res = await removeServiceFavorite(this.serviceId);
+        } else {
+          res = await addServiceFavorite(this.serviceId);
+        }
+
+        if (res.code === 200) {
+          this.isFavorited = !this.isFavorited;
+          this.$message.success(this.isFavorited ? '收藏成功' : '已取消收藏');
+        } else {
+          this.$message.error(res.message);
+        }
+      } catch (error) {
+        console.error('收藏操作失败', error);
+        this.$message.error('操作失败');
+      }
+    },
+
     getSuitableText(suitableFor) {
-      const map = { all: '全部宠物', dog: '仅限狗狗', cat: '仅限猫咪' };
+      const map = { all: '全部宠物', dog: '狗狗', cat: '猫咪' };
       return map[suitableFor] || '全部宠物';
     },
+
     handleBooking() {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -197,6 +238,7 @@ export default {
       }
       this.$router.push(`/service/${this.serviceId}/booking`);
     },
+
     goToDetail(id) {
       this.$router.push(`/service/${id}`);
     }
@@ -209,7 +251,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: #f5f7fa;
 }
 
 .service-detail-content {
@@ -223,20 +265,47 @@ export default {
   padding: 0 20px;
 }
 
+/* 顶部导航栏 */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .breadcrumb {
-  margin-bottom: 30px;
+  flex: 1;
+}
+
+.back-btn {
+  border-radius: 8px;
+  color: #606266;
+  background: white;
+  border: 1px solid #eef2f6;
+  padding: 8px 16px;
+  font-size: 13px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.back-btn:hover {
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
 }
 
 /* 服务信息 */
 .service-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 50px;
+  gap: 40px;
   background: white;
-  border-radius: 24px;
-  padding: 30px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-  margin-bottom: 30px;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eef2f6;
+  margin-bottom: 20px;
 }
 
 .service-gallery {
@@ -247,9 +316,9 @@ export default {
 .main-image {
   width: 100%;
   height: 400px;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #f5f7fa;
 }
 
 .main-image .el-image {
@@ -259,15 +328,15 @@ export default {
 
 .thumb-images {
   display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 12px;
   flex-wrap: wrap;
 }
 
 .thumb-item {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  width: 70px;
+  height: 70px;
+  border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
@@ -275,7 +344,7 @@ export default {
 }
 
 .thumb-item.active {
-  border-color: #667eea;
+  border-color: #409EFF;
 }
 
 .thumb-item .el-image {
@@ -284,191 +353,209 @@ export default {
 }
 
 .service-details {
-  padding: 20px 0;
+  padding: 0;
+}
+
+.product-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
 .service-name {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 20px;
+  margin: 0;
+  flex: 1;
+}
+
+.favorite-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #909399;
+  background: #f5f7fa;
+  margin-left: 16px;
+  border: 1px solid #eef2f6;
+}
+
+.favorite-btn:hover {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.favorite-btn i {
+  font-size: 20px;
+}
+
+.favorite-btn i.favorited {
+  color: #f56c6c;
+}
+
+.favorite-btn span {
+  font-size: 11px;
 }
 
 .service-price {
-  background: #f8f9fc;
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 20px;
+  background: #f5f7fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
 
 .price-label {
-  color: #999;
-  font-size: 14px;
+  color: #909399;
+  font-size: 13px;
 }
 
 .current-price {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: bold;
-  color: #ff6b6b;
-  margin: 0 10px;
+  color: #f56c6c;
+  margin: 0 8px;
 }
 
 .original-price {
-  color: #999;
+  color: #c0c4cc;
   text-decoration: line-through;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .service-meta {
   display: flex;
-  gap: 30px;
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
-  color: #666;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef2f6;
+  color: #606266;
+  font-size: 13px;
   flex-wrap: wrap;
 }
 
 .service-meta i {
-  margin-right: 5px;
-  color: #667eea;
+  margin-right: 4px;
+  color: #409EFF;
 }
 
 .hot-tag {
-  color: #ff6b6b;
+  color: #f56c6c;
 }
 
 .service-suitable {
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .suitable-label {
-  color: #999;
-  font-weight: 500;
+  color: #909399;
+  font-size: 13px;
 }
 
 .suitable-value {
   color: #2c3e50;
-  margin-left: 10px;
+  margin-left: 8px;
+  font-size: 13px;
 }
 
 .service-description {
-  padding: 20px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 0;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .desc-label {
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
   color: #2c3e50;
+  font-size: 14px;
 }
 
 .desc-content {
-  color: #666;
-  line-height: 1.8;
+  color: #606266;
+  line-height: 1.6;
+  font-size: 14px;
 }
 
 .service-actions {
-  margin-top: 30px;
+  margin-top: 24px;
 }
 
 .booking-btn {
-  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  background: #409EFF;
   border: none;
-  padding: 14px 40px;
-  font-size: 16px;
-  border-radius: 40px;
+  padding: 12px 0;
+  font-size: 15px;
+  border-radius: 8px;
   width: 100%;
+  transition: all 0.3s;
 }
 
 .booking-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+  background: #66b1ff;
+  transform: translateY(-1px);
 }
 
 /* 预约须知 */
 .notice-section {
   background: white;
-  border-radius: 20px;
-  padding: 25px 30px;
-  margin-bottom: 30px;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #eef2f6;
 }
 
 .notice-section h3 {
-  font-size: 18px;
-  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
   color: #2c3e50;
 }
 
 .notice-content {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 15px;
+  gap: 12px;
 }
 
 .notice-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #666;
-  font-size: 14px;
+  gap: 8px;
+  color: #606266;
+  font-size: 13px;
 }
 
 .notice-item i {
-  color: #667eea;
-  font-size: 18px;
-}
-
-/* 猜你喜欢 */
-.recommend-section {
-  margin-top: 30px;
+  color: #409EFF;
+  font-size: 16px;
 }
 
 .recommend-section h3 {
-  font-size: 20px;
-  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
   color: #2c3e50;
 }
 
-.recommend-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.recommend-card {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.recommend-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-.recommend-img {
-  width: 100%;
-  height: 160px;
-}
-
-.recommend-info {
-  padding: 12px;
-}
-
 .recommend-info h4 {
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #2c3e50;
 }
 
 .recommend-info .price {
-  color: #ff6b6b;
+  color: #f56c6c;
   font-weight: bold;
+  font-size: 14px;
 }
 
 .image-slot {
@@ -477,31 +564,65 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
-  color: #999;
+  background: #f5f7fa;
+  color: #c0c4cc;
   font-size: 24px;
 }
 
+/* 响应式 */
 @media (max-width: 768px) {
+  .service-detail-content {
+    padding: 20px 0 40px;
+  }
+
+  .top-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .back-btn {
+    margin-left: 0;
+    padding: 6px 12px;
+  }
+
   .service-info {
     grid-template-columns: 1fr;
     gap: 20px;
+    padding: 16px;
   }
 
   .recommend-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .service-name {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .current-price {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .notice-content {
     grid-template-columns: 1fr;
+  }
+
+  .product-header {
+    flex-wrap: wrap;
+  }
+
+  .favorite-btn {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+
+  .main-image {
+    height: 280px;
+  }
+
+  .recommend-img {
+    height: 120px;
   }
 }
 </style>

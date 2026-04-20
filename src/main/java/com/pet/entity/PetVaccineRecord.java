@@ -5,11 +5,11 @@ import java.util.Date;
 public class PetVaccineRecord {
     private Integer id;
     private Integer petId;
+    private Integer inventoryId;
     private String vaccineName;
     private Date vaccineDate;
     private Date nextDate;
-    private String hospital;
-    private String doctor;
+    private String operatorName;
     private String remark;
     private Date createTime;
 
@@ -27,14 +27,25 @@ public class PetVaccineRecord {
     public void setVaccineDate(Date vaccineDate) { this.vaccineDate = vaccineDate; }
     public Date getNextDate() { return nextDate; }
     public void setNextDate(Date nextDate) { this.nextDate = nextDate; }
-    public String getHospital() { return hospital; }
-    public void setHospital(String hospital) { this.hospital = hospital; }
-    public String getDoctor() { return doctor; }
-    public void setDoctor(String doctor) { this.doctor = doctor; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public String getPetName() { return petName; }
     public void setPetName(String petName) { this.petName = petName; }
+    public String getOperatorName() {
+        return operatorName;
+    }
+
+    public void setOperatorName(String operatorName) {
+        this.operatorName = operatorName;
+    }
+    public Integer getInventoryId() {
+        return inventoryId;
+    }
+
+    public void setInventoryId(Integer inventoryId) {
+        this.inventoryId = inventoryId;
+    }
+
 }

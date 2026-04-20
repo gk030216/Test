@@ -162,4 +162,29 @@ public class AdminCarouselController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 批量更新轮播图排序
+     */
+    @PutMapping("/batch-sort")
+    public Result<?> batchUpdateSort(@RequestBody List<Map<String, Integer>> sortList) {
+        try {
+            System.out.println("========== 收到排序更新请求 ==========");
+            System.out.println("接收到的数据: " + sortList);
+
+            if (sortList == null || sortList.isEmpty()) {
+                return Result.error("排序数据不能为空");
+            }
+
+            boolean success = carouselService.batchUpdateSort(sortList);
+            if (success) {
+                return Result.success("排序更新成功");
+            } else {
+                return Result.error("排序更新失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(e.getMessage());
+        }
+    }
 }

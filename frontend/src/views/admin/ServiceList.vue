@@ -70,6 +70,9 @@
         </el-select>
         <el-button type="primary" size="medium" @click="handleSearch" class="search-btn">搜索</el-button>
         <el-button size="medium" @click="handleReset" class="reset-btn">重置</el-button>
+        <el-button type="success" size="medium" @click="handleExport" :loading="exportLoading" plain class="export-btn">
+          <i class="el-icon-download"></i> 导出
+        </el-button>
       </div>
     </div>
 
@@ -112,8 +115,14 @@
       <el-table-column label="操作" width="200" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
+            <el-button size="small" type="primary" plain circle class="action-icon-btn" @click="handleView(scope.row)" title="查看">
+              <i class="el-icon-view"></i>
+            </el-button>
             <el-button size="small" type="primary" plain circle class="action-icon-btn" @click="handleEdit(scope.row)" title="编辑">
               <i class="el-icon-edit"></i>
+            </el-button>
+            <el-button size="small" type="warning" plain circle class="action-icon-btn" @click="handleViewComments(scope.row)" title="评价分析">
+              <i class="el-icon-chat-dot-round"></i>
             </el-button>
             <el-button size="small" type="danger" plain circle class="action-icon-btn" @click="handleDelete(scope.row)" title="删除">
               <i class="el-icon-delete"></i>
@@ -215,6 +224,90 @@
         <el-button type="primary" @click="submitForm" :loading="submitLoading" size="medium">确定</el-button>
       </span>
     </el-dialog>
+
+    <!-- 服务详情对话框 -->
+    <el-dialog title="服务详情" :visible.sync="detailVisible" width="600px" center class="service-detail-dialog">
+      <div class="detail-content" v-if="currentDetailService">
+        <!-- 服务图片 -->
+        <div class="detail-image">
+          <el-image :src="currentDetailService.image" fit="cover" style="width: 100%; height: 200px; border-radius: 12px;">
+            <div slot="error" class="image-slot"><i class="el-icon-picture-outline"></i></div>
+          </el-image>
+        </div>
+
+        <!-- 基本信息 -->
+        <div class="detail-section">
+          <h4>基本信息</h4>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">服务名称：</span>
+                <span class="detail-value">{{ currentDetailService.name }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">服务分类：</span>
+                <span class="detail-value">{{ currentDetailService.categoryName || '未分类' }}</span>
+              </div>
+            </el-col>
+          </el-row>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">价格：</span>
+                <span class="detail-value price">¥{{ currentDetailService.price }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">原价：</span>
+                <span class="detail-value original-price">¥{{ currentDetailService.originalPrice || '--' }}</span>
+              </div>
+            </el-col>
+          </el-row>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">服务时长：</span>
+                <span class="detail-value">{{ currentDetailService.duration }}分钟</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">销量：</span>
+                <span class="detail-value">{{ currentDetailService.sales || 0 }}</span>
+              </div>
+            </el-col>
+          </el-row>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">适用对象：</span>
+                <span class="detail-value">{{ getSuitableText(currentDetailService.suitableFor) }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="detail-item">
+                <span class="detail-label">热门：</span>
+                <span class="detail-value">{{ currentDetailService.isHot === 1 ? '是' : '否' }}</span>
+              </div>
+            </el-col>
+          </el-row>
+          <el-row :gutter="16">
+            <el-col :span="24">
+              <div class="detail-item">
+                <span class="detail-label">服务描述：</span>
+                <span class="detail-value">{{ currentDetailService.description || '暂无描述' }}</span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+      <span slot="footer">
+    <el-button @click="detailVisible = false">关闭</el-button>
+  </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -227,7 +320,8 @@ import {
   deleteItem,
   batchDeleteItems,
   getAllServiceCategories,
-  getServiceStatistics
+  getServiceStatistics,
+  exportServiceList
 } from '@/api/service';
 import { uploadServiceImage } from '@/api/upload';
 
@@ -237,6 +331,9 @@ export default {
     return {
       loading: false,
       submitLoading: false,
+      exportLoading: false,
+      detailVisible: false,
+      currentDetailService: null,
       serviceList: [],
       total: 0,
       page: 1,
@@ -286,12 +383,17 @@ export default {
     async loadList() {
       this.loading = true;
       try {
+        let statusParam = undefined;
+        if (this.searchStatus !== '' && this.searchStatus !== null && this.searchStatus !== undefined) {
+          statusParam = this.searchStatus;
+        }
+
         const params = {
           page: this.page,
           pageSize: this.pageSize,
           keyword: this.searchKeyword || undefined,
           categoryId: this.searchCategoryId || undefined,
-          status: this.searchStatus || undefined
+          status: statusParam
         };
         const res = await getAdminItemList(params);
         if (res.code === 200) {
@@ -305,12 +407,81 @@ export default {
       }
     },
 
-    async loadStatistics() {
+    async handleExport() {
+      this.exportLoading = true;
       try {
+        let statusParam = undefined;
+        if (this.searchStatus !== '' && this.searchStatus !== null && this.searchStatus !== undefined) {
+          statusParam = this.searchStatus;
+        }
+
         const params = {
           keyword: this.searchKeyword || undefined,
           categoryId: this.searchCategoryId || undefined,
-          status: this.searchStatus || undefined
+          status: statusParam
+        };
+
+        const res = await exportServiceList(params);
+
+        // ✅ 检查是否是错误响应（JSON 格式）
+        const contentType = res.type;
+        if (contentType === 'application/json') {
+          const text = await res.text();
+          const error = JSON.parse(text);
+          this.$message.error(error.message || '导出失败');
+          return;
+        }
+
+        // ✅ 检查文件大小
+        if (res.size === 0) {
+          this.$message.error('导出失败：无数据');
+          return;
+        }
+
+        // 创建下载链接
+        const url = window.URL.createObjectURL(res);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `服务列表_${new Date().getTime()}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        this.$message.success('导出成功');
+      } catch (error) {
+        console.error('导出失败', error);
+        this.$message.error('导出失败');
+      } finally {
+        this.exportLoading = false;
+      }
+    },
+
+    // 查看服务详情
+    handleView(row) {
+      this.currentDetailService = row;
+      this.detailVisible = true;
+    },
+
+// 获取适用对象文本
+    getSuitableText(suitableFor) {
+      if (!suitableFor || suitableFor === 'all') return '全部';
+      if (suitableFor === 'dog') return '狗狗';
+      if (suitableFor === 'cat') return '猫咪';
+      return suitableFor;
+    },
+
+    async loadStatistics() {
+      try {
+        let statusParam = undefined;
+        if (this.searchStatus !== '' && this.searchStatus !== null && this.searchStatus !== undefined) {
+          statusParam = this.searchStatus;
+        }
+
+        const params = {
+          keyword: this.searchKeyword || undefined,
+          categoryId: this.searchCategoryId || undefined,
+          status: statusParam
         };
         const res = await getServiceStatistics(params);
         if (res.code === 200) {
@@ -495,6 +666,17 @@ export default {
           }).catch(() => {});
     },
 
+// 查看服务评价分析
+    handleViewComments(row) {
+      this.$router.push({
+        path: '/admin/service-comment-analysis',
+        query: {
+          serviceId: row.id,
+          serviceName: row.name
+        }
+      });
+    },
+
     async handleBatchDelete() {
       if (this.selectedRows.length === 0) return;
       const ids = this.selectedRows.map(r => r.id).join(',');
@@ -582,4 +764,100 @@ export default {
 .form-tip { font-size: 12px; color: #909399; margin-left: 8px; }
 .dialog-footer { text-align: right; padding: 16px 24px 20px; border-top: 1px solid #eef2f6; }
 @media (max-width: 768px) { .service-list { padding: 12px; } .action-bar { flex-direction: column; } .search-input { width: 160px; } }
+.export-btn {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+  color: white;
+}
+
+/* 服务详情对话框样式 */
+.service-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+}
+
+.service-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.service-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+}
+
+.detail-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.detail-image {
+  margin-bottom: 20px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item {
+  margin-bottom: 12px;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: #909399;
+  width: 80px;
+  display: inline-block;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.detail-value.price {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.detail-value.original-price {
+  color: #999;
+  text-decoration: line-through;
+}
+
+.image-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+  color: #999;
+}
+
+.image-slot i {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
 </style>
