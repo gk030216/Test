@@ -85,4 +85,16 @@ public interface ProductCommentMapper {
     // 统计商品评价数量（支持评分筛选）
     int countCommentWithRating(@Param("productId") Integer productId,
                                @Param("rating") Integer rating);
+
+    /**
+     * 获取用户的所有商品评价列表
+     */
+    List<ProductComment> getUserProductComments(@Param("userId") Integer userId,
+                                                @Param("offset") Integer offset,
+                                                @Param("limit") Integer limit);
+
+    /**
+     * 统计用户商品评价数量
+     */
+    int countUserProductComments(@Param("userId") Integer userId);
 }

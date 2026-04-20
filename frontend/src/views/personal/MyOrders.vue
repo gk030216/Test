@@ -2,13 +2,31 @@
   <div class="orders-page">
     <h2 class="page-title">我的订单</h2>
 
-    <!-- 订单类型切换 -->
-    <div class="orders-type-tabs">
-      <div class="type-tab" :class="{ active: orderType === 'product' }" @click="orderType = 'product'">
-        <i class="el-icon-goods"></i> 商品订单
+    <!-- 订单类型栏 - 一行显示：全部订单、商品订单、服务预约、搜索栏 -->
+    <div class="orders-type-bar">
+      <div class="type-tabs">
+        <div class="type-tab" :class="{ active: orderType === 'all' }" @click="showAllOrders">
+          <i class="el-icon-menu"></i> 全部订单
+        </div>
+        <div class="type-tab" :class="{ active: orderType === 'product' }" @click="orderType = 'product'">
+          <i class="el-icon-goods"></i> 商品订单
+        </div>
+        <div class="type-tab" :class="{ active: orderType === 'service' }" @click="orderType = 'service'">
+          <i class="el-icon-service"></i> 服务预约
+        </div>
       </div>
-      <div class="type-tab" :class="{ active: orderType === 'service' }" @click="orderType = 'service'">
-        <i class="el-icon-service"></i> 服务预约
+
+      <div class="search-wrapper">
+        <i class="el-icon-search search-icon"></i>
+        <el-input
+            v-model="searchKeyword"
+            placeholder="搜索订单号/商品名/服务名"
+            size="medium"
+            clearable
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
+            class="search-input"
+        ></el-input>
       </div>
     </div>
 
@@ -23,8 +41,142 @@
 
     <!-- 订单网格 -->
     <div class="orders-grid" v-loading="loading">
+      <!-- 全部订单卡片（商品订单 + 服务预约混合） -->
+      <div class="order-card" v-for="order in allOrdersList" :key="order.orderNo || order.id" v-if="orderType === 'all'">
+        <!-- 商品订单卡片 -->
+        <template v-if="order._type === 'product'">
+          <div class="card-header">
+            <div class="order-info">
+              <span class="order-no"><i class="el-icon-document"></i> {{ order.orderNo }}</span>
+              <span class="order-time"><i class="el-icon-time"></i> {{ formatRelativeTime(order.createTime) }}</span>
+            </div>
+            <div class="order-status" :class="getStatusClass(order.orderStatus)">
+              <i :class="getStatusIcon(order.orderStatus)"></i> {{ getStatusText(order.orderStatus) }}
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="product-image" v-if="order.items && order.items[0]">
+              <img :src="order.items[0].productImage" :alt="order.items[0].productName" @error="e => e.target.src = '/images/default-product.jpg'">
+              <span class="product-count" v-if="order.items.length > 1">+{{ order.items.length - 1 }}</span>
+            </div>
+            <div class="order-info-detail">
+              <div class="product-name">{{ order.items && order.items[0] ? order.items[0].productName : '商品' }}</div>
+              <div class="order-amount">共 {{ order.items ? order.items.length : 0 }} 件商品</div>
+              <div class="order-total">实付：<span class="total-price">¥{{ order.payAmount }}</span></div>
+              <div class="cancel-reason" v-if="order.orderStatus === 4 && order.cancelReason">
+                <i class="el-icon-info"></i>
+                <span>取消原因：{{ order.cancelReason }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <el-button size="small" plain @click="viewOrderDetail(order)">查看详情</el-button>
+
+            <template v-if="order.orderStatus === 0">
+              <el-button size="small" plain class="cancel-btn" @click="openCancelDialog(order, 'product')">取消</el-button>
+              <el-button size="small" class="pay-btn" @click="goToPay(order.orderNo)">去支付</el-button>
+            </template>
+
+            <template v-if="order.orderStatus === 1">
+              <el-tag type="info" size="small" class="status-tag">待发货</el-tag>
+              <el-button size="small" plain class="refund-btn" @click="openCancelDialog(order, 'product')">申请退款</el-button>
+            </template>
+
+            <template v-if="order.orderStatus === 2">
+              <el-button size="small" class="confirm-btn" @click="confirmReceipt(order)">确认收货</el-button>
+            </template>
+
+            <template v-if="order.orderStatus === 3">
+              <el-button v-if="order.commentStatus === 'uncommented'" size="small" plain class="comment-btn" @click="openCommentDialog(order)">评价</el-button>
+              <el-button v-if="order.commentStatus === 'commented'" size="small" plain class="view-btn" @click="viewComment(order)">查看评价</el-button>
+              <el-button size="small" plain class="buyagain-btn" @click="buyAgain(order)">再次购买</el-button>
+            </template>
+
+            <template v-if="order.orderStatus === 4 || order.orderStatus === 5">
+              <el-tag :type="order.orderStatus === 4 ? 'danger' : 'info'" size="small" class="status-tag">
+                {{ order.orderStatus === 4 ? '已取消' : '已退款' }}
+              </el-tag>
+            </template>
+          </div>
+        </template>
+
+        <!-- 服务预约卡片 -->
+        <template v-else>
+          <div class="card-header">
+            <div class="order-info">
+              <span class="order-no"><i class="el-icon-document"></i> {{ order.appointmentNo }}</span>
+              <span class="order-time"><i class="el-icon-time"></i> {{ formatRelativeTime(order.createTime) }}</span>
+            </div>
+            <div class="order-status" :class="getAppointmentStatusClass(order.status)">
+              <i :class="getAppointmentStatusIcon(order.status)"></i> {{ getAppointmentStatusText(order.status) }}
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="product-image">
+              <img
+                  v-if="order.serviceImage"
+                  :src="order.serviceImage"
+                  :alt="order.serviceName"
+                  @error="e => e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50\' y=\'55\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'14\'%3E暂无图片%3C/text%3E%3C/svg%3E'"
+              >
+              <div v-else class="image-placeholder">
+                <i class="el-icon-service"></i>
+              </div>
+            </div>
+            <div class="order-info-detail">
+              <div class="product-name">{{ order.serviceName }}</div>
+              <div class="appointment-info">
+                <span><i class="el-icon-s-custom"></i> {{ order.petName || '未指定' }}</span>
+                <span><i class="el-icon-date"></i> {{ formatDate(order.appointmentDate) }} {{ order.appointmentTime }}</span>
+              </div>
+              <div class="remark-info" v-if="order.remark">
+                <i class="el-icon-edit"></i>
+                <span>备注：{{ order.remark }}</span>
+              </div>
+              <div class="order-total">实付：<span class="total-price">¥{{ order.servicePrice }}</span></div>
+              <div class="cancel-reason" v-if="order.status === 4 && order.cancelReason">
+                <i class="el-icon-info"></i>
+                <span>取消原因：{{ order.cancelReason }}</span>
+              </div>
+              <div class="cancel-reason" v-if="order.status === 5 && order.cancelReason">
+                <i class="el-icon-info"></i>
+                <span>拒绝原因：{{ order.cancelReason }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <el-button size="small" plain @click="viewAppointmentDetail(order)">查看详情</el-button>
+
+            <template v-if="order.status === 0 && order.payStatus !== 1">
+              <el-button size="small" plain class="cancel-btn" @click="openCancelDialog(order, 'service')">取消</el-button>
+              <el-button size="small" class="pay-btn" @click="goToAppointmentPay(order)">去支付</el-button>
+            </template>
+
+            <template v-if="order.status === 1 && order.payStatus === 1">
+              <el-tag type="info" size="small" class="status-tag">待服务</el-tag>
+              <el-button size="small" plain class="refund-btn" @click="openCancelDialog(order, 'service')">申请退款</el-button>
+            </template>
+
+            <template v-if="order.status === 2">
+              <el-tag type="success" size="small" class="status-tag">服务中</el-tag>
+            </template>
+
+            <template v-if="order.status === 3">
+              <el-button v-if="!order.comment" size="small" plain class="comment-btn" @click="openServiceCommentDialog(order)">评价</el-button>
+              <el-button v-if="order.comment" size="small" plain class="view-btn" @click="viewServiceComment(order)">查看评价</el-button>
+            </template>
+
+            <template v-if="order.status === 4 || order.status === 5">
+              <el-tag type="danger" size="small" class="status-tag">
+                {{ order.status === 4 ? '已取消' : '已拒绝' }}
+              </el-tag>
+            </template>
+          </div>
+        </template>
+      </div>
+
       <!-- 商品订单卡片 -->
-      <div class="order-card" v-for="order in orderList" :key="order.orderNo" v-if="orderType === 'product'">
+      <div class="order-card" v-for="order in filteredOrderList" :key="order.orderNo" v-if="orderType === 'product'">
         <div class="card-header">
           <div class="order-info">
             <span class="order-no"><i class="el-icon-document"></i> {{ order.orderNo }}</span>
@@ -36,7 +188,7 @@
         </div>
         <div class="card-body">
           <div class="product-image" v-if="order.items && order.items[0]">
-            <img :src="order.items[0].productImage" :alt="order.items[0].productName">
+            <img :src="order.items[0].productImage" :alt="order.items[0].productName" @error="e => e.target.src = '/images/default-product.jpg'">
             <span class="product-count" v-if="order.items.length > 1">+{{ order.items.length - 1 }}</span>
           </div>
           <div class="order-info-detail">
@@ -52,33 +204,28 @@
         <div class="card-footer">
           <el-button size="small" plain @click="viewOrderDetail(order)">查看详情</el-button>
 
-          <!-- 待支付 -->
           <template v-if="order.orderStatus === 0">
-            <el-button size="small" type="danger" plain @click="openCancelDialog(order, 'product')">取消</el-button>
-            <el-button size="small" type="primary" @click="goToPay(order.orderNo)">去支付</el-button>
+            <el-button size="small" plain class="cancel-btn" @click="openCancelDialog(order, 'product')">取消</el-button>
+            <el-button size="small" class="pay-btn" @click="goToPay(order.orderNo)">去支付</el-button>
           </template>
 
-          <!-- 已支付 - 待发货，可申请退款 -->
           <template v-if="order.orderStatus === 1">
             <el-tag type="info" size="small" class="status-tag">待发货</el-tag>
-            <el-button size="small" type="danger" plain @click="openCancelDialog(order, 'product')">申请退款</el-button>
+            <el-button size="small" plain class="refund-btn" @click="openCancelDialog(order, 'product')">申请退款</el-button>
           </template>
 
-          <!-- 已发货 - 确认收货 -->
           <template v-if="order.orderStatus === 2">
-            <el-button size="small" type="primary" @click="confirmReceipt(order)">确认收货</el-button>
+            <el-button size="small" class="confirm-btn" @click="confirmReceipt(order)">确认收货</el-button>
           </template>
 
-          <!-- 已完成 - 评价 -->
           <template v-if="order.orderStatus === 3">
-            <el-button v-if="order.commentStatus === 'uncommented'" size="small" type="warning" @click="openCommentDialog(order)">评价</el-button>
-            <el-button v-if="order.commentStatus === 'commented'" size="small" type="info" plain @click="viewComment(order)">查看评价</el-button>
-            <el-button size="small" plain @click="buyAgain(order)">再次购买</el-button>
+            <el-button v-if="order.commentStatus === 'uncommented'" size="small" plain class="comment-btn" @click="openCommentDialog(order)">评价</el-button>
+            <el-button v-if="order.commentStatus === 'commented'" size="small" plain class="view-btn" @click="viewComment(order)">查看评价</el-button>
+            <el-button size="small" plain class="buyagain-btn" @click="buyAgain(order)">再次购买</el-button>
           </template>
 
-          <!-- 已取消/已退款 - 显示标签 -->
           <template v-if="order.orderStatus === 4 || order.orderStatus === 5">
-            <el-tag type="danger" size="small" class="status-tag">
+            <el-tag :type="order.orderStatus === 4 ? 'danger' : 'info'" size="small" class="status-tag">
               {{ order.orderStatus === 4 ? '已取消' : '已退款' }}
             </el-tag>
           </template>
@@ -86,7 +233,7 @@
       </div>
 
       <!-- 服务预约卡片 -->
-      <div class="order-card" v-for="appointment in appointmentList" :key="appointment.id" v-if="orderType === 'service'">
+      <div class="order-card" v-for="appointment in filteredAppointmentList" :key="appointment.id" v-if="orderType === 'service'">
         <div class="card-header">
           <div class="order-info">
             <span class="order-no"><i class="el-icon-document"></i> {{ appointment.appointmentNo }}</span>
@@ -98,8 +245,15 @@
         </div>
         <div class="card-body">
           <div class="product-image">
-            <img v-if="appointment.serviceImage" :src="appointment.serviceImage" :alt="appointment.serviceName">
-            <div v-else class="image-placeholder"><i class="el-icon-service"></i></div>
+            <img
+                v-if="appointment.serviceImage"
+                :src="appointment.serviceImage"
+                :alt="appointment.serviceName"
+                @error="e => e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50\' y=\'55\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'14\'%3E暂无图片%3C/text%3E%3C/svg%3E'"
+            >
+            <div v-else class="image-placeholder">
+              <i class="el-icon-service"></i>
+            </div>
           </div>
           <div class="order-info-detail">
             <div class="product-name">{{ appointment.serviceName }}</div>
@@ -107,18 +261,15 @@
               <span><i class="el-icon-s-custom"></i> {{ appointment.petName || '未指定' }}</span>
               <span><i class="el-icon-date"></i> {{ formatDate(appointment.appointmentDate) }} {{ appointment.appointmentTime }}</span>
             </div>
-            <!-- 备注信息 -->
             <div class="remark-info" v-if="appointment.remark">
               <i class="el-icon-edit"></i>
               <span>备注：{{ appointment.remark }}</span>
             </div>
             <div class="order-total">实付：<span class="total-price">¥{{ appointment.servicePrice }}</span></div>
-            <!-- 取消原因显示 -->
             <div class="cancel-reason" v-if="appointment.status === 4 && appointment.cancelReason">
               <i class="el-icon-info"></i>
               <span>取消原因：{{ appointment.cancelReason }}</span>
             </div>
-            <!-- ✅ 拒绝原因显示 -->
             <div class="cancel-reason" v-if="appointment.status === 5 && appointment.cancelReason">
               <i class="el-icon-info"></i>
               <span>拒绝原因：{{ appointment.cancelReason }}</span>
@@ -128,30 +279,25 @@
         <div class="card-footer">
           <el-button size="small" plain @click="viewAppointmentDetail(appointment)">查看详情</el-button>
 
-          <!-- 待确认/未支付 -->
           <template v-if="appointment.status === 0 && appointment.payStatus !== 1">
-            <el-button size="small" type="danger" plain @click="openCancelDialog(appointment, 'service')">取消</el-button>
-            <el-button size="small" type="primary" @click="goToAppointmentPay(appointment)">去支付</el-button>
+            <el-button size="small" plain class="cancel-btn" @click="openCancelDialog(appointment, 'service')">取消</el-button>
+            <el-button size="small" class="pay-btn" @click="goToAppointmentPay(appointment)">去支付</el-button>
           </template>
 
-          <!-- 已确认/已支付 - 可申请退款 -->
           <template v-if="appointment.status === 1 && appointment.payStatus === 1">
             <el-tag type="info" size="small" class="status-tag">待服务</el-tag>
-            <el-button size="small" type="danger" plain @click="openCancelDialog(appointment, 'service')">申请退款</el-button>
+            <el-button size="small" plain class="refund-btn" @click="openCancelDialog(appointment, 'service')">申请退款</el-button>
           </template>
 
-          <!-- 服务中 -->
           <template v-if="appointment.status === 2">
             <el-tag type="success" size="small" class="status-tag">服务中</el-tag>
           </template>
 
-          <!-- 已完成 - 评价 -->
           <template v-if="appointment.status === 3">
-            <el-button v-if="!appointment.comment" size="small" type="warning" @click="openServiceCommentDialog(appointment)">评价</el-button>
-            <el-button v-if="appointment.comment" size="small" type="info" plain @click="viewServiceComment(appointment)">查看评价</el-button>
+            <el-button v-if="!appointment.comment" size="small" plain class="comment-btn" @click="openServiceCommentDialog(appointment)">评价</el-button>
+            <el-button v-if="appointment.comment" size="small" plain class="view-btn" @click="viewServiceComment(appointment)">查看评价</el-button>
           </template>
 
-          <!-- 已取消/已拒绝 - 显示标签，无操作按钮 -->
           <template v-if="appointment.status === 4 || appointment.status === 5">
             <el-tag type="danger" size="small" class="status-tag">
               {{ appointment.status === 4 ? '已取消' : '已拒绝' }}
@@ -159,11 +305,12 @@
           </template>
         </div>
       </div>
-      <div class="empty-state" v-if="!loading && ((orderType === 'product' && orderList.length === 0) || (orderType === 'service' && appointmentList.length === 0))">
+
+      <div class="empty-state" v-if="!loading && ((orderType === 'product' && filteredOrderList.length === 0) || (orderType === 'service' && filteredAppointmentList.length === 0) || (orderType === 'all' && allOrdersList.length === 0))">
         <i class="el-icon-s-order"></i>
-        <p>暂无{{ orderType === 'product' ? '订单' : '预约' }}</p>
-        <el-button type="primary" size="small" @click="orderType === 'product' ? $router.push('/shop') : $router.push('/services')">
-          {{ orderType === 'product' ? '去购物' : '去预约' }}
+        <p>{{ searchKeyword ? '没有找到相关订单' : '暂无' + (orderType === 'product' ? '订单' : (orderType === 'service' ? '预约' : '订单')) }}</p>
+        <el-button type="primary" size="small" @click="orderType === 'product' ? $router.push('/shop') : (orderType === 'service' ? $router.push('/services') : $router.push('/'))">
+          {{ orderType === 'product' ? '去购物' : (orderType === 'service' ? '去预约' : '去逛逛') }}
         </el-button>
       </div>
 
@@ -172,7 +319,7 @@
       </div>
     </div>
 
-    <!-- 取消/退款对话框 - 动态原因选项 -->
+    <!-- 取消/退款对话框 -->
     <el-dialog :title="dialogTitle" :visible.sync="cancelDialogVisible" width="450px" center class="cancel-dialog">
       <div class="cancel-content">
         <div class="cancel-info">
@@ -181,14 +328,12 @@
         </div>
         <el-form label-width="80px">
           <el-form-item label="取消原因">
-            <!-- 服务预约原因选项 -->
             <el-select v-if="currentCancelType === 'service'" v-model="cancelReason" placeholder="请选择取消原因" style="width: 100%">
               <el-option label="时间冲突，改天再约" value="时间冲突，改天再约" />
               <el-option label="宠物身体不适" value="宠物身体不适" />
               <el-option label="已经找到其他服务" value="已经找到其他服务" />
               <el-option label="其他原因" value="其他原因" />
             </el-select>
-            <!-- 商品订单原因选项 -->
             <el-select v-else v-model="cancelReason" placeholder="请选择取消原因" style="width: 100%">
               <el-option label="不想要了" value="不想要了" />
               <el-option label="信息填写错误" value="信息填写错误" />
@@ -375,8 +520,8 @@
 </template>
 
 <script>
-import { getOrderList, cancelOrder, updateOrderStatus, refundOrder } from '@/api/order';
-import { getUserAppointments, cancelAppointment, addServiceComment, getServiceCommentByAppointment, refundAppointment } from '@/api/service';
+import { getOrderList, cancelOrder, updateOrderStatus } from '@/api/order';
+import { getUserAppointments, cancelAppointment, addServiceComment, getServiceCommentByAppointment } from '@/api/service';
 import { addComment, getProductComments } from '@/api/comment';
 import { uploadCommentImage as uploadImage } from '@/api/upload';
 import { addToCart } from '@/api/cart';
@@ -385,17 +530,20 @@ export default {
   name: 'Orders',
   data() {
     return {
+      allRawOrders: [],
+      allRawTotal: 0,
       loading: false,
       commentSubmitting: false,
       serviceCommentSubmitting: false,
       cancelLoading: false,
-      orderType: 'product',
+      orderType: 'all',
       orderList: [],
       appointmentList: [],
       total: 0,
       page: 1,
-      pageSize: 12,
+      pageSize: 9,
       activeTab: '',
+      searchKeyword: '',
       productTabList: [
         { value: '', label: '全部', icon: 'el-icon-menu' },
         { value: 0, label: '待支付', icon: 'el-icon-time' },
@@ -412,7 +560,7 @@ export default {
         { value: 2, label: '服务中', icon: 'el-icon-loading' },
         { value: 3, label: '已完成', icon: 'el-icon-circle-check' },
         { value: 4, label: '已取消', icon: 'el-icon-circle-close' },
-        { value: 5, label: '已拒绝', icon: 'el-icon-circle-close' }  // 新增
+        { value: 5, label: '已拒绝', icon: 'el-icon-circle-close' }
       ],
       orderCounts: {},
       commentDialogVisible: false,
@@ -446,6 +594,11 @@ export default {
   },
   computed: {
     currentTabList() {
+      if (this.orderType === 'all') {
+        // 全部订单时合并去重
+        const allTabs = [...this.productTabList, ...this.serviceTabList];
+        return allTabs.filter((v, i, a) => a.findIndex(t => t.value === v.value) === i);
+      }
       return this.orderType === 'product' ? this.productTabList : this.serviceTabList;
     },
     dialogTitle() {
@@ -455,21 +608,96 @@ export default {
       } else {
         return this.currentCancelItem.status === 1 && this.currentCancelItem.payStatus === 1 ? '申请退款' : '取消预约';
       }
+    },
+    // 全部订单列表（合并商品订单和服务预约）
+    allOrdersList() {
+      let filtered = this.allRawOrders;
+
+      // 根据搜索关键词过滤
+      if (this.searchKeyword) {
+        const keyword = this.searchKeyword.toLowerCase();
+        filtered = this.allRawOrders.filter(item => {
+          const orderNo = (item.orderNo || item.appointmentNo || '').toLowerCase();
+          const name = (item.items?.[0]?.productName || item.serviceName || '').toLowerCase();
+          return orderNo.includes(keyword) || name.includes(keyword);
+        });
+        // 更新过滤后的总数
+        this.total = filtered.length;
+      } else {
+        this.total = this.allRawTotal;
+      }
+
+      // 前端分页
+      const start = (this.page - 1) * this.pageSize;
+      const end = start + this.pageSize;
+      return filtered.slice(start, end);
+    },
+    // 商品订单过滤
+    filteredOrderList() {
+      if (!this.searchKeyword) return this.orderList;
+      const keyword = this.searchKeyword.toLowerCase();
+      return this.orderList.filter(order => {
+        const orderNo = (order.orderNo || '').toLowerCase();
+        const productName = (order.items && order.items[0] && order.items[0].productName || '').toLowerCase();
+        return orderNo.includes(keyword) || productName.includes(keyword);
+      });
+    },
+    // 服务预约过滤
+    filteredAppointmentList() {
+      if (!this.searchKeyword) return this.appointmentList;
+      const keyword = this.searchKeyword.toLowerCase();
+      return this.appointmentList.filter(appointment => {
+        const appointmentNo = (appointment.appointmentNo || '').toLowerCase();
+        const serviceName = (appointment.serviceName || '').toLowerCase();
+        return appointmentNo.includes(keyword) || serviceName.includes(keyword);
+      });
     }
   },
   watch: {
     activeTab() { this.page = 1; this.loadData(); },
-    orderType() { this.activeTab = ''; this.page = 1; this.loadData(); }
+    orderType() { this.activeTab = ''; this.page = 1; this.searchKeyword = ''; this.loadData(); }
   },
   created() { this.loadData(); },
   methods: {
+    handleSearch() {},
+    showAllOrders() {
+      this.orderType = 'all';
+      this.activeTab = '';
+      this.searchKeyword = '';
+      this.page = 1;
+      this.loadData();
+    },
     async loadData() {
       this.loading = true;
       try {
-        if (this.orderType === 'product') {
-          await this.loadOrders();
+        if (this.orderType === 'all') {
+          // 全部订单：一次性获取所有数据（不分页），然后前端做分页
+          // 只在第一页或数据为空时获取全部数据
+          if (this.page === 1 || this.allRawOrders.length === 0) {
+            // 获取所有商品订单（不分页）
+            const ordersRes = await getOrderList({ page: 1, pageSize: 1000, status: this.activeTab !== '' ? this.activeTab : undefined });
+            // 获取所有服务预约（不分页）
+            const appointmentsRes = await getUserAppointments({ page: 1, pageSize: 1000, status: this.activeTab !== '' ? this.activeTab : undefined });
+
+            const orders = (ordersRes.code === 200 ? ordersRes.data.list : []).map(o => ({ ...o, _type: 'product' }));
+            const appointments = (appointmentsRes.code === 200 ? appointmentsRes.data.list : []).map(a => ({ ...a, _type: 'service' }));
+
+            const all = [...orders, ...appointments];
+            // 按时间排序（最新的在前）
+            all.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+
+            this.allRawOrders = all;
+            this.allRawTotal = all.length;
+            // 设置总数为合并后的总数
+            this.total = this.allRawTotal;
+          }
+          // 注意：不需要重新请求，因为 allRawOrders 已经缓存了全部数据
+          // 计算属性 allOrdersList 会自动处理分页和搜索过滤
+
+        } else if (this.orderType === 'product') {
+          await this.loadOrders(true);
         } else {
-          await this.loadAppointments();
+          await this.loadAppointments(true);
         }
       } catch (error) {
         console.error('加载失败', error);
@@ -478,20 +706,39 @@ export default {
         this.loading = false;
       }
     },
-    async loadOrders() {
+    async loadOrders(loadComments = true) {
       const res = await getOrderList({ page: this.page, pageSize: this.pageSize, status: this.activeTab !== '' ? this.activeTab : undefined });
       if (res.code === 200) {
         this.orderList = res.data.list;
         this.total = res.data.total;
-        await this.loadOrderComments();
+        if (loadComments) await this.loadOrderComments();
       }
     },
-    async loadAppointments() {
-      const res = await getUserAppointments({ page: this.page, pageSize: this.pageSize, status: this.activeTab !== '' ? this.activeTab : undefined });
+    async loadAppointments(loadComments = true) {
+      console.log('========== Orders.vue 加载服务预约 ==========');
+      console.log('当前页码:', this.page);
+      console.log('每页大小:', this.pageSize);
+      console.log('当前状态筛选:', this.activeTab !== '' ? this.activeTab : '全部');
+
+      const res = await getUserAppointments({
+        page: this.page,
+        pageSize: this.pageSize,
+        status: this.activeTab !== '' ? this.activeTab : undefined
+      });
+
+      console.log('接口返回状态:', res.code);
+      console.log('接口返回总数:', res.data?.total);
+      console.log('接口返回列表长度:', res.data?.list?.length);
+      console.log('============================================');
+
       if (res.code === 200) {
-        this.appointmentList = res.data.list || [];
+        // 确保每个预约都有 serviceImage 字段
+        this.appointmentList = (res.data.list || []).map(item => ({
+          ...item,
+          serviceImage: item.serviceImage || ''
+        }));
         this.total = res.data.total || 0;
-        await this.loadAppointmentComments();
+        if (loadComments) await this.loadAppointmentComments();
       }
     },
     async loadOrderComments() {
@@ -533,28 +780,23 @@ export default {
       return userInfo ? JSON.parse(userInfo).id : null;
     },
     getOrderCount(status) { return this.orderCounts[status] || 0; },
-    handlePageChange(page) { this.page = page; this.loadData(); },
+    handlePageChange(page) {
+      this.page = page;
+      if (this.orderType === 'all') {
+        // 全部订单：不需要重新请求，计算属性会自动更新
+        // 强制触发视图更新
+        this.$forceUpdate();
+      } else {
+        this.loadData();
+      }
+    },
 
     getStatusText(status) {
-      const map = {
-        0: '待支付',
-        1: '已支付',
-        2: '已发货',
-        3: '已完成',
-        4: '已取消',
-        5: '已退款'  // ✅ 新增
-      };
+      const map = { 0: '待支付', 1: '已支付', 2: '已发货', 3: '已完成', 4: '已取消', 5: '已退款' };
       return map[status] || '未知';
     },
     getStatusClass(status) {
-      const map = {
-        0: 'status-pending',
-        1: 'status-paid',
-        2: 'status-shipped',
-        3: 'status-completed',
-        4: 'status-cancelled',
-        5: 'status-refunded'
-      };
+      const map = { 0: 'status-pending', 1: 'status-paid', 2: 'status-shipped', 3: 'status-completed', 4: 'status-cancelled', 5: 'status-refunded' };
       return map[status] || '';
     },
     getStatusIcon(status) { const map = {0: 'el-icon-time', 1: 'el-icon-success', 2: 'el-icon-truck', 3: 'el-icon-circle-check', 4: 'el-icon-circle-close'}; return map[status] || 'el-icon-info'; },
@@ -579,15 +821,9 @@ export default {
       let reason = this.cancelReason;
       if (reason === '其他原因') {
         reason = this.customReason;
-        if (!reason) {
-          this.$message.warning('请输入取消原因');
-          return;
-        }
+        if (!reason) { this.$message.warning('请输入取消原因'); return; }
       }
-      if (!reason) {
-        this.$message.warning('请选择取消原因');
-        return;
-      }
+      if (!reason) { this.$message.warning('请选择取消原因'); return; }
 
       this.cancelLoading = true;
       try {
@@ -597,7 +833,6 @@ export default {
         } else {
           res = await cancelAppointment(this.currentCancelItem.id, reason);
         }
-
         if (res.code === 200) {
           this.$message.success(res.message || '操作成功');
           this.cancelDialogVisible = false;
@@ -613,27 +848,18 @@ export default {
       }
     },
 
-    goToProduct(productId) { if (productId) this.$router.push(`/product/${productId}`); },
     goToPay(orderNo) { this.$router.push(`/pay/${orderNo}`); },
+    goToAppointmentPay(appointment) { this.$router.push(`/pay/${appointment.appointmentNo}`); },
 
     async confirmReceipt(order) {
-      if (order.orderStatus !== 2) {
-        this.$message.warning('当前状态无法确认收货');
-        return;
-      }
-      this.$confirm('确认已收到商品？确认后可以评价商品哦！', '提示', {
-        type: 'info',
-        confirmButtonText: '确认收货',
-        cancelButtonText: '再等等'
-      }).then(async () => {
+      if (order.orderStatus !== 2) { this.$message.warning('当前状态无法确认收货'); return; }
+      this.$confirm('确认已收到商品？确认后可以评价商品哦！', '提示', { type: 'info', confirmButtonText: '确认收货', cancelButtonText: '再等等' }).then(async () => {
         try {
           await updateOrderStatus(order.orderNo, 3);
           this.$message.success('确认收货成功！快去评价吧~');
           await this.loadData();
           setTimeout(() => this.openCommentDialog(order), 500);
-        } catch (error) {
-          this.$message.error('操作失败');
-        }
+        } catch (error) { this.$message.error('操作失败'); }
       }).catch(() => {});
     },
 
@@ -649,9 +875,7 @@ export default {
     viewComment(order) { this.viewCommentData = order.comment; this.viewProduct = order.items[0]; this.viewCommentVisible = true; },
     viewOrderDetail(order) { this.detailOrder = order; this.orderDetailVisible = true; },
 
-    async buyAgain(order) { try { for (const item of order.items) { await addToCart(item.productId, item.quantity); } this.$message.success('已加入购物车'); this.$bus.$emit('cart-updated'); } catch (error) { this.$message.error('添加失败'); } },
-
-    goToAppointmentPay(appointment) { this.$router.push(`/pay/${appointment.appointmentNo}`); },
+    async buyAgain(order) { try { for (const item of order.items) { await addToCart(item.productId, item.quantity); } this.$message.success('已加入购物车'); if (this.$bus) { this.$bus.$emit('cart-updated'); } } catch (error) { this.$message.error('添加失败'); } },
 
     openServiceCommentDialog(appointment) { this.currentAppointment = appointment; this.serviceCommentForm = { rating: 5, content: '' }; this.serviceCommentDialogVisible = true; this.$nextTick(() => { this.$refs.serviceCommentForm?.clearValidate(); }); },
 
@@ -667,18 +891,74 @@ export default {
 .orders-page { padding: 0; background: transparent; min-height: 400px; }
 .page-title { font-size: 24px; font-weight: 600; color: #2c3e50; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; }
 
-/* 订单类型切换 */
-.orders-type-tabs { display: flex; gap: 12px; margin-bottom: 20px; }
-.type-tab { display: flex; align-items: center; gap: 6px; padding: 8px 24px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; background: #fff; border: 1px solid #e0e0e0; transition: all 0.3s; }
-.type-tab:hover { border-color: #667eea; color: #667eea; }
-.type-tab.active { background: linear-gradient(135deg, #667eea, #764ba2); border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+/* 订单类型栏 - 一行显示 */
+.orders-type-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.type-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.type-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 24px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s;
+}
+
+.type-tab:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.type-tab.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* 搜索框样式 */
+.search-wrapper {
+  position: relative;
+  width: 250px;
+  flex-shrink: 0;
+}
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #909399;
+  font-size: 16px;
+  z-index: 1;
+}
+.search-input ::v-deep .el-input__inner {
+  padding-left: 36px;
+  border-radius: 8px;
+}
 
 /* 订单状态标签页 */
 .orders-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
 .tab-item { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 6px 16px; border-radius: 30px; transition: all 0.3s; font-size: 13px; font-weight: 500; color: #666; background: #f5f5f5; }
 .tab-item i { font-size: 14px; }
 .tab-item:hover { background: #e8e8e8; color: #667eea; }
-.tab-item.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+.tab-item.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
 .tab-count { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 2px 6px; font-size: 11px; margin-left: 4px; }
 
 /* 订单网格 */
@@ -697,6 +977,7 @@ export default {
 .status-shipped { color: #67c23a; background: #f0f9f4; }
 .status-completed { color: #909399; background: #f4f4f5; }
 .status-cancelled { color: #f56c6c; background: #fef0f0; }
+.status-refunded { color: #909399; background: #f4f4f5; }
 .status-servicing { color: #67c23a; background: #f0f9f4; }
 .status-rejected { color: #f56c6c; background: #fef0f0; }
 .status-confirmed { color: #409EFF; background: #ecf5ff; }
@@ -713,24 +994,27 @@ export default {
 .appointment-info i { margin-right: 4px; color: #667eea; }
 .order-total { font-size: 13px; color: #666; margin-top: 6px; }
 .total-price { color: #ff6b6b; font-weight: 600; font-size: 15px; }
-
-/* 取消原因样式 */
-.cancel-reason {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  color: #f56c6c;
-  font-size: 12px;
-}
-
-.cancel-reason i {
-  font-size: 14px;
-  color: #f56c6c;
-}
+.cancel-reason { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: #f56c6c; font-size: 12px; }
+.cancel-reason i { font-size: 14px; color: #f56c6c; }
+.remark-info { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: #909399; }
+.remark-info i { color: #667eea; font-size: 12px; }
 
 .card-footer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #f0f0f0; flex-wrap: wrap; align-items: center; }
-.card-footer .el-button { flex: 1; padding: 6px 0; font-size: 12px; }
+.card-footer .el-button { flex: 1; padding: 6px 0; font-size: 12px; border-radius: 6px; transition: all 0.3s; }
+.cancel-btn { color: #f56c6c; border-color: #fde2e2; background: #fef0f0; }
+.cancel-btn:hover { color: white; background: #f56c6c; border-color: #f56c6c; }
+.pay-btn { color: #409EFF; border-color: #d9ecff; background: #ecf5ff; }
+.pay-btn:hover { color: white; background: #409EFF; border-color: #409EFF; }
+.refund-btn { color: #e6a23c; border-color: #fdf6ec; background: #fdf6ec; }
+.refund-btn:hover { color: white; background: #e6a23c; border-color: #e6a23c; }
+.confirm-btn { color: #67c23a; border-color: #f0f9eb; background: #f0f9eb; }
+.confirm-btn:hover { color: white; background: #67c23a; border-color: #67c23a; }
+.comment-btn { color: #e6a23c; border-color: #fdf6ec; background: #fdf6ec; }
+.comment-btn:hover { color: white; background: #e6a23c; border-color: #e6a23c; }
+.view-btn { color: #67c23a; border-color: #f0f9eb; background: #f0f9eb; }
+.view-btn:hover { color: white; background: #67c23a; border-color: #67c23a; }
+.buyagain-btn { color: #409EFF; border-color: #d9ecff; background: #ecf5ff; }
+.buyagain-btn:hover { color: white; background: #409EFF; border-color: #409EFF; }
 .status-tag { flex: 1; text-align: center; }
 
 .empty-state { grid-column: 1 / -1; text-align: center; padding: 60px; background: #fff; border-radius: 12px; color: #999; }
@@ -791,7 +1075,7 @@ export default {
 .amount-row.total { margin-top: 8px; padding-top: 12px; border-top: 1px solid #e0e0e0; font-weight: 600; }
 .total-price { color: #ff6b6b; font-size: 20px; font-weight: bold; }
 
-/* 查看评价对话框 - 图片样式 */
+/* 查看评价对话框 */
 .view-comment-content { padding: 10px 0; }
 .view-product { display: flex; gap: 16px; padding: 16px; background: #f8f9fc; border-radius: 16px; margin-bottom: 24px; align-items: center; }
 .view-product img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
@@ -802,71 +1086,25 @@ export default {
 .view-comment { padding: 16px; }
 .view-comment .comment-text { margin: 12px 0; padding: 12px; background: #f8f9fc; border-radius: 12px; line-height: 1.6; font-size: 14px; }
 .view-comment .comment-time { font-size: 12px; color: #999; margin-top: 8px; text-align: right; }
-
-/* 评价图片 - 限制60x60 */
-.view-comment .comment-images {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 12px 0;
-  align-items: flex-start;
-}
-.view-comment .comment-img {
-  width: 60px !important;
-  height: 60px !important;
-  min-width: 60px;
-  max-width: 60px;
-  min-height: 60px;
-  max-height: 60px;
-  border-radius: 8px;
-  cursor: pointer;
-  object-fit: cover;
-  border: 1px solid #f0f0f0;
-  flex-shrink: 0;
-  overflow: hidden;
-  display: inline-block;
-}
-.view-comment .comment-img >>> .el-image__inner,
-.view-comment .comment-img /deep/ .el-image__inner,
-.view-comment .comment-img ::v-deep .el-image__inner {
-  width: 60px !important;
-  height: 60px !important;
-  object-fit: cover !important;
-  border-radius: 8px;
-}
-.view-comment .comment-img:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
+.view-comment .comment-images { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; align-items: flex-start; }
+.view-comment .comment-img { width: 60px !important; height: 60px !important; min-width: 60px; max-width: 60px; min-height: 60px; max-height: 60px; border-radius: 8px; cursor: pointer; object-fit: cover; border: 1px solid #f0f0f0; flex-shrink: 0; }
 .view-comment .comment-reply { background: #fff; border-radius: 12px; padding: 12px 16px; margin-top: 12px; border-left: 3px solid #67c23a; }
 .view-comment .reply-header { display: flex; align-items: center; gap: 6px; font-weight: 500; color: #67c23a; margin-bottom: 8px; font-size: 13px; }
 .view-comment .reply-content { color: #5a6874; line-height: 1.5; margin-bottom: 6px; font-size: 13px; }
 .view-comment .reply-time { font-size: 11px; color: #999; text-align: right; }
 
-@media (max-width: 900px) { .orders-grid { grid-template-columns: repeat(2, 1fr); } }
+/* 响应式 */
+@media (max-width: 900px) {
+  .orders-grid { grid-template-columns: repeat(2, 1fr); }
+  .orders-type-bar { flex-wrap: wrap; }
+  .search-wrapper { width: 100%; }
+}
 @media (max-width: 600px) {
   .orders-grid { grid-template-columns: 1fr; }
   .card-body { flex-direction: column; align-items: center; text-align: center; }
   .view-product { flex-direction: column; text-align: center; }
   .view-comment .comment-images { justify-content: center; }
-}
-/* 备注信息样式 */
-.remark-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 12px;
-  color: #909399;
-}
-
-.remark-info i {
-  color: #667eea;
-  font-size: 12px;
-}
-.status-refunded {
-  color: #909399;
-  background: #f4f4f5;
+  .orders-tabs { justify-content: center; }
+  .type-tabs { flex-wrap: wrap; justify-content: center; }
 }
 </style>

@@ -193,11 +193,6 @@
           <i class="el-icon-setting"></i>
           <span slot="title">系统设置</span>
         </el-menu-item>
-
-        <el-menu-item index="profile">
-          <i class="el-icon-user"></i>
-          <span>个人资料</span>
-        </el-menu-item>
       </el-menu>
     </aside>
 
@@ -220,8 +215,14 @@
               <i class="el-icon-arrow-down"></i>
             </div>
             <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+              <el-dropdown-item command="profile">
+                <i class="el-icon-user"></i>
+                <span>个人资料</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <i class="el-icon-switch-button"></i>
+                <span>退出登录</span>
+              </el-dropdown-item>
             </el-dropdown-menu>
           </el-dropdown>
         </div>
@@ -331,7 +332,7 @@ export default {
     },
     handleUserCommand(command) {
       if (command === 'profile') {
-        this.$router.push('/personal/profile');
+        this.$router.push('/admin/profile');
       } else if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
           confirmButtonText: '确定',

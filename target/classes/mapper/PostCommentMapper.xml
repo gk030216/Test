@@ -93,7 +93,7 @@
             p.title as post_title,
             p.content as post_content,
             p.create_time as post_create_time,
-            pu.username as post_author_name,
+            pu.nickname as post_author_name,
             pu.avatar as post_author_avatar,
             -- 父评论内容
             pc.content as parent_comment_content,

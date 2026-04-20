@@ -61,4 +61,16 @@ public interface ServiceCommentMapper {
     // 获取员工自己的评价统计
     Map<String, Object> getStatisticsByStaff(@Param("staffId") Integer staffId);
 
+    /**
+     * 获取用户的所有服务评价
+     */
+    List<ServiceComment> getUserServiceComments(@Param("userId") Integer userId,
+                                                @Param("offset") Integer offset,
+                                                @Param("limit") Integer limit);
+
+    /**
+     * 统计用户服务评价数量
+     */
+    int countUserServiceComments(@Param("userId") Integer userId);
+
 }

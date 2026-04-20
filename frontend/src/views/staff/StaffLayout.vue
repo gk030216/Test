@@ -41,7 +41,7 @@
             <span slot="title">宠物列表</span>
           </el-menu-item>
           <el-menu-item index="Staff-health-record">
-            <i class="el-icon-first-aid-kit"></i>
+            <i class="el-icon-document"></i>
             <span slot="title">体检记录</span>
           </el-menu-item>
           <el-menu-item index="Staff-vaccine-record">
@@ -71,10 +71,6 @@
         <el-menu-item index="feedback-manage">
           <i class="el-icon-warning"></i>
           <span slot="title">异常反馈</span>
-        </el-menu-item>
-        <el-menu-item index="profile">
-          <i class="el-icon-user"></i>
-          <span>个人资料</span>
         </el-menu-item>
       </el-menu>
     </aside>
@@ -156,9 +152,12 @@ export default {
         'dashboard': '工作台',
         'appointments': '预约管理',
         'pet-list': '宠物列表',
-        'pet-health': '健康记录',
+        'Staff-health-record': '体检记录',      // 修正：与实际菜单index一致
+        'Staff-vaccine-record': '疫苗记录',      // 修正：与实际菜单index一致
+        'vaccine-stock': '疫苗库存',             // 新增
+        'product-stock': '商品库存',             // 新增
         'evaluations': '服务评价',
-        'feedback': '异常反馈'
+        'feedback-manage': '异常反馈'            // 修正：与实际菜单index一致
       };
       this.currentTitle = titles[index] || '管理页面';
       this.$router.push(`/staff/${index}`);
@@ -172,16 +171,19 @@ export default {
           'dashboard': '工作台',
           'appointments': '预约管理',
           'pet-list': '宠物列表',
-          'pet-health': '健康记录',
+          'Staff-health-record': '体检记录',
+          'Staff-vaccine-record': '疫苗记录',
+          'vaccine-stock': '疫苗库存',
+          'product-stock': '商品库存',
           'evaluations': '服务评价',
-          'feedback': '异常反馈'
+          'feedback-manage': '异常反馈'
         };
         this.currentTitle = titles[menu] || '管理页面';
       }
     },
     handleUserCommand(command) {
       if (command === 'profile') {
-        this.$router.push('/personal/profile');
+        this.$router.push('/staff/profile');
       } else if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
           confirmButtonText: '确定',

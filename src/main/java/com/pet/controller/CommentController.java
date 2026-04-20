@@ -82,4 +82,21 @@ public class CommentController {
         }
     }
 
+    /**
+     * 获取用户的所有商品评价
+     */
+    @GetMapping("/user/products")
+    public Result<Map<String, Object>> getUserProductComments(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
+        try {
+            Integer userId = getUserId(request);
+            Map<String, Object> result = commentService.getUserProductComments(userId, page, pageSize);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
 }

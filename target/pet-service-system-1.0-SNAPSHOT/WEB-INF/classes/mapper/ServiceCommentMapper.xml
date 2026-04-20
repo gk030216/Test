@@ -8,6 +8,7 @@
         <result column="service_id" property="serviceId"/>
         <result column="user_id" property="userId"/>
         <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>  <!-- ✅ 添加昵称 -->
         <result column="rating" property="rating"/>
         <result column="content" property="content"/>
         <result column="images" property="images"/>
@@ -17,6 +18,8 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="service_name" property="serviceName"/>
+        <result column="service_price" property="servicePrice"/>
+        <result column="service_image" property="serviceImage"/>
         <result column="user_avatar" property="userAvatar"/>
     </resultMap>
 
@@ -26,13 +29,17 @@
     </insert>
 
     <select id="getByServiceId" resultMap="BaseResultMap">
-        SELECT c.*, u.avatar as user_avatar, s.name as service_name
+        SELECT
+        c.*,
+        u.avatar as user_avatar,
+        u.nickname as user_nickname,  <!-- ✅ 添加昵称 -->
+        s.name as service_name
         FROM service_comment c
-                 LEFT JOIN user u ON c.user_id = u.id
-                 LEFT JOIN service_item s ON c.service_id = s.id
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN service_item s ON c.service_id = s.id
         WHERE c.service_id = #{serviceId} AND c.status = 1
         ORDER BY c.create_time DESC
-            LIMIT #{offset}, #{limit}
+        LIMIT #{offset}, #{limit}
     </select>
 
     <select id="countByServiceId" resultType="int">
@@ -70,7 +77,11 @@
     </select>
 
     <select id="getAdminList" resultMap="BaseResultMap">
-        SELECT c.*, u.avatar as user_avatar, s.name as service_name
+        SELECT
+        c.*,
+        u.avatar as user_avatar,
+        u.nickname as user_nickname,  <!-- ✅ 添加昵称 -->
+        s.name as service_name
         FROM service_comment c
         LEFT JOIN user u ON c.user_id = u.id
         LEFT JOIN service_item s ON c.service_id = s.id
@@ -86,7 +97,6 @@
             <if test="status != null">
                 AND c.status = #{status}
             </if>
-            <!-- ✅ 添加 replyStatus 筛选 -->
             <if test="replyStatus != null">
                 <if test="replyStatus == 0">
                     AND (c.reply IS NULL OR c.reply = '')
@@ -116,7 +126,6 @@
             <if test="status != null">
                 AND c.status = #{status}
             </if>
-            <!-- ✅ 添加 replyStatus 筛选 -->
             <if test="replyStatus != null">
                 <if test="replyStatus == 0">
                     AND (c.reply IS NULL OR c.reply = '')
@@ -143,7 +152,7 @@
     <select id="getServiceCommentTrend" resultType="java.util.HashMap">
         SELECT
             DATE_FORMAT(create_time, '%Y-%m-%d') as date,
-        COUNT(*) as count
+            COUNT(*) as count
         FROM service_comment
         WHERE service_id = #{serviceId}
           AND status = 1
@@ -165,10 +174,20 @@
     <!-- 获取服务评价列表（支持评分筛选） -->
     <select id="getServiceCommentListWithRating" resultMap="BaseResultMap">
         SELECT
-        c.id, c.appointment_id, c.service_id, c.user_id,
-        c.rating, c.content, c.images, c.reply, c.reply_time,
-        c.status, c.create_time, c.update_time,
+        c.id,
+        c.appointment_id,
+        c.service_id,
+        c.user_id,
+        c.rating,
+        c.content,
+        c.images,
+        c.reply,
+        c.reply_time,
+        c.status,
+        c.create_time,
+        c.update_time,
         u.username as user_name,
+        u.nickname as user_nickname,  <!-- ✅ 添加昵称 -->
         u.avatar as user_avatar,
         s.name as service_name
         FROM service_comment c
@@ -214,6 +233,48 @@
                  LEFT JOIN appointment a ON sc.appointment_id = a.id
         WHERE sc.status = 1
           AND a.staff_id = #{staffId}
+    </select>
+
+    <!-- 获取用户的所有服务评价列表 -->
+    <select id="getUserServiceComments" resultMap="BaseResultMap">
+        SELECT
+        sc.id,
+        sc.appointment_id,
+        sc.service_id,
+        sc.user_id,
+        sc.rating,
+        sc.content,
+        sc.images,
+        sc.reply,
+        sc.reply_time,
+        sc.status,
+        sc.create_time,
+        s.name as service_name,
+        s.price as service_price,
+        s.image as service_image,
+        u.username as user_name,
+        u.nickname as user_nickname,  <!-- ✅ 添加昵称 -->
+        u.avatar as user_avatar
+        FROM service_comment sc
+        LEFT JOIN service_item s ON sc.service_id = s.id
+        LEFT JOIN user u ON sc.user_id = u.id
+        WHERE sc.user_id = #{userId}
+        AND sc.status = 1
+        AND s.id IS NOT NULL
+        AND s.status = 1
+        ORDER BY sc.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计用户服务评价数量 -->
+    <select id="countUserServiceComments" resultType="int">
+        SELECT COUNT(*)
+        FROM service_comment sc
+                 LEFT JOIN service_item s ON sc.service_id = s.id
+        WHERE sc.user_id = #{userId}
+          AND sc.status = 1
+          AND s.id IS NOT NULL
+          AND s.status = 1
     </select>
 
 </mapper>

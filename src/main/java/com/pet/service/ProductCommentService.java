@@ -42,4 +42,7 @@ public interface ProductCommentService {
     // 获取指定商品的评价列表
     Map<String, Object> getProductCommentsList(Integer productId, Integer page, Integer pageSize, Integer rating);
 
+    // ProductCommentService.java
+    Map<String, Object> getUserProductComments(Integer userId, Integer page, Integer pageSize);
+
 }

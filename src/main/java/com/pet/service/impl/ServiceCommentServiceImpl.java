@@ -32,6 +32,9 @@ public class ServiceCommentServiceImpl implements ServiceCommentService {
     @Autowired
     private StaffStatisticsMapper statisticsMapper;
 
+    @Autowired
+    private ServiceCommentMapper serviceCommentMapper;
+
     @Override
     @Transactional
     public boolean addComment(ServiceComment comment) {
@@ -193,5 +196,19 @@ public class ServiceCommentServiceImpl implements ServiceCommentService {
             stats.put("unreplyCount", 0);
         }
         return stats;
+    }
+
+    @Override
+    public Map<String, Object> getUserServiceComments(Integer userId, Integer page, Integer pageSize) {
+        int offset = (page - 1) * pageSize;
+        List<ServiceComment> list = serviceCommentMapper.getUserServiceComments(userId, offset, pageSize);
+        int total = serviceCommentMapper.countUserServiceComments(userId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
     }
 }

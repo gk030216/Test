@@ -123,23 +123,23 @@
                   <div class="comment-item" v-for="comment in commentList" :key="comment.id">
                     <div class="comment-header">
                       <el-avatar :size="40" :src="comment.userAvatar" class="comment-avatar">
-                        {{ comment.userName ? comment.userName.charAt(0).toUpperCase() : 'U' }}
+                        {{ comment.displayName ? comment.displayName.charAt(0).toUpperCase() : 'U' }}
                       </el-avatar>
                       <div class="comment-info">
                         <div class="user-info">
-                          <span class="user-name">{{ comment.userName }}</span>
+                          <span class="user-name">{{ comment.displayName }}</span>
                           <el-rate v-model="comment.rating" disabled show-score text-color="#ff9900"></el-rate>
                         </div>
                         <div class="comment-time">{{ formatDate(comment.createTime) }}</div>
                       </div>
                     </div>
                     <div class="comment-content">{{ comment.content }}</div>
-                    <div class="comment-images" v-if="comment.images">
+                    <div class="comment-images" v-if="comment.imageList && comment.imageList.length">
                       <el-image
-                          v-for="(img, idx) in comment.images.split(',')"
+                          v-for="(img, idx) in comment.imageList"
                           :key="idx"
                           :src="img"
-                          :preview-src-list="comment.images.split(',')"
+                          :preview-src-list="comment.imageList"
                           fit="cover"
                           class="comment-img"
                       ></el-image>
@@ -255,16 +255,27 @@ export default {
     },
 
     // 加载评价列表
+// 加载评价列表
     async loadComments() {
       this.commentLoading = true;
       try {
         const res = await getServiceComments(this.serviceId, this.commentPage);
         if (res.code === 200) {
-          this.commentList = res.data.list || [];
+          // ✅ 处理评论数据，优先使用昵称
+          this.commentList = (res.data.list || []).map(comment => ({
+            ...comment,
+            // 显示名称：优先昵称，其次用户名，最后默认
+            displayName: comment.userNickname || comment.userName || '匿名用户',
+            // 确保 rating 是数字
+            rating: Number(comment.rating) || 0,
+            // 处理图片
+            imageList: comment.images ? (typeof comment.images === 'string' ? comment.images.split(',') : comment.images) : []
+          }));
           this.commentTotal = res.data.total || 0;
         }
       } catch (error) {
         console.error('加载评价失败', error);
+        this.$message.error('加载评价失败');
       } finally {
         this.commentLoading = false;
       }

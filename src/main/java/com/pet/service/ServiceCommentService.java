@@ -24,4 +24,9 @@ public interface ServiceCommentService {
     // 获取员工自己的评价统计
     Map<String, Object> getStatisticsByStaff(Integer staffId);
 
+    /**
+     * 获取用户的所有服务评价
+     */
+    Map<String, Object> getUserServiceComments(Integer userId, Integer page, Integer pageSize);
+
 }

@@ -175,4 +175,21 @@ public class ServiceCommentController {
         }
     }
 
+    /**
+     * 获取用户的所有服务评价
+     */
+    @GetMapping("/user/comments")
+    public Result<Map<String, Object>> getUserServiceComments(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
+        try {
+            Integer userId = getUserId(request);
+            Map<String, Object> result = commentService.getUserServiceComments(userId, page, pageSize);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
 }

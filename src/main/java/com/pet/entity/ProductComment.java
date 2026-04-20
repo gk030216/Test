@@ -9,6 +9,7 @@ public class ProductComment {
     private Integer productId;
     private Integer userId;
     private String userName;
+    private String userNickname;  // ✅ 添加昵称字段
     private Integer rating;
     private String content;
     private String images;
@@ -17,7 +18,7 @@ public class ProductComment {
     private Integer status;
     private Date createTime;
 
-    // 关联查询字段
+    // 关联字段
     private String productName;
     private String productImage;
     private BigDecimal productPrice;
@@ -38,6 +39,9 @@ public class ProductComment {
 
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
+
+    public String getUserNickname() { return userNickname; }
+    public void setUserNickname(String userNickname) { this.userNickname = userNickname; }
 
     public Integer getRating() { return rating; }
     public void setRating(Integer rating) { this.rating = rating; }

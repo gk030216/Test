@@ -495,3 +495,12 @@ export function getHotServiceList() {
         method: 'get'
     });
 }
+
+// 获取用户的所有服务评价
+export function getUserServiceComments(params) {
+    return request({
+        url: '/service/comment/user/comments',
+        method: 'get',
+        params
+    });
+}

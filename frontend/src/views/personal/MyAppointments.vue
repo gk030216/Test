@@ -10,6 +10,7 @@
           :class="['tab-item', { active: activeTab === tab.value }]"
           @click="activeTab = tab.value"
       >
+        <i :class="getTabIcon(tab.value)"></i>
         {{ tab.label }}
         <span class="tab-count" v-if="getCount(tab.value) > 0">{{ getCount(tab.value) }}</span>
       </div>
@@ -37,7 +38,12 @@
         <!-- 卡片内容 -->
         <div class="card-body">
           <div class="service-image">
-            <img v-if="item.serviceImage" :src="item.serviceImage" :alt="item.serviceName">
+            <img
+                v-if="item.serviceImage"
+                :src="item.serviceImage"
+                :alt="item.serviceName"
+                @error="e => e.target.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50\' y=\'55\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'14\'%3E暂无图片%3C/text%3E%3C/svg%3E'"
+            >
             <div v-else class="image-placeholder">
               <i class="el-icon-service"></i>
             </div>
@@ -76,45 +82,36 @@
           <el-button
               v-if="item.status === 0 && item.payStatus !== 1"
               size="small"
-              type="danger"
               plain
               @click="cancelAppointment(item)"
+              class="cancel-btn"
           >
             <i class="el-icon-close"></i> 取消预约
           </el-button>
           <el-button
-              v-if="item.status === 0 && item.payStatus === 1"
+              v-if="(item.status === 0 || item.status === 1) && item.payStatus === 1"
               size="small"
-              type="danger"
               plain
               @click="cancelAppointment(item)"
-          >
-            <i class="el-icon-close"></i> 申请退款
-          </el-button>
-          <el-button
-              v-if="item.status === 1 && item.payStatus === 1"
-              size="small"
-              type="danger"
-              plain
-              @click="cancelAppointment(item)"
+              class="cancel-btn"
           >
             <i class="el-icon-close"></i> 申请退款
           </el-button>
           <el-button
               v-if="item.status === 3 && !item.comment"
               size="small"
-              type="warning"
               plain
               @click="openCommentDialog(item)"
+              class="comment-btn"
           >
             <i class="el-icon-edit"></i> 评价服务
           </el-button>
           <el-button
               v-if="item.status === 3 && item.comment"
               size="small"
-              type="info"
               plain
               @click="viewServiceComment(item)"
+              class="view-btn"
           >
             <i class="el-icon-view"></i> 查看评价
           </el-button>
@@ -122,6 +119,7 @@
               size="small"
               plain
               @click="viewDetail(item)"
+              class="detail-btn"
           >
             <i class="el-icon-document"></i> 查看详情
           </el-button>
@@ -179,13 +177,11 @@
 
       <span slot="footer" class="dialog-footer">
         <el-button @click="commentDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitComment" :loading="commentSubmitting">
-          <i class="el-icon-check"></i> 提交评价
-        </el-button>
+        <el-button type="primary" @click="submitComment" :loading="commentSubmitting">提交评价</el-button>
       </span>
     </el-dialog>
 
-    <!-- 服务预约查看评价对话框 - 与 Orders.vue 完全一致 -->
+    <!-- 服务预约查看评价对话框 -->
     <el-dialog
         title="我的评价"
         :visible.sync="viewServiceCommentVisible"
@@ -304,7 +300,7 @@ export default {
       appointmentList: [],
       total: 0,
       page: 1,
-      pageSize: 12,
+      pageSize: 9,
       activeTab: '',
       tabs: [
         { value: '', label: '全部' },
@@ -326,7 +322,7 @@ export default {
         customReason: ''
       },
       commentForm: {
-        rating: 5,
+        rating: null,
         content: ''
       },
       commentRules: {
@@ -345,41 +341,48 @@ export default {
     }
   },
   methods: {
+    getTabIcon(value) {
+      const map = {
+        '': 'el-icon-menu',
+        0: 'el-icon-time',
+        1: 'el-icon-success',
+        2: 'el-icon-loading',
+        3: 'el-icon-circle-check',
+        4: 'el-icon-circle-close',
+        5: 'el-icon-close'
+      };
+      return map[value] || 'el-icon-info';
+    },
+
     async loadAppointments() {
       this.loading = true;
       try {
+        console.log('========== MyAppointments.vue 加载预约 ==========');
+        console.log('当前页码:', this.page);
+        console.log('每页大小:', this.pageSize);
+        console.log('当前状态筛选:', this.activeTab !== '' ? this.activeTab : '全部');
+
         const statusParam = this.activeTab !== '' ? this.activeTab : undefined;
         const res = await getUserAppointments({
           page: this.page,
           pageSize: this.pageSize,
           status: statusParam
         });
+
+        console.log('接口返回状态:', res.code);
+        console.log('接口返回总数:', res.data?.total);
+        console.log('接口返回列表长度:', res.data?.list?.length);
+        console.log('==============================================');
+
         if (res.code === 200) {
           this.appointmentList = res.data.list || [];
           this.total = res.data.total || 0;
-          await this.loadAppointmentComments();
         }
       } catch (error) {
         console.error('加载预约列表失败', error);
         this.$message.error('加载失败');
       } finally {
         this.loading = false;
-      }
-    },
-
-    async loadAppointmentComments() {
-      for (let appointment of this.appointmentList) {
-        appointment.comment = null;
-        if (appointment.status === 3) {
-          try {
-            const res = await getServiceCommentByAppointment(appointment.id);
-            if (res.code === 200 && res.data) {
-              appointment.comment = res.data;
-            }
-          } catch (error) {
-            console.error('获取评价失败', error);
-          }
-        }
       }
     },
 
@@ -501,7 +504,7 @@ export default {
     openCommentDialog(item) {
       this.currentAppointment = item;
       this.commentForm = {
-        rating: 5,
+        rating: null,
         content: ''
       };
       this.commentDialogVisible = true;
@@ -512,14 +515,44 @@ export default {
       });
     },
 
-    viewServiceComment(appointment) {
-      this.viewServiceCommentData = appointment.comment;
-      if (this.viewServiceCommentData) {
-        this.viewServiceCommentData.serviceImage = appointment.serviceImage;
-        this.viewServiceCommentData.serviceName = appointment.serviceName;
-        this.viewServiceCommentData.servicePrice = appointment.servicePrice;
+    async viewServiceComment(appointment) {
+      if (appointment.comment) {
+        this.viewServiceCommentData = {
+          ...appointment.comment,
+          serviceImage: appointment.serviceImage,
+          serviceName: appointment.serviceName,
+          servicePrice: appointment.servicePrice
+        };
+        this.viewServiceCommentVisible = true;
+        return;
       }
-      this.viewServiceCommentVisible = true;
+
+      const loading = this.$loading({
+        text: '加载评价中...',
+        target: document.querySelector('.my-appointments'),
+        background: 'rgba(0, 0, 0, 0.5)'
+      });
+
+      try {
+        const res = await getServiceCommentByAppointment(appointment.id);
+        if (res.code === 200 && res.data) {
+          appointment.comment = res.data;
+          this.viewServiceCommentData = {
+            ...res.data,
+            serviceImage: appointment.serviceImage,
+            serviceName: appointment.serviceName,
+            servicePrice: appointment.servicePrice
+          };
+          this.viewServiceCommentVisible = true;
+        } else {
+          this.$message.warning('暂无评价内容');
+        }
+      } catch (error) {
+        console.error('获取评价失败', error);
+        this.$message.error('获取评价失败');
+      } finally {
+        loading.close();
+      }
     },
 
     async submitComment() {
@@ -570,6 +603,7 @@ export default {
   border-bottom: 2px solid #f0f0f0;
 }
 
+/* 标签页切换样式 - 与我的评论一致 */
 .appointment-tabs {
   display: flex;
   gap: 12px;
@@ -578,6 +612,9 @@ export default {
 }
 
 .tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 20px;
   border-radius: 30px;
   cursor: pointer;
@@ -589,6 +626,10 @@ export default {
   border: 1px solid #e0e0e0;
 }
 
+.tab-item i {
+  font-size: 16px;
+}
+
 .tab-item:hover {
   border-color: #667eea;
   color: #667eea;
@@ -598,7 +639,6 @@ export default {
   background: linear-gradient(135deg, #667eea, #764ba2);
   border-color: transparent;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .tab-count {
@@ -609,6 +649,7 @@ export default {
   border-radius: 20px;
 }
 
+/* 预约网格 */
 .appointments-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -630,6 +671,7 @@ export default {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+/* 卡片头部 */
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -637,7 +679,6 @@ export default {
   padding: 12px 16px;
   background: #fafbfc;
   border-bottom: 1px solid #f0f0f0;
-  flex-wrap: nowrap;
 }
 
 .appointment-info {
@@ -680,12 +721,32 @@ export default {
   flex-shrink: 0;
 }
 
-.status-pending { color: #e6a23c; background: #fdf6ec; }
-.status-confirmed { color: #409EFF; background: #ecf5ff; }
-.status-servicing { color: #67c23a; background: #f0f9f4; }
-.status-completed { color: #909399; background: #f4f4f5; }
-.status-cancelled, .status-rejected { color: #f56c6c; background: #fef0f0; }
+.status-pending {
+  color: #e6a23c;
+  background: #fdf6ec;
+}
 
+.status-confirmed {
+  color: #409EFF;
+  background: #ecf5ff;
+}
+
+.status-servicing {
+  color: #67c23a;
+  background: #f0f9f4;
+}
+
+.status-completed {
+  color: #909399;
+  background: #f4f4f5;
+}
+
+.status-cancelled, .status-rejected {
+  color: #f56c6c;
+  background: #fef0f0;
+}
+
+/* 卡片内容 */
 .card-body {
   display: flex;
   padding: 16px;
@@ -781,19 +842,72 @@ export default {
   color: #f56c6c;
 }
 
+/* 卡片底部按钮 - 与我的评论样式一致 */
 .card-footer {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid #f0f0f0;
+  background: #fff;
 }
 
 .card-footer .el-button {
   flex: 1;
   padding: 6px 0;
   font-size: 12px;
+  border-radius: 6px;
+  transition: all 0.3s;
 }
 
+.cancel-btn {
+  color: #f56c6c;
+  border-color: #fde2e2;
+  background: #fef0f0;
+}
+
+.cancel-btn:hover {
+  color: white;
+  background: #f56c6c;
+  border-color: #f56c6c;
+}
+
+.comment-btn {
+  color: #e6a23c;
+  border-color: #fdf6ec;
+  background: #fdf6ec;
+}
+
+.comment-btn:hover {
+  color: white;
+  background: #e6a23c;
+  border-color: #e6a23c;
+}
+
+.view-btn {
+  color: #67c23a;
+  border-color: #f0f9eb;
+  background: #f0f9eb;
+}
+
+.view-btn:hover {
+  color: white;
+  background: #67c23a;
+  border-color: #67c23a;
+}
+
+.detail-btn {
+  color: #409EFF;
+  border-color: #d9ecff;
+  background: #ecf5ff;
+}
+
+.detail-btn:hover {
+  color: white;
+  background: #409EFF;
+  border-color: #409EFF;
+}
+
+/* 空状态 */
 .empty-state {
   grid-column: 1 / -1;
   text-align: center;
@@ -809,6 +923,7 @@ export default {
   color: #ddd;
 }
 
+/* 分页 */
 .pagination {
   grid-column: 1 / -1;
   display: flex;
@@ -821,8 +936,7 @@ export default {
 .view-comment-dialog ::v-deep .el-dialog,
 .cancel-dialog ::v-deep .el-dialog,
 .detail-dialog ::v-deep .el-dialog {
-  border-radius: 20px;
-  overflow: hidden;
+  border-radius: 16px;
 }
 
 .comment-dialog ::v-deep .el-dialog__header,
@@ -830,8 +944,9 @@ export default {
 .cancel-dialog ::v-deep .el-dialog__header,
 .detail-dialog ::v-deep .el-dialog__header {
   background: linear-gradient(135deg, #667eea, #764ba2);
-  padding: 20px 24px;
+  padding: 16px 20px;
   margin: 0;
+  border-radius: 16px 16px 0 0;
 }
 
 .comment-dialog ::v-deep .el-dialog__title,
@@ -859,7 +974,7 @@ export default {
   gap: 16px;
   padding: 16px;
   background: #f8f9fc;
-  border-radius: 16px;
+  border-radius: 12px;
   margin-bottom: 24px;
 }
 
@@ -880,11 +995,6 @@ export default {
 
 .rating-wrapper {
   padding: 5px 0;
-}
-
-.dialog-footer {
-  text-align: right;
-  padding-top: 10px;
 }
 
 .detail-content {
@@ -908,7 +1018,7 @@ export default {
   color: #f56c6c;
 }
 
-/* 查看评价对话框 - 限制服务图片大小 */
+/* 查看评价对话框 */
 .view-comment-dialog ::v-deep .view-product img {
   width: 70px !important;
   height: 70px !important;
@@ -938,6 +1048,7 @@ export default {
   flex-shrink: 0;
 }
 
+/* 响应式 */
 @media (max-width: 900px) {
   .appointments-grid {
     grid-template-columns: repeat(2, 1fr);

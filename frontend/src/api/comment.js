@@ -105,3 +105,12 @@ export function getProductCommentsList(productId, params) {
         params
     });
 }
+
+// 获取用户的所有商品评价
+export function getUserProductComments(params) {
+    return request({
+        url: '/comment/user/products',
+        method: 'get',
+        params
+    });
+}

@@ -258,4 +258,19 @@ public class ProductCommentServiceImpl implements ProductCommentService {
     private int getProductRepliedCommentCount(Integer productId) {
         return commentMapper.getProductRepliedCommentCount(productId);
     }
+
+    // ProductCommentServiceImpl.java
+    @Override
+    public Map<String, Object> getUserProductComments(Integer userId, Integer page, Integer pageSize) {
+        int offset = (page - 1) * pageSize;
+        List<ProductComment> list = commentMapper.getUserProductComments(userId, offset, pageSize);
+        int total = commentMapper.countUserProductComments(userId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        return result;
+    }
 }

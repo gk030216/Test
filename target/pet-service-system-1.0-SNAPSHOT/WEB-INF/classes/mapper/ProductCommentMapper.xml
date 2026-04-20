@@ -8,6 +8,7 @@
         <result column="product_id" property="productId"/>
         <result column="user_id" property="userId"/>
         <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>
         <result column="rating" property="rating"/>
         <result column="content" property="content"/>
         <result column="images" property="images"/>
@@ -45,6 +46,7 @@
             p.image as product_image,
             p.price as product_price,
             u.username as user_name,
+            u.nickname as user_nickname,
             u.avatar as user_avatar
         FROM product_comment pc
                  LEFT JOIN product p ON pc.product_id = p.id
@@ -76,6 +78,7 @@
         p.image as product_image,
         p.price as product_price,
         u.username as user_name,
+        u.nickname as user_nickname,
         u.avatar as user_avatar
         FROM product_comment pc
         LEFT JOIN product p ON pc.product_id = p.id
@@ -195,6 +198,7 @@
             p.image as product_image,
             p.price as product_price,
             u.username as user_name,
+            u.nickname as user_nickname,
             u.avatar as user_avatar
         FROM product_comment pc
                  LEFT JOIN product p ON pc.product_id = p.id
@@ -217,7 +221,7 @@
     <select id="getProductCommentTrend" resultType="java.util.HashMap">
         SELECT
             DATE_FORMAT(create_time, '%Y-%m-%d') as date,
-        COUNT(*) as count
+            COUNT(*) as count
         FROM product_comment
         WHERE product_id = #{productId}
           AND status = 1
@@ -252,6 +256,7 @@
         c.create_time,
         p.name as product_name,
         u.username as user_name,
+        u.nickname as user_nickname,
         u.avatar as user_avatar
         FROM product_comment c
         LEFT JOIN product p ON c.product_id = p.id
@@ -272,6 +277,48 @@
         <if test="rating != null">
             AND rating = #{rating}
         </if>
+    </select>
+
+    <!-- 获取用户的所有商品评价列表 -->
+    <select id="getUserProductComments" resultMap="BaseResultMap">
+        SELECT
+            pc.id,
+            pc.order_no,
+            pc.product_id,
+            pc.user_id,
+            pc.rating,
+            pc.content,
+            pc.images,
+            pc.reply,
+            pc.reply_time,
+            pc.status,
+            pc.create_time,
+            p.name as product_name,
+            p.image as product_image,
+            p.price as product_price,
+            u.username as user_name,
+            u.nickname as user_nickname,
+            u.avatar as user_avatar
+        FROM product_comment pc
+                 LEFT JOIN product p ON pc.product_id = p.id
+                 LEFT JOIN user u ON pc.user_id = u.id
+        WHERE pc.user_id = #{userId}
+          AND pc.status = 1
+          AND p.id IS NOT NULL
+          AND p.status = 1
+        ORDER BY pc.create_time DESC
+            LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计用户商品评价数量 -->
+    <select id="countUserProductComments" resultType="int">
+        SELECT COUNT(*)
+        FROM product_comment pc
+                 LEFT JOIN product p ON pc.product_id = p.id
+        WHERE pc.user_id = #{userId}
+          AND pc.status = 1
+          AND p.id IS NOT NULL
+          AND p.status = 1
     </select>
 
 </mapper>
