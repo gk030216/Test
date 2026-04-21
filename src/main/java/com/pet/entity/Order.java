@@ -17,13 +17,18 @@ public class Order {
     private Integer payStatus;
     private Integer orderStatus;
     private String tradeNo;
-    private String remark;
     private Date createTime;
     private Date payTime;
     private Date updateTime;
+    private String orderType;
+    private String cancelReason;
 
     // 非数据库字段，用于关联订单详情
     private List<OrderItem> items;
+
+    // 导出临时字段（非数据库字段）
+    private String orderStatusName;
+    private String payStatusName;
 
     // getter和setter
     public Integer getId() { return id; }
@@ -62,9 +67,6 @@ public class Order {
     public String getTradeNo() { return tradeNo; }
     public void setTradeNo(String tradeNo) { this.tradeNo = tradeNo; }
 
-    public String getRemark() { return remark; }
-    public void setRemark(String remark) { this.remark = remark; }
-
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
 
@@ -76,4 +78,16 @@ public class Order {
 
     public List<OrderItem> getItems() { return items; }
     public void setItems(List<OrderItem> items) { this.items = items; }
+
+    public String getOrderStatusName() { return orderStatusName; }
+    public void setOrderStatusName(String orderStatusName) { this.orderStatusName = orderStatusName; }
+
+    public String getPayStatusName() { return payStatusName; }
+    public void setPayStatusName(String payStatusName) { this.payStatusName = payStatusName; }
+
+    public String getOrderType() { return orderType; }
+    public void setOrderType(String orderType) { this.orderType = orderType; }
+
+    public String getCancelReason() { return cancelReason; }
+    public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
 }

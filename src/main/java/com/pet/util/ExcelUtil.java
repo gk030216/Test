@@ -5,31 +5,27 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class ExcelUtil {
 
-    /**
-     * 导出Excel
-     * @param response HttpServletResponse
-     * @param dataList 数据列表
-     * @param headers 表头数组
-     * @param fieldNames 字段名数组（与表头对应）
-     * @param sheetName 工作表名称
-     * @param fileName 文件名
-     */
     public static <T> void exportExcel(HttpServletResponse response,
                                        List<T> dataList,
                                        String[] headers,
                                        String[] fieldNames,
                                        String sheetName,
                                        String fileName) throws Exception {
-        // 创建工作簿
+        if (response.isCommitted()) {
+            return;
+        }
+
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet(sheetName);
 
@@ -46,7 +42,6 @@ public class ExcelUtil {
         headerFont.setBold(true);
         headerStyle.setFont(headerFont);
 
-        // 创建数据行样式
         CellStyle dataStyle = workbook.createCellStyle();
         dataStyle.setBorderBottom(BorderStyle.THIN);
         dataStyle.setBorderTop(BorderStyle.THIN);
@@ -75,11 +70,11 @@ public class ExcelUtil {
             }
         }
 
-        // 设置响应头
+        response.reset();
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8") + ".xlsx");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
 
-        // 输出文件
         try (OutputStream outputStream = response.getOutputStream()) {
             workbook.write(outputStream);
             outputStream.flush();
@@ -87,10 +82,14 @@ public class ExcelUtil {
         workbook.close();
     }
 
-    /**
-     * 通过反射获取字段值
-     */
+    // ✅ 修改：支持 Map 和普通对象
     private static Object getFieldValue(Object obj, String fieldName) {
+        // 如果是 Map 类型
+        if (obj instanceof Map) {
+            return ((Map<?, ?>) obj).get(fieldName);
+        }
+
+        // 如果是普通对象，使用反射
         try {
             Field field = obj.getClass().getDeclaredField(fieldName);
             field.setAccessible(true);
@@ -100,9 +99,6 @@ public class ExcelUtil {
         }
     }
 
-    /**
-     * 设置单元格值
-     */
     private static void setCellValue(Cell cell, Object value) {
         if (value == null) {
             cell.setCellValue("");
@@ -114,6 +110,9 @@ public class ExcelUtil {
             cell.setCellValue((Double) value);
         } else if (value instanceof Boolean) {
             cell.setCellValue((Boolean) value);
+        } else if (value instanceof Date) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            cell.setCellValue(sdf.format((Date) value));
         } else {
             cell.setCellValue(value.toString());
         }

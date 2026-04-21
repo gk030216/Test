@@ -8,7 +8,6 @@
         <result column="description" property="description"/>
         <result column="price" property="price"/>
         <result column="original_price" property="originalPrice"/>
-        <result column="stock" property="stock"/>
         <result column="category_id" property="categoryId"/>
         <result column="category_name" property="categoryName"/>
         <result column="image" property="image"/>
@@ -19,33 +18,45 @@
         <result column="is_new" property="isNew"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="stock" property="stock"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, name, description, price, original_price, stock, category_id, category_name,
-        image, images, sales, status, is_hot, is_new, create_time, update_time
+        id, name, description, price, original_price,
+        category_id, category_name, image, images,
+        sales, status, is_hot, is_new, create_time, update_time
     </sql>
 
+    <!-- 前台商品列表查询 - 只返回库存 > 0 的商品 -->
     <select id="getProductList" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM product
+        SELECT
+        p.id, p.name, p.description, p.price, p.original_price,
+        p.category_id, p.category_name, p.image, p.images,
+        p.sales, p.status, p.is_hot, p.is_new, p.create_time, p.update_time,
+        COALESCE(i.stock, 0) as stock
+        FROM product p
+        LEFT JOIN inventory i ON i.item_id = p.id AND i.type = 'product'
         <where>
-            status = 1
+            p.status = 1
+            AND COALESCE(i.stock, 0) > 0   <!-- ✅ 只显示有库存的商品 -->
             <if test="keyword != null and keyword != ''">
-                AND (name LIKE CONCAT('%', #{keyword}, '%')
-                OR description LIKE CONCAT('%', #{keyword}, '%'))
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR p.description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="categoryId != null">
-                AND category_id = #{categoryId}
+                AND p.category_id IN (
+                SELECT id FROM product_category
+                WHERE id = #{categoryId} OR parent_id = #{categoryId}
+                )
             </if>
             <if test="isHot != null">
-                AND is_hot = #{isHot}
+                AND p.is_hot = #{isHot}
             </if>
             <if test="isNew != null">
-                AND is_new = #{isNew}
+                AND p.is_new = #{isNew}
             </if>
         </where>
-        ORDER BY is_hot DESC, is_new DESC, sales DESC, id DESC
+        ORDER BY is_hot DESC, is_new DESC, sales DESC, p.id DESC
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -59,19 +70,235 @@
                 OR description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="categoryId != null">
-                AND category_id = #{categoryId}
+                AND category_id IN (
+                SELECT id FROM product_category
+                WHERE id = #{categoryId} OR parent_id = #{categoryId}
+                )
             </if>
         </where>
     </select>
 
-    <select id="getById" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List"/>
-        FROM product WHERE id = #{id}
+    <!-- 后台商品列表查询 -->
+    <select id="getAdminProductList" resultMap="BaseResultMap">
+        SELECT
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.original_price,
+        p.category_id,
+        p.category_name,
+        p.image,
+        p.images,
+        p.sales,
+        p.status,
+        p.is_hot,
+        p.is_new,
+        DATE_FORMAT(p.create_time, '%Y-%m-%d %H:%i:%s') as create_time,
+        COALESCE(i.stock, 0) as stock
+        FROM product p
+        LEFT JOIN inventory i ON i.item_id = p.id AND i.type = 'product'
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND p.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND p.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+        </where>
+        ORDER BY p.id DESC
+        LIMIT #{offset}, #{limit}
     </select>
 
-    <update id="updateStock">
-        UPDATE product SET stock = stock + #{quantity}, sales = sales - #{quantity}
-        WHERE id = #{id} AND stock + #{quantity} >= 0
+    <!-- 只保留这一个 countAdminProduct，删除重复的 -->
+    <select id="countAdminProduct" resultType="int">
+        SELECT COUNT(*)
+        FROM product p
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND p.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND p.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="getById" resultMap="BaseResultMap">
+        SELECT
+            p.id,
+            p.name,
+            p.description,
+            p.price,
+            p.original_price,
+            p.category_id,
+            p.category_name,
+            p.image,
+            p.images,
+            p.sales,
+            p.status,
+            p.is_hot,
+            p.is_new,
+            p.create_time,
+            COALESCE(i.stock, 0) as stock
+        FROM product p
+                 LEFT JOIN inventory i ON i.item_id = p.id AND i.type = 'product'
+        WHERE p.id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product (name, description, price, original_price,
+                             category_id, category_name, image, status, is_hot, is_new)
+        VALUES (#{name}, #{description}, #{price}, #{originalPrice},
+                #{categoryId}, #{categoryName}, #{image}, #{status}, #{isHot}, #{isNew})
+    </insert>
+
+    <update id="update">
+        UPDATE product
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="originalPrice != null">original_price = #{originalPrice},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="categoryName != null">category_name = #{categoryName},</if>
+            <if test="image != null">image = #{image},</if>
+            <if test="images != null">images = #{images},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isHot != null">is_hot = #{isHot},</if>
+            <if test="isNew != null">is_new = #{isNew},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE product SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateRating">
+        UPDATE product SET avg_rating = #{avgRating}, comment_count = #{commentCount}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM product WHERE id = #{id}
+    </delete>
+
+    <!-- 导出商品列表 -->
+    <select id="exportAdminProductList" resultMap="BaseResultMap">
+        SELECT
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.original_price,
+        p.category_id,
+        p.category_name,
+        p.image,
+        p.images,
+        p.sales,
+        p.status,
+        p.is_hot,
+        p.is_new,
+        DATE_FORMAT(p.create_time, '%Y-%m-%d %H:%i:%s') as create_time,
+        COALESCE(i.stock, 0) as stock
+        FROM product p
+        LEFT JOIN inventory i ON i.item_id = p.id AND i.type = 'product'
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND p.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="categoryId != null">
+                AND p.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+        </where>
+        ORDER BY p.id DESC
+    </select>
+
+    <!-- 获取商品统计数据 -->
+    <select id="getProductStatistics" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) as totalProducts,
+            COALESCE(SUM(sales), 0) as totalSales,
+            COALESCE(SUM(price * sales), 0) as totalRevenue,
+            COALESCE(ROUND(AVG(avg_rating), 1), 0) as avgRating
+        FROM product
+        WHERE status = 1
+    </select>
+
+    <!-- 获取分类商品数量分布 -->
+    <select id="getCategoryDistribution" resultType="java.util.HashMap">
+        SELECT
+            pc.name as name,
+            COUNT(p.id) as value
+        FROM product p
+            LEFT JOIN product_category pc ON p.category_id = pc.id
+        WHERE p.status = 1 AND pc.name IS NOT NULL
+        GROUP BY pc.name
+        ORDER BY value DESC
+            LIMIT 10
+    </select>
+
+    <!-- 获取销量排行Top N -->
+    <select id="getSalesRank" resultType="java.util.HashMap">
+        SELECT
+            id,
+            name,
+            sales,
+            price,
+            image
+        FROM product
+        WHERE status = 1 AND sales &gt; 0
+        ORDER BY sales DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 获取价格区间分布 -->
+    <select id="getPriceDistribution" resultType="java.util.HashMap">
+        SELECT
+            CASE
+                WHEN price &lt; 50 THEN '0-50元'
+                WHEN price &gt;= 50 AND price &lt; 100 THEN '50-100元'
+                WHEN price &gt;= 100 AND price &lt; 200 THEN '100-200元'
+                WHEN price &gt;= 200 AND price &lt; 500 THEN '200-500元'
+                ELSE '500元以上'
+                END as name,
+            COUNT(*) as value
+        FROM product
+        WHERE status = 1
+        GROUP BY
+            CASE
+            WHEN price &lt; 50 THEN '0-50元'
+            WHEN price &gt;= 50 AND price &lt; 100 THEN '50-100元'
+            WHEN price &gt;= 100 AND price &lt; 200 THEN '100-200元'
+            WHEN price &gt;= 200 AND price &lt; 500 THEN '200-500元'
+            ELSE '500元以上'
+        END
+        ORDER BY
+        MIN(price)
+    </select>
+
+    <!-- 获取商品状态分布 -->
+    <select id="getStatusDistribution" resultType="java.util.HashMap">
+        SELECT
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as onShelf,
+            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as offShelf
+        FROM product
+    </select>
+
+    <!-- 更新商品销量 -->
+    <update id="updateSales">
+        UPDATE product SET sales = sales + #{quantity} WHERE id = #{id}
     </update>
 
 </mapper>

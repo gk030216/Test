@@ -64,8 +64,10 @@ public class AdminCarouselController {
             } else {
                 return Result.error("添加失败");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("添加失败");
         }
     }
 
@@ -98,14 +100,13 @@ public class AdminCarouselController {
             } else {
                 return Result.error("操作失败");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("操作失败");
         }
     }
 
-    /**
-     * 批量更新状态
-     */
     @PutMapping("/batch-status")
     public Result<?> batchUpdateStatus(@RequestParam String ids, @RequestParam Integer status) {
         try {
@@ -118,8 +119,10 @@ public class AdminCarouselController {
             } else {
                 return Result.error("操作失败");
             }
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return Result.error(e.getMessage());
+        } catch (Exception e) {
+            return Result.error("操作失败");
         }
     }
 
@@ -156,6 +159,31 @@ public class AdminCarouselController {
                 return Result.error("批量删除失败");
             }
         } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量更新轮播图排序
+     */
+    @PutMapping("/batch-sort")
+    public Result<?> batchUpdateSort(@RequestBody List<Map<String, Integer>> sortList) {
+        try {
+            System.out.println("========== 收到排序更新请求 ==========");
+            System.out.println("接收到的数据: " + sortList);
+
+            if (sortList == null || sortList.isEmpty()) {
+                return Result.error("排序数据不能为空");
+            }
+
+            boolean success = carouselService.batchUpdateSort(sortList);
+            if (success) {
+                return Result.success("排序更新成功");
+            } else {
+                return Result.error("排序更新失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
             return Result.error(e.getMessage());
         }
     }

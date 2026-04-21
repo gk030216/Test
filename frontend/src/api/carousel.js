@@ -77,3 +77,11 @@ export function batchDeleteCarousel(ids) {
         params: { ids }
     });
 }
+
+export function batchUpdateCarouselSort(sortList) {
+    return request({
+        url: '/admin/carousel/batch-sort',
+        method: 'put',
+        data: sortList
+    });
+}

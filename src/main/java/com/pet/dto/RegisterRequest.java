@@ -8,6 +8,18 @@ public class RegisterRequest {
     private String phone;
     private String nickname;
 
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    private String avatar;
+
+    private String gender;
+
     public String getUsername() {
         return username;
     }
@@ -54,5 +66,13 @@ public class RegisterRequest {
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
     }
 }

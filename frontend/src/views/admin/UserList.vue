@@ -53,6 +53,7 @@
             clearable
             size="medium"
             class="status-select"
+            @change="handleSearch"
         >
           <el-option label="正常" :value="1"></el-option>
           <el-option label="禁用" :value="0"></el-option>
@@ -121,6 +122,13 @@
         </template>
       </el-table-column>
 
+      <!-- 性别列 -->
+      <el-table-column prop="gender" label="性别" width="80" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.gender || '保密' }}</span>
+        </template>
+      </el-table-column>
+
       <!-- 状态切换按钮 -->
       <el-table-column label="状态" width="100" align="center">
         <template slot-scope="scope">
@@ -147,9 +155,20 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="140" fixed="right" align="center">
+      <el-table-column label="操作" width="200" fixed="right" align="center">
         <template slot-scope="scope">
           <div class="action-buttons">
+            <el-button
+                size="small"
+                type="info"
+                plain
+                circle
+                @click="handleView(scope.row)"
+                class="action-icon-btn"
+                title="查看"
+            >
+              <i class="el-icon-view"></i>
+            </el-button>
             <el-button
                 size="small"
                 type="primary"
@@ -157,6 +176,7 @@
                 circle
                 @click="handleEdit(scope.row)"
                 class="action-icon-btn"
+                title="编辑"
             >
               <i class="el-icon-edit"></i>
             </el-button>
@@ -167,6 +187,7 @@
                 circle
                 @click="handleDelete(scope.row)"
                 class="action-icon-btn"
+                title="删除"
             >
               <i class="el-icon-delete"></i>
             </el-button>
@@ -265,6 +286,15 @@
           <el-form-item label="手机号">
             <el-input v-model="currentUser.phone" placeholder="请输入手机号" size="medium"></el-input>
           </el-form-item>
+
+          <!-- 性别选择 -->
+          <el-form-item label="性别">
+            <el-radio-group v-model="currentUser.gender">
+              <el-radio label="男">男</el-radio>
+              <el-radio label="女">女</el-radio>
+              <el-radio label="保密">保密</el-radio>
+            </el-radio-group>
+          </el-form-item>
         </el-form>
       </div>
 
@@ -273,6 +303,70 @@
         <el-button type="primary" @click="submitForm" :loading="submitLoading" size="medium">
           {{ isEdit ? '保存修改' : '立即创建' }}
         </el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 用户详情对话框 -->
+    <el-dialog
+        title="用户详情"
+        :visible.sync="detailVisible"
+        width="550px"
+        center
+        class="user-detail-dialog"
+    >
+      <div class="detail-content" v-if="currentDetailUser">
+        <!-- 头像区域 -->
+        <div class="detail-avatar">
+          <el-avatar
+              :size="100"
+              :src="currentDetailUser.avatar"
+              class="detail-avatar-img"
+          >
+            {{ !currentDetailUser.avatar ? (currentDetailUser.nickname || currentDetailUser.username).charAt(0).toUpperCase() : '' }}
+          </el-avatar>
+        </div>
+
+        <!-- 基本信息 -->
+        <div class="detail-section">
+          <div class="detail-item">
+            <span class="detail-label">用户名：</span>
+            <span class="detail-value">{{ currentDetailUser.username }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">昵称：</span>
+            <span class="detail-value">{{ currentDetailUser.nickname || '--' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">邮箱：</span>
+            <span class="detail-value">{{ currentDetailUser.email }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">手机号：</span>
+            <span class="detail-value">{{ currentDetailUser.phone || '--' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">性别：</span>
+            <span class="detail-value">{{ currentDetailUser.gender || '保密' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">状态：</span>
+            <el-tag :type="currentDetailUser.status === 1 ? 'success' : 'danger'" size="small">
+              {{ currentDetailUser.status === 1 ? '正常' : '禁用' }}
+            </el-tag>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">注册时间：</span>
+            <span class="detail-value">{{ formatDate(currentDetailUser.createTime) }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">最后登录：</span>
+            <span class="detail-value">{{ formatDate(currentDetailUser.lastLoginTime) || '--' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <span slot="footer">
+        <el-button @click="detailVisible = false">关闭</el-button>
       </span>
     </el-dialog>
   </div>
@@ -307,6 +401,8 @@ export default {
       loading: false,
       exportLoading: false,
       submitLoading: false,
+      detailVisible: false,
+      currentDetailUser: null,
       userList: [],
       total: 0,
       page: 1,
@@ -328,6 +424,7 @@ export default {
         phone: '',
         nickname: '',
         avatar: '',
+        gender: '保密',
         role: 1,
         status: 1
       },
@@ -363,11 +460,16 @@ export default {
     async loadUserList() {
       this.loading = true;
       try {
+        let statusParam = undefined;
+        if (this.searchForm.status !== '' && this.searchForm.status !== null && this.searchForm.status !== undefined) {
+          statusParam = this.searchForm.status;
+        }
+
         const params = {
           page: this.page,
           pageSize: this.pageSize,
           keyword: this.searchForm.keyword || undefined,
-          status: this.searchForm.status || undefined,
+          status: statusParam,
           role: 1
         };
         const res = await getUserList(params);
@@ -423,6 +525,12 @@ export default {
     triggerUpload() {
       this.$refs.avatarInput.click();
     },
+
+    handleView(row) {
+      this.currentDetailUser = row;
+      this.detailVisible = true;
+    },
+
     async handleAvatarUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -444,11 +552,9 @@ export default {
       try {
         const res = await uploadAvatar(formData);
         if (res.code === 200) {
-          // 更新预览和当前用户头像
           this.avatarPreview = res.data.url;
           this.currentUser.avatar = res.data.url;
 
-          // 如果是编辑模式，立即更新列表中的头像
           if (this.isEdit && this.currentUser.id) {
             const index = this.userList.findIndex(u => u.id === this.currentUser.id);
             if (index !== -1) {
@@ -521,6 +627,7 @@ export default {
         phone: '',
         nickname: '',
         avatar: '',
+        gender: '保密',
         role: 1,
         status: 1
       };
@@ -543,6 +650,7 @@ export default {
         phone: row.phone || '',
         nickname: row.nickname || '',
         avatar: row.avatar || '',
+        gender: row.gender || '保密',
         role: 1,
         status: row.status
       };
@@ -825,16 +933,20 @@ export default {
 }
 
 .export-btn {
-  border-color: #67c23a;
-  color: #67c23a;
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
 }
 
 .export-btn:hover {
-  background: #f0f9ff;
-  border-color: #67c23a;
-  color: #67c23a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.4);
+  color: white;
 }
-
 /* 表格样式 */
 .user-table {
   background: #fff;
@@ -1093,5 +1205,87 @@ export default {
   .pagination-wrapper {
     justify-content: center;
   }
+}
+
+/* 用户详情对话框样式 */
+.user-detail-dialog ::v-deep .el-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.user-detail-dialog ::v-deep .el-dialog__header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.user-detail-dialog ::v-deep .el-dialog__title {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.user-detail-dialog ::v-deep .el-dialog__close {
+  color: white;
+  font-size: 20px;
+}
+
+.user-detail-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
+}
+
+.detail-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-avatar {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.detail-avatar-img {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 36px;
+}
+
+.detail-section {
+  padding: 0 10px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  width: 85px;
+  font-size: 14px;
+  color: #909399;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #eef2f6;
 }
 </style>

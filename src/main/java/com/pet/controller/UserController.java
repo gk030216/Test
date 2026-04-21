@@ -114,4 +114,92 @@ public class UserController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 获取用户头像
+     */
+    @GetMapping("/avatar/{userId}")
+    public Result<String> getUserAvatar(@PathVariable Integer userId) {
+        try {
+            User user = userService.getUserById(userId);
+            if (user != null) {
+                return Result.success(user.getAvatar());
+            } else {
+                return Result.error("用户不存在");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 更新用户信息
+     */
+    @PutMapping("/update")
+    public Result<?> updateUserInfo(@RequestBody User user, @RequestAttribute("userId") Integer userId) {
+        try {
+            // 确保只能修改自己的信息
+            user.setId(userId);
+            boolean success = userService.updateUserInfo(user);
+            if (success) {
+                // 更新成功后，可以重新查询用户信息返回
+                User updatedUser = userService.getUserById(userId);
+                updatedUser.setPassword(null);
+                return Result.success("更新成功", updatedUser);
+            } else {
+                return Result.error("更新失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 修改密码
+     */
+    @PostMapping("/change-password")
+    public Result<?> changePassword(@RequestBody Map<String, String> params,
+                                    @RequestAttribute("userId") Integer userId) {
+        try {
+            String oldPassword = params.get("oldPassword");
+            String newPassword = params.get("newPassword");
+
+            if (oldPassword == null || newPassword == null) {
+                return Result.error("参数错误");
+            }
+
+            boolean success = userService.changePassword(userId, oldPassword, newPassword);
+            if (success) {
+                return Result.success("密码修改成功");
+            } else {
+                return Result.error("密码修改失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/update-email")
+    public Result<?> updateEmail(@RequestBody Map<String, String> params,
+                                 @RequestAttribute("userId") Integer userId) {
+        try {
+            String currentEmail = params.get("currentEmail");
+            String newEmail = params.get("newEmail");
+            String code = params.get("code");
+
+            if (currentEmail == null || newEmail == null || code == null) {
+                return Result.error("参数错误");
+            }
+
+            boolean success = userService.updateEmail(userId, currentEmail, newEmail, code);
+            if (success) {
+                return Result.success("邮箱更新成功");
+            } else {
+                return Result.error("邮箱更新失败");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
 }

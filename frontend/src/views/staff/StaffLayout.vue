@@ -31,17 +31,44 @@
           <span slot="title">预约管理</span>
         </el-menu-item>
 
-        <el-menu-item index="pet-files">
-          <i class="el-icon-s-custom"></i>
-          <span slot="title">宠物档案</span>
-        </el-menu-item>
-
+        <el-submenu index="pet">
+          <template slot="title">
+            <i class="el-icon-s-custom"></i>
+            <span slot="title">宠物管理</span>
+          </template>
+          <el-menu-item index="pet-list">
+            <i class="el-icon-menu"></i>
+            <span slot="title">宠物列表</span>
+          </el-menu-item>
+          <el-menu-item index="Staff-health-record">
+            <i class="el-icon-document"></i>
+            <span slot="title">体检记录</span>
+          </el-menu-item>
+          <el-menu-item index="Staff-vaccine-record">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">疫苗记录</span>
+          </el-menu-item>
+        </el-submenu>
+        <el-submenu index="inventory-menu">
+          <template slot="title">
+            <i class="el-icon-shopping-cart-2"></i>
+            <span>库存管理</span>
+          </template>
+          <el-menu-item index="vaccine-stock">
+            <i class="el-icon-first-aid-kit"></i>
+            <span>疫苗库存</span>
+          </el-menu-item>
+          <el-menu-item index="product-stock">
+            <i class="el-icon-goods"></i>
+            <span>商品库存</span>
+          </el-menu-item>
+        </el-submenu>
         <el-menu-item index="evaluations">
           <i class="el-icon-star-on"></i>
           <span slot="title">服务评价</span>
         </el-menu-item>
 
-        <el-menu-item index="feedback">
+        <el-menu-item index="feedback-manage">
           <i class="el-icon-warning"></i>
           <span slot="title">异常反馈</span>
         </el-menu-item>
@@ -124,9 +151,13 @@ export default {
       const titles = {
         'dashboard': '工作台',
         'appointments': '预约管理',
-        'pet-files': '宠物档案',
+        'pet-list': '宠物列表',
+        'Staff-health-record': '体检记录',      // 修正：与实际菜单index一致
+        'Staff-vaccine-record': '疫苗记录',      // 修正：与实际菜单index一致
+        'vaccine-stock': '疫苗库存',             // 新增
+        'product-stock': '商品库存',             // 新增
         'evaluations': '服务评价',
-        'feedback': '异常反馈'
+        'feedback-manage': '异常反馈'            // 修正：与实际菜单index一致
       };
       this.currentTitle = titles[index] || '管理页面';
       this.$router.push(`/staff/${index}`);
@@ -139,16 +170,20 @@ export default {
         const titles = {
           'dashboard': '工作台',
           'appointments': '预约管理',
-          'pet-files': '宠物档案',
+          'pet-list': '宠物列表',
+          'Staff-health-record': '体检记录',
+          'Staff-vaccine-record': '疫苗记录',
+          'vaccine-stock': '疫苗库存',
+          'product-stock': '商品库存',
           'evaluations': '服务评价',
-          'feedback': '异常反馈'
+          'feedback-manage': '异常反馈'
         };
         this.currentTitle = titles[menu] || '管理页面';
       }
     },
     handleUserCommand(command) {
       if (command === 'profile') {
-        this.$message.info('个人中心功能开发中');
+        this.$router.push('/staff/profile');
       } else if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
           confirmButtonText: '确定',
@@ -230,6 +265,10 @@ export default {
   overflow-y: auto;
 }
 
+.sidebar-menu ::v-deep .el-submenu .el-menu-item {
+  padding-left: 50px !important;
+}
+
 .staff-main {
   flex: 1;
   display: flex;
@@ -278,6 +317,7 @@ export default {
   overflow-y: auto;
 }
 
+/* 滚动条样式 */
 .staff-sidebar::-webkit-scrollbar {
   width: 6px;
 }
@@ -302,5 +342,9 @@ export default {
 .staff-content::-webkit-scrollbar-thumb {
   background: #c0c4cc;
   border-radius: 4px;
+}
+
+.staff-content::-webkit-scrollbar-thumb:hover {
+  background: #909399;
 }
 </style>

@@ -13,4 +13,8 @@ public interface CartMapper {
     int delete(@Param("id") Integer id);
     int deleteSelected(@Param("userId") Integer userId);
     int batchDelete(@Param("ids") List<Integer> ids);
+    /**
+     * 根据用户ID和商品ID删除购物车商品
+     */
+    int deleteByUserIdAndProductId(@Param("userId") Integer userId, @Param("productId") Integer productId);
 }

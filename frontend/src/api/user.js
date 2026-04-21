@@ -63,6 +63,49 @@ export function sendForgetCode(email) {
   });
 }
 
+// 获取用户信息
+export function getUserInfo() {
+  return request({
+    url: '/user/current-user',
+    method: 'get'
+  });
+}
+
+// 更新用户信息
+export function updateUserInfo(data) {
+  return request({
+    url: '/user/update',
+    method: 'put',
+    data
+  });
+}
+
+// 修改密码
+export function changePassword(data) {
+  return request({
+    url: '/user/change-password',
+    method: 'post',
+    data
+  });
+}
+
+// 发送修改邮箱验证码
+export function sendEmailCode(email) {
+  return request({
+    url: '/code/change-email',
+    method: 'post',
+    params: { email }
+  });
+}
+
+// 修改邮箱（确认）
+export function updateEmail(data) {
+  return request({
+    url: '/user/update-email',
+    method: 'post',
+    data
+  });
+}
 // ============= 管理员接口 =============
 
 // 获取用户列表
@@ -124,5 +167,64 @@ export function batchDeleteUsers(ids) {
     url: '/admin/user/batch-delete',
     method: 'delete',
     params: { ids }
+  });
+}
+
+// 获取用户头像
+export function getUserAvatar(userId) {
+  return request({
+    url: `/user/avatar/${userId}`,
+    method: 'get'
+  });
+}
+
+//
+export function getAllStaff() {
+  return request({
+    url: '/admin/user/staff/all',
+    method: 'get'
+  });
+}
+
+// ============= 用户分析接口 =============
+
+// 获取用户统计数据
+export function getUserStatistics() {
+  return request({
+    url: '/admin/user/statistics',
+    method: 'get'
+  });
+}
+
+// 获取用户增长趋势
+export function getUserTrend(params) {
+  return request({
+    url: '/admin/user/trend',
+    method: 'get',
+    params
+  });
+}
+
+// 获取用户角色分布
+export function getUserRoleDistribution() {
+  return request({
+    url: '/admin/user/role-distribution',
+    method: 'get'
+  });
+}
+
+// 获取用户性别分布
+export function getUserGenderDistribution() {
+  return request({
+    url: '/admin/user/gender-distribution',
+    method: 'get'
+  });
+}
+
+// 获取用户活跃度分布
+export function getUserActivityDistribution() {
+  return request({
+    url: '/admin/user/activity-distribution',
+    method: 'get'
   });
 }

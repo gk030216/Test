@@ -1,5 +1,7 @@
 import request from '@/utils/request';
 
+// ============= 前台接口 =============
+
 // 创建订单
 export function createOrder(data) {
     return request({
@@ -17,7 +19,7 @@ export function getOrderDetail(orderNo) {
     });
 }
 
-// 获取订单列表
+// 获取订单列表（用户）
 export function getOrderList(params) {
     return request({
         url: '/order/list',
@@ -27,10 +29,11 @@ export function getOrderList(params) {
 }
 
 // 取消订单
-export function cancelOrder(orderNo) {
+export function cancelOrder(orderNo, reason) {
     return request({
         url: `/order/cancel/${orderNo}`,
-        method: 'put'
+        method: 'put',
+        data: { reason }
     });
 }
 
@@ -40,5 +43,61 @@ export function payOrder(data) {
         url: '/order/pay',
         method: 'post',
         data
+    });
+}
+
+// ============= 管理员接口 =============
+
+// 获取订单列表（后台）
+export function getAdminOrderList(params) {
+    return request({
+        url: '/admin/order/list',
+        method: 'get',
+        params
+    });
+}
+
+// 更新订单状态
+export function updateOrderStatus(orderNo, orderStatus) {
+    return request({
+        url: '/admin/order/status',
+        method: 'put',
+        params: { orderNo, orderStatus }
+    });
+}
+
+// 删除订单
+export function deleteOrder(id) {
+    return request({
+        url: `/admin/order/delete/${id}`,
+        method: 'delete'
+    });
+}
+
+// 批量删除订单
+export function batchDeleteOrders(ids) {
+    return request({
+        url: '/admin/order/batch-delete',
+        method: 'delete',
+        params: { ids }
+    });
+}
+
+// 申请退款
+export function refundOrder(orderNo, reason) {
+    return request({
+        url: `/order/refund/${orderNo}`,
+        method: 'post',
+        data: { reason }
+    });
+}
+
+// 导出订单列表
+export function exportOrderList(params) {
+    return request({
+        url: '/admin/order/export',
+        method: 'get',
+        params,
+        responseType: 'blob'
     });
 }

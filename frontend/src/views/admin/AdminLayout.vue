@@ -21,72 +21,199 @@
           active-text-color="#409EFF"
           @select="handleMenuSelect"
       >
+        <!-- 仪表盘 -->
         <el-menu-item index="dashboard">
           <i class="el-icon-s-home"></i>
           <span slot="title">仪表盘</span>
         </el-menu-item>
 
+        <!-- 用户管理 -->
         <el-submenu index="user">
           <template slot="title">
             <i class="el-icon-user"></i>
             <span slot="title">用户管理</span>
           </template>
-          <el-menu-item index="user-list">用户列表</el-menu-item>
-          <el-menu-item index="staff-list">员工列表</el-menu-item>
+          <el-menu-item index="user-list">
+            <i class="el-icon-user-solid"></i>
+            <span slot="title">用户列表</span>
+          </el-menu-item>
+          <el-menu-item index="staff-list">
+            <i class="el-icon-s-custom"></i>
+            <span slot="title">员工列表</span>
+          </el-menu-item>
+          <el-menu-item index="user-analysis">
+            <i class="el-icon-data-line"></i>
+            <span slot="title">用户分析</span>
+          </el-menu-item>
         </el-submenu>
 
-        <el-submenu index="service">
-          <template slot="title">
-            <i class="el-icon-s-order"></i>
-            <span slot="title">服务管理</span>
-          </template>
-          <el-menu-item index="service-list">服务列表</el-menu-item>
-          <el-menu-item index="service-category">服务分类</el-menu-item>
-          <el-menu-item index="appointment-list">预约管理</el-menu-item>
-        </el-submenu>
-
+        <!-- 宠物管理 -->
         <el-submenu index="pet">
           <template slot="title">
             <i class="el-icon-s-custom"></i>
-            <span slot="title">宠物档案</span>
+            <span slot="title">宠物管理</span>
           </template>
-          <el-menu-item index="pet-list">宠物列表</el-menu-item>
-          <el-menu-item index="pet-health">健康记录</el-menu-item>
+          <el-menu-item index="pet-list">
+            <i class="el-icon-menu"></i>
+            <span slot="title">宠物列表</span>
+          </el-menu-item>
+          <el-menu-item index="health-record">
+            <i class="el-icon-document"></i>
+            <span slot="title">体检记录</span>
+          </el-menu-item>
+          <el-menu-item index="vaccine-record">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">疫苗记录</span>
+          </el-menu-item>
+          <el-menu-item index="pet-statistics">
+            <i class="el-icon-data-line"></i>
+            <span slot="title">宠物统计</span>
+          </el-menu-item>
         </el-submenu>
 
-        <el-submenu index="product">
+        <!-- 服务管理 -->
+        <el-submenu index="service">
           <template slot="title">
+            <i class="el-icon-service"></i>
+            <span slot="title">服务管理</span>
+          </template>
+          <el-menu-item index="service-category">
+            <i class="el-icon-folder"></i>
+            <span slot="title">服务分类</span>
+          </el-menu-item>
+          <el-menu-item index="service-list">
+            <i class="el-icon-service"></i>
+            <span slot="title">服务列表</span>
+          </el-menu-item>
+          <el-menu-item index="appointment-list">
+            <i class="el-icon-time"></i>
+            <span slot="title">预约管理</span>
+          </el-menu-item>
+          <el-menu-item index="service-comment-list">
+            <i class="el-icon-star-on"></i>
+            <span slot="title">服务评价</span>
+          </el-menu-item>
+          <el-menu-item index="service-analysis">
+            <i class="el-icon-data-line"></i>
+            <span slot="title">服务分析</span>
+          </el-menu-item>
+        </el-submenu>
+
+        <!-- 商城管理 -->
+        <el-submenu index="shop">
+          <template slot="title">
+            <i class="el-icon-shopping-cart-2"></i>
+            <span slot="title">商城管理</span>
+          </template>
+          <el-menu-item index="category-list">
+            <i class="el-icon-menu"></i>
+            <span slot="title">商品分类</span>
+          </el-menu-item>
+          <el-menu-item index="product-list">
             <i class="el-icon-goods"></i>
             <span slot="title">商品管理</span>
-          </template>
-          <el-menu-item index="product-list">商品列表</el-menu-item>
-          <el-menu-item index="product-category">商品分类</el-menu-item>
-          <el-menu-item index="order-list">订单管理</el-menu-item>
+          </el-menu-item>
+          <el-menu-item index="order-list">
+            <i class="el-icon-s-order"></i>
+            <span slot="title">订单管理</span>
+          </el-menu-item>
+          <el-menu-item index="comment-list">
+            <i class="el-icon-chat-dot-round"></i>
+            <span slot="title">商品评价</span>
+          </el-menu-item>
+          <el-menu-item index="data-analysis">
+            <i class="el-icon-data-line"></i>
+            <span slot="title">商城分析</span>
+          </el-menu-item>
         </el-submenu>
 
+        <!-- 库存管理 -->
+        <el-submenu index="inventory">
+          <template slot="title">
+            <i class="el-icon-shopping-cart-2"></i>
+            <span slot="title">库存管理</span>
+          </template>
+          <el-menu-item index="product-stock">
+            <i class="el-icon-goods"></i>
+            <span slot="title">商品库存</span>
+          </el-menu-item>
+          <el-menu-item index="vaccine-stock">
+            <i class="el-icon-first-aid-kit"></i>
+            <span slot="title">疫苗库存</span>
+          </el-menu-item>
+        </el-submenu>
+
+        <!-- 社区管理 -->
         <el-submenu index="community">
           <template slot="title">
             <i class="el-icon-chat-dot-round"></i>
             <span slot="title">社区管理</span>
           </template>
-          <el-menu-item index="post-list">帖子管理</el-menu-item>
-          <el-menu-item index="comment-list">评论管理</el-menu-item>
+          <el-menu-item index="post-manage">
+            <i class="el-icon-document"></i>
+            <span slot="title">帖子管理</span>
+          </el-menu-item>
+          <el-menu-item index="comment-manage">
+            <i class="el-icon-message"></i>
+            <span slot="title">评论管理</span>
+          </el-menu-item>
         </el-submenu>
 
-        <el-menu-item index="carousel">
-          <i class="el-icon-picture"></i>
-          <span slot="title">轮播图管理</span>
-        </el-menu-item>
+        <!-- AI管理 -->
+        <el-submenu index="ai">
+          <template slot="title">
+            <i class="el-icon-cpu"></i>
+            <span slot="title">AI管理</span>
+          </template>
+          <el-menu-item index="faq-list">
+            <i class="el-icon-question"></i>
+            <span slot="title">常见问题</span>
+          </el-menu-item>
+          <el-menu-item index="knowledge-list">
+            <i class="el-icon-document"></i>
+            <span slot="title">知识库管理</span>
+          </el-menu-item>
+          <el-menu-item index="chat-history">
+            <i class="el-icon-chat-dot-round"></i>
+            <span slot="title">对话记录</span>
+          </el-menu-item>
+          <el-menu-item index="user-chat-history">
+            <i class="el-icon-chat-dot-round"></i>
+            <span slot="title">用户对话</span>
+          </el-menu-item>
+        </el-submenu>
 
-        <el-menu-item index="statistics">
-          <i class="el-icon-data-line"></i>
-          <span slot="title">数据统计</span>
-        </el-menu-item>
+        <!-- 内容管理 -->
+        <el-submenu index="content">
+          <template slot="title">
+            <i class="el-icon-picture"></i>
+            <span slot="title">内容管理</span>
+          </template>
+          <el-menu-item index="carousel">
+            <i class="el-icon-picture"></i>
+            <span slot="title">轮播图管理</span>
+          </el-menu-item>
+          <el-menu-item index="notice-manage">
+            <i class="el-icon-bell"></i>
+            <span slot="title">公告管理</span>
+          </el-menu-item>
+        </el-submenu>
 
-        <el-menu-item index="settings">
-          <i class="el-icon-setting"></i>
-          <span slot="title">系统设置</span>
-        </el-menu-item>
+        <!-- 反馈与设置 -->
+        <el-submenu index="system">
+          <template slot="title">
+            <i class="el-icon-setting"></i>
+            <span slot="title">系统管理</span>
+          </template>
+          <el-menu-item index="feedback">
+            <i class="el-icon-warning"></i>
+            <span slot="title">异常反馈</span>
+          </el-menu-item>
+          <el-menu-item index="settings">
+            <i class="el-icon-setting"></i>
+            <span slot="title">系统设置</span>
+          </el-menu-item>
+        </el-submenu>
       </el-menu>
     </aside>
 
@@ -109,8 +236,14 @@
               <i class="el-icon-arrow-down"></i>
             </div>
             <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+              <el-dropdown-item command="profile">
+                <i class="el-icon-user"></i>
+                <span>个人资料</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <i class="el-icon-switch-button"></i>
+                <span>退出登录</span>
+              </el-dropdown-item>
             </el-dropdown-menu>
           </el-dropdown>
         </div>
@@ -179,8 +312,12 @@ export default {
         'post-list': '帖子管理',
         'comment-list': '评论管理',
         'carousel': '轮播图管理',
+        'knowledge-list': '知识库管理',
+        'faq-list': '常见问题管理',
+        'chat-history': '对话记录',
         'statistics': '数据统计',
-        'settings': '系统设置'
+        'settings': '系统设置',
+        'feedback': '异常反馈'
       };
       this.currentTitle = titles[index] || '管理页面';
 
@@ -208,14 +345,15 @@ export default {
           'comment-list': '评论管理',
           'carousel': '轮播图管理',
           'statistics': '数据统计',
-          'settings': '系统设置'
+          'settings': '系统设置',
+          'feedback': '异常反馈'
         };
         this.currentTitle = titles[menu] || '管理页面';
       }
     },
     handleUserCommand(command) {
       if (command === 'profile') {
-        this.$message.info('个人中心功能开发中');
+        this.$router.push('/admin/profile');
       } else if (command === 'logout') {
         this.$confirm('确定要退出登录吗？', '提示', {
           confirmButtonText: '确定',

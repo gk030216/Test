@@ -2,8 +2,10 @@
 package com.pet.service.impl;
 
 import com.pet.entity.Cart;
+import com.pet.entity.Inventory;
 import com.pet.entity.Product;
 import com.pet.mapper.CartMapper;
+import com.pet.mapper.InventoryMapper;
 import com.pet.mapper.ProductMapper;
 import com.pet.service.CartService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,9 @@ public class CartServiceImpl implements CartService {
     @Autowired
     private ProductMapper productMapper;
 
+    @Autowired
+    private InventoryMapper inventoryMapper;
+
     @Override
     public List<Cart> getCartList(Integer userId) {
         return cartMapper.getCartList(userId);
@@ -37,7 +42,13 @@ public class CartServiceImpl implements CartService {
         if (product == null) {
             throw new RuntimeException("商品不存在");
         }
-        if (product.getStock() < quantity) {
+
+        // ✅ 从库存表获取库存
+        Inventory inventory = inventoryMapper.getByTypeAndItemId("product", productId);
+        if (inventory == null) {
+            throw new RuntimeException("商品库存不存在");
+        }
+        if (inventory.getStock() < quantity) {
             throw new RuntimeException("库存不足");
         }
 
@@ -46,7 +57,7 @@ public class CartServiceImpl implements CartService {
         if (existingCart != null) {
             // 更新数量
             int newQuantity = existingCart.getQuantity() + quantity;
-            if (product.getStock() < newQuantity) {
+            if (inventory.getStock() < newQuantity) {
                 throw new RuntimeException("库存不足");
             }
             cartMapper.updateQuantity(existingCart.getId(), newQuantity);

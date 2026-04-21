@@ -69,4 +69,19 @@ public interface UserService {
      * 更新用户信息（管理员）
      */
     boolean updateUser(User user);
+
+    /**
+     * 更新用户信息
+     */
+    boolean updateUserInfo(User user);
+
+    /**
+     * 修改密码
+     */
+    boolean changePassword(Integer userId, String oldPassword, String newPassword);
+
+    /**
+     * 更新邮箱
+     */
+    boolean updateEmail(Integer userId, String currentEmail, String newEmail, String code);
 }

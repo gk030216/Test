@@ -106,4 +106,13 @@
         </foreach>
     </delete>
 
+    <!-- 批量更新排序 -->
+    <update id="batchUpdateSort" parameterType="java.util.List">
+        <foreach collection="list" item="item" separator=";">
+            UPDATE carousel
+            SET sort_order = #{item.sortOrder}
+            WHERE id = #{item.id}
+        </foreach>
+    </update>
+
 </mapper>
