@@ -9,7 +9,7 @@ public class ServiceComment {
     private Integer serviceId;
     private Integer userId;
     private String userName;
-    private String userNickname;  // ✅ 添加昵称字段
+    private String userNickname;
     private Integer rating;
     private String content;
     private String images;
@@ -24,6 +24,8 @@ public class ServiceComment {
     private BigDecimal servicePrice;
     private String serviceImage;
     private String userAvatar;
+    private String staffName;
+
 
     // getter/setter
     public Integer getId() { return id; }
@@ -79,4 +81,12 @@ public class ServiceComment {
 
     public String getUserAvatar() { return userAvatar; }
     public void setUserAvatar(String userAvatar) { this.userAvatar = userAvatar; }
+
+    public String getStaffName() {
+        return staffName;
+    }
+
+    public void setStaffName(String staffName) {
+        this.staffName = staffName;
+    }
 }

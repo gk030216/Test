@@ -45,7 +45,7 @@
       </el-table-column>
       <el-table-column label="主人" width="180">
         <template slot-scope="scope">
-          <div class="owner-name">{{ scope.row.userName || '未知' }}</div>
+          <div class="owner-name">{{ scope.row.userNickname || scope.row.userName || '未知' }}</div>
           <div class="owner-id">用户ID: {{ scope.row.userId }}</div>
         </template>
       </el-table-column>
@@ -181,11 +181,11 @@
               <el-option
                   v-for="user in userList"
                   :key="user.id"
-                  :label="`${user.username} (${user.nickname || user.username})`"
+                  :label="`${user.nickname || user.username} (${user.username})`"
                   :value="user.id">
                 <div class="user-option">
-                  <span class="username">{{ user.username }}</span>
-                  <span class="nickname" v-if="user.nickname && user.nickname !== user.username">({{ user.nickname }})</span>
+                  <span class="nickname">{{ user.nickname || user.username }}</span>
+                  <span class="username" v-if="user.nickname && user.nickname !== user.username">({{ user.username }})</span>
                   <span class="user-id">ID: {{ user.id }}</span>
                 </div>
               </el-option>
@@ -223,7 +223,7 @@
         <div class="detail-body">
           <div class="info-row">
             <span class="info-label">主人：</span>
-            <span class="info-value">{{ currentPet.userName || '未知' }} (ID: {{ currentPet.userId }})</span>
+            <span class="info-value">{{ currentPet.userNickname || currentPet.userName || '未知' }} (ID: {{ currentPet.userId }})</span>
           </div>
           <div class="info-row">
             <span class="info-label">生日：</span>
@@ -316,7 +316,11 @@ export default {
       try {
         const res = await getAdminPetList({ page: this.page, pageSize: this.pageSize, ...this.searchForm });
         if (res.code === 200) {
-          this.petList = res.data.list || [];
+          // ✅ 确保 userNickname 字段存在
+          this.petList = (res.data.list || []).map(pet => ({
+            ...pet,
+            userNickname: pet.userNickname || pet.nickname || null
+          }));
           this.total = res.data.total || 0;
         }
       } catch (error) {

@@ -23,11 +23,13 @@
         ORDER BY v.vaccine_date DESC
     </select>
 
+    <!-- 插入疫苗记录 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO pet_vaccine_record (pet_id, inventory_id, vaccine_name, vaccine_date, next_date, operator_name, remark)
         VALUES (#{petId}, #{inventoryId}, #{vaccineName}, #{vaccineDate}, #{nextDate}, #{operatorName}, #{remark})
     </insert>
 
+    <!-- 更新疫苗记录 -->
     <update id="update">
         UPDATE pet_vaccine_record
         <set>
@@ -40,6 +42,7 @@
         WHERE id = #{id}
     </update>
 
+    <!-- 删除疫苗记录 -->
     <delete id="deleteById">
         DELETE FROM pet_vaccine_record WHERE id = #{id}
     </delete>
@@ -54,7 +57,7 @@
         ORDER BY v.next_date ASC
     </select>
 
-    <!--获取所有疫苗记录（管理员用）- 删除 hospital，doctor 改为 operator_name -->
+    <!-- 获取所有疫苗记录（管理员用）- 包含昵称 -->
     <select id="getAllVaccineRecords" resultType="java.util.HashMap">
         SELECT
         v.id,
@@ -68,6 +71,7 @@
         p.name as petName,
         u.id as ownerId,
         u.username as ownerName,
+        u.nickname as ownerNickname,
         i.item_name as vaccineStockName,
         i.stock as currentStock
         FROM pet_vaccine_record v
@@ -78,13 +82,14 @@
         <if test="keyword != null and keyword != ''">
             AND (p.name LIKE CONCAT('%', #{keyword}, '%')
             OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
             OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         ORDER BY v.create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
-    <!-- 统计所有疫苗记录（只统计正常宠物的记录） -->
+    <!-- 统计所有疫苗记录（只统计正常宠物的记录）- 包含昵称搜索 -->
     <select id="countAllVaccineRecords" resultType="int">
         SELECT COUNT(*)
         FROM pet_vaccine_record v
@@ -94,6 +99,7 @@
         <if test="keyword != null and keyword != ''">
             AND (p.name LIKE CONCAT('%', #{keyword}, '%')
             OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
             OR v.vaccine_name LIKE CONCAT('%', #{keyword}, '%'))
         </if>
     </select>

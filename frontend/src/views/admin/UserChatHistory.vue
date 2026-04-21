@@ -37,7 +37,7 @@
               </el-avatar>
             </div>
             <div class="user-info">
-              <div class="user-name">{{ user.userName || '匿名用户' }}</div>
+              <div class="user-name">{{ user.userNickname || user.userName || '匿名用户' }}</div>
               <div class="user-preview">{{ truncateText(user.lastQuestion, 30) }}</div>
             </div>
             <div class="user-meta">
@@ -62,7 +62,7 @@
               {{ getUserInitial(currentUser.userName) }}
             </el-avatar>
             <div class="chat-user-detail">
-              <div class="chat-user-name">{{ currentUser.userName || '匿名用户' }}</div>
+              <div class="chat-user-name">{{ currentUser.userNickname || currentUser.userName || '匿名用户' }}</div>
               <div class="chat-user-stats">
                 <span><i class="el-icon-chat-dot-round"></i> {{ currentUser.dialogCount }} 条对话</span>
               </div>
@@ -91,7 +91,7 @@
               <div class="message-row message-user">
                 <div class="message-avatar">
                   <el-avatar :size="32" :src="getAvatarUrl(currentUser.avatar)" class="user-avatar-small">
-                    {{ getUserInitial(currentUser.userName) }}
+                    {{ getUserInitial(currentUser.userNickname || currentUser.userName) }}
                   </el-avatar>
                 </div>
                 <div class="message-bubble user-bubble">
@@ -258,7 +258,8 @@ export default {
         if (!userMap.has(userId)) {
           userMap.set(userId, {
             userId: userId,
-            userName: item.userName || `用户${userId}`,
+            userName: item.userName || item.userNickname || `用户${userId}`,  // 简化：直接使用后端返回的值
+            userNickname: item.userNickname,
             avatar: item.userAvatar || '',
             dialogs: [],
             dialogCount: 0,
@@ -284,8 +285,11 @@ export default {
 
     selectUser(user) {
       this.currentUserId = user.userId;
-      this.currentUser = user;
-      // 按时间升序排序（最早在上，最新在下）
+      this.currentUser = {
+        ...user,
+        userName: user.userName,        // 已经在上一步设置好了
+        userNickname: user.userNickname
+      };
       this.currentDialogs = [...user.dialogs].sort((a, b) => {
         return new Date(a.createTime) - new Date(b.createTime);
       });
@@ -323,7 +327,7 @@ export default {
 
     async deleteUserConversation(userId) {
       const user = this.userGroupList.find(u => u.userId === userId);
-      this.$confirm(`确定清空用户 "${user?.userName || userId}" 的所有对话记录吗？`, '警告', { type: 'warning' })
+      this.$confirm(`确定清空用户 "${user?.userNickname || user?.userName || userId}" 的所有对话记录吗？`, '警告', { type: 'warning' })
           .then(async () => {
             const ids = this.historyList.filter(item => item.userId === userId).map(item => item.id);
             if (ids.length > 0) {

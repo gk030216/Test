@@ -23,6 +23,7 @@ public class PetProfile {
 
     // 关联字段
     private String userName;
+    private String userNickname;
     private Integer age;  // 计算年龄
     private List<PetVaccineRecord> vaccineRecords;
     private List<PetHealthRecord> healthRecords;
@@ -66,4 +67,13 @@ public class PetProfile {
     public void setVaccineRecords(List<PetVaccineRecord> vaccineRecords) { this.vaccineRecords = vaccineRecords; }
     public List<PetHealthRecord> getHealthRecords() { return healthRecords; }
     public void setHealthRecords(List<PetHealthRecord> healthRecords) { this.healthRecords = healthRecords; }
+
+    public String getUserNickname() {
+        return userNickname;
+    }
+
+    public void setUserNickname(String userNickname) {
+        this.userNickname = userNickname;
+    }
+
 }

@@ -118,10 +118,10 @@
                 :src="scope.row.userAvatar"
                 class="user-avatar"
             >
-              {{ scope.row.userName ? scope.row.userName.charAt(0).toUpperCase() : 'U' }}
+              {{ (scope.row.userNickname || scope.row.userName || 'U').charAt(0).toUpperCase() }}
             </el-avatar>
             <div class="user-detail">
-              <span class="user-name">{{ scope.row.userName }}</span>
+              <span class="user-name">{{ scope.row.userNickname || scope.row.userName }}</span>
               <span class="user-id">ID: {{ scope.row.userId }}</span>
             </div>
           </div>
@@ -152,7 +152,16 @@
         </template>
       </el-table-column>
 
-      <!-- 状态列 - 保留切换开关 -->
+      <!-- ✅ 回复状态列 -->
+      <el-table-column label="回复状态" width="100" align="center">
+        <template slot-scope="scope">
+          <el-tag :type="scope.row.reply ? 'success' : 'info'" size="small">
+            {{ scope.row.reply ? '已回复' : '未回复' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+
+      <!-- 状态列 -->
       <el-table-column label="状态" width="100" align="center">
         <template slot-scope="scope">
           <el-switch
@@ -173,18 +182,7 @@
         </template>
       </el-table-column>
 
-      <!-- 商家回复列 -->
-      <el-table-column label="商家回复" width="200">
-        <template slot-scope="scope">
-          <div v-if="scope.row.reply" class="reply-text">
-            <div class="reply-content">{{ scope.row.reply }}</div>
-            <div class="reply-time">{{ formatDate(scope.row.replyTime) }}</div>
-          </div>
-          <el-button v-else size="small" type="primary" plain @click="openReplyDialog(scope.row)">
-            <i class="el-icon-chat-dot-round"></i> 回复
-          </el-button>
-        </template>
-      </el-table-column>
+      <!-- ❌ 删除商家回复列 -->
 
       <!-- 操作列 -->
       <el-table-column label="操作" width="140" align="center" fixed="right">
@@ -271,10 +269,10 @@
                     :src="currentComment.userAvatar"
                     class="user-avatar"
                 >
-                  {{ currentComment.userName ? currentComment.userName.charAt(0).toUpperCase() : 'U' }}
+                  {{ (currentComment.userNickname || currentComment.userName || 'U').charAt(0).toUpperCase() }}
                 </el-avatar>
                 <div class="user-detail">
-                  <span class="user-name">{{ currentComment.userName }}</span>
+                  <span class="user-name">{{ currentComment.userNickname || currentComment.userName }}</span>
                   <el-rate v-model="currentComment.rating" disabled text-color="#ff9900"></el-rate>
                 </div>
               </div>
@@ -368,12 +366,15 @@ export default {
         };
         const res = await getCommentList(params);
         if (res.code === 200) {
-          // 为每条数据添加 loading 状态
-          this.commentList = res.data.list.map(item => ({
-            ...item,
-            statusLoading: false
-          }));
-          this.total = res.data.total;
+          // ✅ 过滤掉商品已删除的评论（productName 为 null 或空）
+          this.commentList = (res.data.list || [])
+              .filter(item => item.productName !== null && item.productName !== '')
+              .map(item => ({
+                ...item,
+                userNickname: item.userNickname || null,
+                statusLoading: false
+              }));
+          this.total = this.commentList.length;
         }
       } catch (error) {
         console.error('加载评价列表失败', error);

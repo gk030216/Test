@@ -144,11 +144,11 @@
       </div>
     </div>
 
-    <!-- 评价对话框 -->
+    <!-- 评价对话框（支持上传图片） -->
     <el-dialog
         title="评价服务"
         :visible.sync="commentDialogVisible"
-        width="500px"
+        width="550px"
         center
         class="comment-dialog"
         :close-on-click-modal="false"
@@ -161,16 +161,35 @@
           </div>
           <div class="service-info">
             <h4>{{ currentAppointment.serviceName }}</h4>
-            <div class="service-meta"><span><i class="el-icon-s-custom"></i> {{ currentAppointment.petName }}</span><span class="price">¥{{ currentAppointment.servicePrice }}</span></div>
+            <div class="service-meta">
+              <span><i class="el-icon-s-custom"></i> {{ currentAppointment.petName }}</span>
+              <span class="price">¥{{ currentAppointment.servicePrice }}</span>
+            </div>
           </div>
         </div>
 
         <el-form :model="commentForm" :rules="commentRules" ref="commentForm" label-width="80px">
           <el-form-item label="评分" prop="rating">
-            <div class="rating-wrapper"><el-rate v-model="commentForm.rating" :texts="['很差', '较差', '一般', '推荐', '超赞']" show-text :colors="['#f56c6c', '#e6a23c', '#67c23a']" /></div>
+            <div class="rating-wrapper">
+              <el-rate v-model="commentForm.rating" :texts="['很差', '较差', '一般', '推荐', '超赞']" show-text :colors="['#f56c6c', '#e6a23c', '#67c23a']" />
+            </div>
           </el-form-item>
           <el-form-item label="评价内容" prop="content">
             <el-input type="textarea" v-model="commentForm.content" rows="4" placeholder="说说你的服务体验..." maxlength="500" show-word-limit />
+          </el-form-item>
+          <el-form-item label="上传图片">
+            <el-upload
+                action="#"
+                :http-request="uploadCommentImage"
+                list-type="picture-card"
+                :on-preview="handlePictureCardPreview"
+                :on-remove="handleRemove"
+                :file-list="commentForm.imageList"
+                :limit="5"
+            >
+              <i class="el-icon-plus" />
+            </el-upload>
+            <div class="upload-tip">支持 JPG、PNG 格式，最多5张，每张不超过2MB</div>
           </el-form-item>
         </el-form>
       </div>
@@ -181,35 +200,89 @@
       </span>
     </el-dialog>
 
+    <!-- 图片预览对话框 -->
+    <el-dialog :visible.sync="previewVisible" width="400px" append-to-body>
+      <img :src="previewImage" style="width: 100%" alt="预览图片">
+    </el-dialog>
+
     <!-- 服务预约查看评价对话框 -->
     <el-dialog
         title="我的评价"
         :visible.sync="viewServiceCommentVisible"
-        width="500px"
+        width="550px"
         center
         class="view-comment-dialog"
+        :close-on-click-modal="false"
     >
       <div class="view-comment-content" v-if="viewServiceCommentData">
-        <div class="view-product">
-          <img v-if="viewServiceCommentData.serviceImage" :src="viewServiceCommentData.serviceImage" :alt="viewServiceCommentData.serviceName">
-          <div v-else class="image-placeholder"><i class="el-icon-service"></i></div>
-          <div class="product-info">
-            <h4>{{ viewServiceCommentData.serviceName }}</h4>
-            <div class="product-price">¥{{ viewServiceCommentData.servicePrice }}</div>
+        <!-- 服务信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-service"></i>
+            <span>服务信息</span>
+          </div>
+          <div class="service-info-row">
+            <div class="service-image-wrapper">
+              <img v-if="viewServiceCommentData.serviceImage" :src="viewServiceCommentData.serviceImage" class="service-img">
+              <div v-else class="image-placeholder"><i class="el-icon-service"></i></div>
+            </div>
+            <div class="service-detail">
+              <h4>{{ viewServiceCommentData.serviceName }}</h4>
+              <div class="service-meta">
+                <span><i class="el-icon-s-custom"></i> {{ viewServiceCommentData.petName || '未指定' }}</span>
+                <span class="price">¥{{ viewServiceCommentData.servicePrice }}</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="view-comment">
-          <div class="comment-rating"><el-rate v-model="viewServiceCommentData.rating" disabled show-score text-color="#ff9900" /></div>
+
+        <!-- 评价内容 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-star-on"></i>
+            <span>评价内容</span>
+          </div>
+          <div class="rating-row">
+            <span class="rating-label">评分：</span>
+            <el-rate v-model="viewServiceCommentData.rating" disabled show-score text-color="#ff9900" />
+          </div>
           <div class="comment-text">{{ viewServiceCommentData.content }}</div>
           <div class="comment-time">{{ formatDate(viewServiceCommentData.createTime) }}</div>
-          <div class="comment-reply" v-if="viewServiceCommentData.reply">
-            <div class="reply-header"><i class="el-icon-chat-dot-round"></i><span>商家回复</span></div>
-            <div class="reply-content">{{ viewServiceCommentData.reply }}</div>
-            <div class="reply-time">{{ formatDate(viewServiceCommentData.replyTime) }}</div>
+
+          <!-- 评价图片 -->
+          <div class="comment-images" v-if="viewServiceCommentData.images">
+            <div class="images-title">评价图片：</div>
+            <div class="image-list">
+              <el-image
+                  v-for="(img, idx) in viewServiceCommentData.images.split(',')"
+                  :key="idx"
+                  :src="img"
+                  :preview-src-list="viewServiceCommentData.images.split(',')"
+                  fit="cover"
+                  class="comment-img"
+              >
+                <div slot="error" class="image-slot">
+                  <i class="el-icon-picture-outline"></i>
+                </div>
+              </el-image>
+            </div>
           </div>
         </div>
+
+        <!-- 商家回复 -->
+        <div class="detail-section" v-if="viewServiceCommentData.reply">
+          <div class="section-title">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>商家回复</span>
+          </div>
+          <div class="reply-content">{{ viewServiceCommentData.reply }}</div>
+          <div class="reply-time">{{ formatDate(viewServiceCommentData.replyTime) }}</div>
+        </div>
       </div>
-      <span slot="footer"><el-button type="primary" @click="viewServiceCommentVisible = false">关闭</el-button></span>
+
+      <span slot="footer">
+        <el-button type="primary" @click="viewServiceCommentVisible = false">关闭</el-button>
+      </span>
     </el-dialog>
 
     <!-- 取消预约对话框 -->
@@ -246,40 +319,95 @@
       </span>
     </el-dialog>
 
-    <!-- 预约详情对话框 -->
+    <!-- 预约详情对话框（美化版） -->
     <el-dialog
         title="预约详情"
         :visible.sync="detailDialogVisible"
-        width="500px"
+        width="600px"
         center
         class="detail-dialog"
+        :close-on-click-modal="false"
     >
       <div class="detail-content" v-if="currentAppointment">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="预约编号">{{ currentAppointment.appointmentNo }}</el-descriptions-item>
-          <el-descriptions-item label="服务名称">{{ currentAppointment.serviceName }}</el-descriptions-item>
-          <el-descriptions-item label="服务金额">
-            <span class="detail-price">¥{{ currentAppointment.servicePrice }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="预约宠物">{{ currentAppointment.petName }}</el-descriptions-item>
-          <el-descriptions-item label="预约时间">
-            {{ formatDate(currentAppointment.appointmentDate) }} {{ currentAppointment.appointmentTime }}
-          </el-descriptions-item>
-          <el-descriptions-item label="服务人员">
-            {{ currentAppointment.staffName || '待分配' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="预约状态">
-            <span :class="['status-badge', getStatusClass(currentAppointment.status)]">
-              {{ getStatusText(currentAppointment.status) }}
-            </span>
-          </el-descriptions-item>
-          <el-descriptions-item label="下单时间">{{ formatDateTime(currentAppointment.createTime) }}</el-descriptions-item>
-          <el-descriptions-item label="备注">{{ currentAppointment.remark || '无' }}</el-descriptions-item>
-          <el-descriptions-item label="取消原因" v-if="currentAppointment.cancelReason">
-            <span class="cancel-reason-text">{{ currentAppointment.cancelReason }}</span>
-          </el-descriptions-item>
-        </el-descriptions>
+        <!-- 服务信息卡片 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-service"></i>
+            <span>服务信息</span>
+          </div>
+          <div class="service-card">
+            <div class="service-img-wrapper">
+              <img v-if="currentAppointment.serviceImage" :src="currentAppointment.serviceImage" :alt="currentAppointment.serviceName">
+              <div v-else class="img-placeholder"><i class="el-icon-service"></i></div>
+            </div>
+            <div class="service-card-info">
+              <h3>{{ currentAppointment.serviceName }}</h3>
+              <div class="price-tag">¥{{ currentAppointment.servicePrice }}</div>
+              <div class="staff-tag" v-if="currentAppointment.staffName">
+                <i class="el-icon-user"></i> 服务人员：{{ currentAppointment.staffName }}
+              </div>
+              <div class="staff-tag" v-else>
+                <i class="el-icon-user"></i> 服务人员：待分配
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 预约信息 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <i class="el-icon-info"></i>
+            <span>预约信息</span>
+          </div>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <div class="info-item">
+                <span class="info-label">预约编号：</span>
+                <span class="info-value">{{ currentAppointment.appointmentNo }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="info-item">
+                <span class="info-label">预约状态：</span>
+                <span :class="['status-badge', getStatusClass(currentAppointment.status)]">
+                  {{ getStatusText(currentAppointment.status) }}
+                </span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="info-item">
+                <span class="info-label">预约宠物：</span>
+                <span class="info-value">{{ currentAppointment.petName || '未指定' }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="info-item">
+                <span class="info-label">预约时间：</span>
+                <span class="info-value">{{ formatDate(currentAppointment.appointmentDate) }} {{ currentAppointment.appointmentTime }}</span>
+              </div>
+            </el-col>
+            <el-col :span="12">
+              <div class="info-item">
+                <span class="info-label">下单时间：</span>
+                <span class="info-value">{{ formatDateTime(currentAppointment.createTime) }}</span>
+              </div>
+            </el-col>
+            <el-col :span="24">
+              <div class="info-item" v-if="currentAppointment.remark">
+                <span class="info-label">备注：</span>
+                <span class="info-value">{{ currentAppointment.remark }}</span>
+              </div>
+            </el-col>
+            <el-col :span="24" v-if="currentAppointment.cancelReason">
+              <div class="info-item">
+                <span class="info-label">取消/拒绝原因：</span>
+                <span class="info-value cancel-text">{{ currentAppointment.cancelReason }}</span>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
       </div>
+
       <span slot="footer">
         <el-button type="primary" @click="detailDialogVisible = false">关闭</el-button>
       </span>
@@ -289,6 +417,7 @@
 
 <script>
 import { getUserAppointments, cancelAppointment, addServiceComment, getServiceCommentByAppointment } from '@/api/service';
+import { uploadCommentImage as uploadImage } from '@/api/upload';
 
 export default {
   name: 'MyAppointments',
@@ -303,18 +432,20 @@ export default {
       pageSize: 9,
       activeTab: '',
       tabs: [
-        { value: '', label: '全部' },
-        { value: 0, label: '待确认' },
-        { value: 1, label: '已确认' },
-        { value: 2, label: '服务中' },
-        { value: 3, label: '已完成' },
-        { value: 4, label: '已取消' },
-        { value: 5, label: '已拒绝' }
+        {value: '', label: '全部'},
+        {value: 0, label: '待确认'},
+        {value: 1, label: '已确认'},
+        {value: 2, label: '服务中'},
+        {value: 3, label: '已完成'},
+        {value: 4, label: '已取消'},
+        {value: 5, label: '已拒绝'}
       ],
       cancelDialogVisible: false,
       detailDialogVisible: false,
       commentDialogVisible: false,
       viewServiceCommentVisible: false,
+      previewVisible: false,
+      previewImage: '',
       currentAppointment: null,
       viewServiceCommentData: null,
       cancelForm: {
@@ -323,11 +454,13 @@ export default {
       },
       commentForm: {
         rating: null,
-        content: ''
+        content: '',
+        imageList: [],
+        imageUrls: []
       },
       commentRules: {
-        rating: [{ required: true, message: '请选择评分', trigger: 'change' }],
-        content: [{ required: true, message: '请输入评价内容', trigger: 'blur' }]
+        rating: [{required: true, message: '请选择评分', trigger: 'change'}],
+        content: [{required: true, message: '请输入评价内容', trigger: 'blur'}]
       }
     };
   },
@@ -357,11 +490,6 @@ export default {
     async loadAppointments() {
       this.loading = true;
       try {
-        console.log('========== MyAppointments.vue 加载预约 ==========');
-        console.log('当前页码:', this.page);
-        console.log('每页大小:', this.pageSize);
-        console.log('当前状态筛选:', this.activeTab !== '' ? this.activeTab : '全部');
-
         const statusParam = this.activeTab !== '' ? this.activeTab : undefined;
         const res = await getUserAppointments({
           page: this.page,
@@ -369,13 +497,29 @@ export default {
           status: statusParam
         });
 
-        console.log('接口返回状态:', res.code);
-        console.log('接口返回总数:', res.data?.total);
-        console.log('接口返回列表长度:', res.data?.list?.length);
-        console.log('==============================================');
-
         if (res.code === 200) {
           this.appointmentList = res.data.list || [];
+
+          // 并发获取所有已完成预约的评价
+          const completedItems = this.appointmentList.filter(item => item.status === 3);
+          if (completedItems.length > 0) {
+            const commentPromises = completedItems.map(item =>
+                getServiceCommentByAppointment(item.id).then(commentRes => ({
+                  id: item.id,
+                  comment: (commentRes.code === 200 && commentRes.data) ? commentRes.data : null
+                })).catch(() => ({id: item.id, comment: null}))
+            );
+
+            const comments = await Promise.all(commentPromises);
+            const commentMap = new Map(comments.map(c => [c.id, c.comment]));
+
+            this.appointmentList.forEach(item => {
+              if (item.status === 3) {
+                item.comment = commentMap.get(item.id) || null;
+              }
+            });
+          }
+
           this.total = res.data.total || 0;
         }
       } catch (error) {
@@ -459,7 +603,7 @@ export default {
 
     cancelAppointment(item) {
       this.currentAppointment = item;
-      this.cancelForm = { reason: '', customReason: '' };
+      this.cancelForm = {reason: '', customReason: ''};
       this.cancelDialogVisible = true;
     },
 
@@ -505,7 +649,9 @@ export default {
       this.currentAppointment = item;
       this.commentForm = {
         rating: null,
-        content: ''
+        content: '',
+        imageList: [],
+        imageUrls: []
       };
       this.commentDialogVisible = true;
       this.$nextTick(() => {
@@ -515,13 +661,49 @@ export default {
       });
     },
 
+    // 上传评价图片
+    async uploadCommentImage(file) {
+      const formData = new FormData();
+      formData.append('file', file.file);
+      try {
+        const res = await uploadImage(formData);
+        if (res.code === 200) {
+          this.commentForm.imageUrls.push(res.data.url);
+          this.commentForm.imageList.push({
+            uid: Date.now(),
+            name: file.file.name,
+            url: res.data.url
+          });
+        } else {
+          this.$message.error(res.message);
+        }
+      } catch (error) {
+        this.$message.error('上传失败');
+      }
+    },
+
+    handlePictureCardPreview(file) {
+      this.previewImage = file.url;
+      this.previewVisible = true;
+    },
+
+    handleRemove(file) {
+      const index = this.commentForm.imageList.findIndex(f => f.uid === file.uid);
+      if (index !== -1) {
+        this.commentForm.imageList.splice(index, 1);
+        this.commentForm.imageUrls.splice(index, 1);
+      }
+    },
+
     async viewServiceComment(appointment) {
       if (appointment.comment) {
         this.viewServiceCommentData = {
           ...appointment.comment,
           serviceImage: appointment.serviceImage,
           serviceName: appointment.serviceName,
-          servicePrice: appointment.servicePrice
+          servicePrice: appointment.servicePrice,
+          petName: appointment.petName,
+          images: appointment.comment.images || null
         };
         this.viewServiceCommentVisible = true;
         return;
@@ -541,7 +723,9 @@ export default {
             ...res.data,
             serviceImage: appointment.serviceImage,
             serviceName: appointment.serviceName,
-            servicePrice: appointment.servicePrice
+            servicePrice: appointment.servicePrice,
+            petName: appointment.petName,
+            images: res.data.images || null
           };
           this.viewServiceCommentVisible = true;
         } else {
@@ -565,7 +749,8 @@ export default {
             appointmentId: this.currentAppointment.id,
             serviceId: this.currentAppointment.serviceId,
             rating: this.commentForm.rating,
-            content: this.commentForm.content
+            content: this.commentForm.content,
+            images: this.commentForm.imageUrls.join(',')  // 上传图片URL
           });
 
           if (res.code === 200) {
@@ -603,7 +788,7 @@ export default {
   border-bottom: 2px solid #f0f0f0;
 }
 
-/* 标签页切换样式 - 与我的评论一致 */
+/* 标签页切换样式 */
 .appointment-tabs {
   display: flex;
   gap: 12px;
@@ -842,7 +1027,7 @@ export default {
   color: #f56c6c;
 }
 
-/* 卡片底部按钮 - 与我的评论样式一致 */
+/* 卡片底部按钮 */
 .card-footer {
   display: flex;
   gap: 8px;
@@ -958,13 +1143,6 @@ export default {
   font-size: 18px;
 }
 
-.comment-dialog ::v-deep .el-dialog__close,
-.view-comment-dialog ::v-deep .el-dialog__close,
-.cancel-dialog ::v-deep .el-dialog__close,
-.detail-dialog ::v-deep .el-dialog__close {
-  color: white;
-}
-
 .comment-dialog-content {
   padding: 10px 0;
 }
@@ -997,13 +1175,121 @@ export default {
   padding: 5px 0;
 }
 
+.upload-tip {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+/* 预约详情对话框 */
 .detail-content {
   padding: 10px;
 }
 
-.detail-price {
-  color: #ff6b6b;
+.detail-section {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 16px;
+}
+
+.section-title i {
+  color: #667eea;
+  font-size: 18px;
+}
+
+.service-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #f8f9fc;
+  border-radius: 16px;
+}
+
+.service-img-wrapper {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f5f7fa;
+}
+
+.service-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa, #e8eaef);
+  color: #bbb;
+  font-size: 40px;
+}
+
+.service-card-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.price-tag {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff6b6b;
+  margin-bottom: 8px;
+}
+
+.staff-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #ecf5ff;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #409EFF;
+}
+
+.info-item {
+  margin-bottom: 12px;
+}
+
+.info-label {
+  display: inline-block;
+  width: 90px;
+  font-size: 13px;
+  color: #909399;
+}
+
+.info-value {
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.cancel-text {
+  color: #f56c6c;
 }
 
 .status-badge {
@@ -1014,38 +1300,116 @@ export default {
   font-weight: 500;
 }
 
-.cancel-reason-text {
-  color: #f56c6c;
+/* 查看评价对话框样式 */
+.view-comment-dialog ::v-deep .el-dialog__body {
+  padding: 24px;
+  background: #fff;
 }
 
-/* 查看评价对话框 */
-.view-comment-dialog ::v-deep .view-product img {
-  width: 70px !important;
-  height: 70px !important;
-  min-width: 70px;
-  max-width: 70px;
-  min-height: 70px;
-  max-height: 70px;
-  border-radius: 12px;
-  object-fit: cover;
-  flex-shrink: 0;
+.view-comment-content {
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-.view-comment-dialog ::v-deep .view-product .image-placeholder {
+.service-info-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.service-image-wrapper {
   width: 70px;
   height: 70px;
-  min-width: 70px;
-  max-width: 70px;
-  min-height: 70px;
-  max-height: 70px;
+  flex-shrink: 0;
   border-radius: 12px;
+  overflow: hidden;
+  background: #f5f7fa;
+}
+
+.service-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.service-detail {
+  flex: 1;
+}
+
+.service-detail h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 6px;
+}
+
+.rating-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa, #e8eaef);
-  color: #bbb;
-  font-size: 32px;
-  flex-shrink: 0;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rating-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.comment-text {
+  background: #f8f9fc;
+  padding: 14px;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+}
+
+.comment-images {
+  margin-top: 15px;
+}
+
+.images-title {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.image-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.comment-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid #eef2f6;
+}
+
+.reply-content {
+  background: #e8f7ef;
+  padding: 14px;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.reply-time {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
 }
 
 /* 响应式 */
@@ -1075,6 +1439,16 @@ export default {
   .remark-info,
   .cancel-reason {
     justify-content: center;
+  }
+
+  .service-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .service-card-info {
+    text-align: center;
   }
 }
 </style>

@@ -52,7 +52,10 @@
       <el-table-column prop="id" label="ID" width="70" align="center"></el-table-column>
       <el-table-column prop="appointmentNo" label="预约编号" width="180"></el-table-column>
       <el-table-column label="用户信息" width="150">
-        <template slot-scope="scope"><div class="user-name">{{ scope.row.userName }}</div><div class="user-id">ID: {{ scope.row.userId }}</div></template>
+        <template slot-scope="scope">
+          <div class="user-name">{{ scope.row.userNickname || scope.row.userName || '--' }}</div>
+          <div class="user-id">ID: {{ scope.row.userId }}</div>
+        </template>
       </el-table-column>
       <el-table-column label="宠物" width="120"><template slot-scope="scope">{{ scope.row.petName || '--' }}</template></el-table-column>
       <el-table-column label="服务" min-width="150"><template slot-scope="scope">{{ scope.row.serviceName }}</template></el-table-column>
@@ -86,8 +89,10 @@
     <!-- 详情对话框 -->
     <el-dialog title="预约详情" :visible.sync="detailVisible" width="600px" center>
       <div class="detail-content" v-if="currentAppointment">
-        <div class="detail-row"><span class="label">预约编号：</span><span class="value">{{ currentAppointment.appointmentNo }}</span></div>
-        <div class="detail-row"><span class="label">用户信息：</span><span class="value">{{ currentAppointment.userName }} (ID: {{ currentAppointment.userId }})</span></div>
+        <div class="detail-row">
+          <span class="label">用户信息：</span>
+          <span class="value">{{ currentAppointment.userNickname || currentAppointment.userName || '--' }} (ID: {{ currentAppointment.userId }})</span>
+        </div>
         <div class="detail-row"><span class="label">宠物：</span><span class="value">{{ currentAppointment.petName || '--' }}</span></div>
         <div class="detail-row"><span class="label">服务：</span><span class="value">{{ currentAppointment.serviceName }}</span></div>
         <div class="detail-row"><span class="label">金额：</span><span class="value price">¥{{ currentAppointment.servicePrice }}</span></div>

@@ -297,7 +297,7 @@ import {
   testEmailConfig,
   testAIConfig
 } from '@/api/settings';
-import { uploadCarouselImage } from '@/api/upload';
+import { uploadImage  } from '@/api/upload';
 
 export default {
   name: 'Settings',
@@ -418,10 +418,10 @@ export default {
       const formData = new FormData();
       formData.append('file', options.file);
       try {
-        const res = await uploadCarouselImage(formData);
+        const res = await uploadImage(formData);
         if (res.code === 200) {
           this.basicForm.siteLogo = res.data.url;
-          this.$message.success('上传成功');
+          this.$message.success('Logo上传成功');
         } else {
           this.$message.error(res.message || '上传失败');
         }

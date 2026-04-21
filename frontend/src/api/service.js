@@ -504,3 +504,20 @@ export function getUserServiceComments(params) {
         params
     });
 }
+
+// 真实删除预约（物理删除）
+export function realDeleteAppointment(id) {
+    return request({
+        url: `/admin/service/real-delete/${id}`,  // ✅ 加上 /service
+        method: 'delete'
+    });
+}
+
+// 批量真实删除预约
+export function batchRealDeleteAppointments(ids) {
+    return request({
+        url: '/admin/service/batch-real-delete',  // ✅ 加上 /service
+        method: 'delete',
+        params: { ids }
+    });
+}

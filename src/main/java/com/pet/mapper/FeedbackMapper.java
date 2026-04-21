@@ -7,9 +7,10 @@ import java.util.List;
 public interface FeedbackMapper {
     int insert(Feedback feedback);
     int update(Feedback feedback);
-    int updateStatus(@Param("id") Integer id, @Param("status") Integer status,
-                     @Param("handlerId") Integer handlerId, @Param("handlerName") String handlerName);
-    int resolve(@Param("id") Integer id, @Param("processResult") String processResult);
+    // 开始处理：只传 handlerId
+    int updateStatus(@Param("id") Integer id, @Param("status") Integer status, @Param("handlerId") Integer handlerId);
+    // 解决：只传 handlerId
+    int resolve(@Param("id") Integer id, @Param("processResult") String processResult, @Param("handlerId") Integer handlerId);
     Feedback getById(@Param("id") Integer id);
     List<Feedback> getList(@Param("offset") Integer offset, @Param("limit") Integer limit,
                            @Param("keyword") String keyword, @Param("type") String type,
@@ -21,7 +22,6 @@ public interface FeedbackMapper {
     List<Feedback> getUserFeedbacks(@Param("userId") Integer userId, @Param("offset") Integer offset,
                                     @Param("limit") Integer limit);
 
-    // 员工获取反馈列表（待处理 + 自己处理的）
     List<Feedback> getStaffList(@Param("offset") Integer offset,
                                 @Param("limit") Integer limit,
                                 @Param("keyword") String keyword,
@@ -29,12 +29,10 @@ public interface FeedbackMapper {
                                 @Param("status") Integer status,
                                 @Param("handlerId") Integer handlerId);
 
-    // 员工获取反馈总数
     int countStaffList(@Param("keyword") String keyword,
                        @Param("type") String type,
                        @Param("status") Integer status,
                        @Param("handlerId") Integer handlerId);
 
-    // 根据状态和处理人统计
     int countByStatusAndHandler(@Param("status") Integer status, @Param("handlerId") Integer handlerId);
 }

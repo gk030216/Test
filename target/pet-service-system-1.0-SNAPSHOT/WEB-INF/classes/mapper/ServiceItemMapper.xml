@@ -167,14 +167,19 @@
         </where>
     </select>
 
+    <!-- 获取热门服务（简化版，用于统计） -->
     <select id="getHotServices" resultType="java.util.HashMap">
-        SELECT id, name, sales as count
+        SELECT
+            id,
+            name,
+            price,
+            image,
+            sales as count
         FROM service_item
         WHERE status = 1
         ORDER BY sales DESC
             LIMIT #{limit}
     </select>
-
     <!-- 新增方法：返回完整的服务信息 -->
     <select id="getHotServiceItems" resultType="com.pet.entity.ServiceItem">
         SELECT

@@ -31,21 +31,15 @@ public class FeedbackController {
         return (Integer) request.getAttribute("role");
     }
 
-    private String getUserName(HttpServletRequest request) {
-        String username = (String) request.getAttribute("username");
-        return username != null ? username : "用户";
-    }
-
     /**
-     * 用户提交反馈
+     * 用户提交反馈（只存 user_id，不存 user_name）
      */
     @PostMapping("/submit")
     public Result<?> submit(@RequestBody Feedback feedback, HttpServletRequest request) {
         try {
             Integer userId = getUserId(request);
-            String userName = getUserName(request);
             feedback.setUserId(userId);
-            feedback.setUserName(userName);
+            // 不设置 userName
             feedback.setStatus(0);
             feedbackMapper.insert(feedback);
             return Result.success("提交成功");
@@ -151,14 +145,14 @@ public class FeedbackController {
     }
 
     /**
-     * 开始处理反馈
+     * 开始处理反馈（只传 handler_id，不传 handler_name）
      */
     @PutMapping("/admin/process/{id}")
     public Result<?> processFeedback(@PathVariable Integer id, HttpServletRequest request) {
         try {
             Integer handlerId = getUserId(request);
-            String handlerName = getUserName(request);
-            feedbackMapper.updateStatus(id, 1, handlerId, handlerName);
+            // 只传 handlerId，不传 handlerName
+            feedbackMapper.updateStatus(id, 1, handlerId);
             return Result.success("已开始处理");
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -166,16 +160,18 @@ public class FeedbackController {
     }
 
     /**
-     * 解决反馈
+     * 解决反馈（只传 handler_id，不传 handler_name）
      */
     @PutMapping("/admin/resolve/{id}")
-    public Result<?> resolveFeedback(@PathVariable Integer id, @RequestBody Map<String, String> params) {
+    public Result<?> resolveFeedback(@PathVariable Integer id, @RequestBody Map<String, String> params, HttpServletRequest request) {
         try {
+            Integer handlerId = getUserId(request);
             String processResult = params.get("processResult");
             if (processResult == null || processResult.isEmpty()) {
                 return Result.error("处理结果不能为空");
             }
-            feedbackMapper.resolve(id, processResult);
+            // 只传 handlerId
+            feedbackMapper.resolve(id, processResult, handlerId);
             return Result.success("已解决");
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -186,8 +182,9 @@ public class FeedbackController {
      * 添加处理记录
      */
     @PostMapping("/admin/record")
-    public Result<?> addRecord(@RequestBody Map<String, Object> params) {
+    public Result<?> addRecord(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         try {
+            Integer handlerId = getUserId(request);
             Integer feedbackId = (Integer) params.get("feedbackId");
             String content = (String) params.get("content");
 
@@ -195,7 +192,7 @@ public class FeedbackController {
                 return Result.error("参数错误");
             }
 
-            feedbackMapper.resolve(feedbackId, content);
+            feedbackMapper.resolve(feedbackId, content, handlerId);
             return Result.success("记录已添加");
         } catch (Exception e) {
             return Result.error(e.getMessage());

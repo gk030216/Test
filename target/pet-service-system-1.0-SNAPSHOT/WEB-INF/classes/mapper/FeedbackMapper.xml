@@ -5,7 +5,7 @@
     <resultMap id="BaseResultMap" type="com.pet.entity.Feedback">
         <id column="id" property="id"/>
         <result column="user_id" property="userId"/>
-        <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>
         <result column="user_avatar" property="userAvatar"/>
         <result column="title" property="title"/>
         <result column="content" property="content"/>
@@ -16,16 +16,17 @@
         <result column="appointment_no" property="appointmentNo"/>
         <result column="contact" property="contact"/>
         <result column="handler_id" property="handlerId"/>
-        <result column="handler_name" property="handlerName"/>
+        <result column="handler_nickname" property="handlerNickname"/>
         <result column="process_result" property="processResult"/>
         <result column="process_time" property="processTime"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
+    <!-- 插入：只存 user_id -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO feedback (user_id, user_name, title, content, images, type, status, order_no, appointment_no, contact)
-        VALUES (#{userId}, #{userName}, #{title}, #{content}, #{images}, #{type}, 0, #{orderNo}, #{appointmentNo}, #{contact})
+        INSERT INTO feedback (user_id, title, content, images, type, status, order_no, appointment_no, contact)
+        VALUES (#{userId}, #{title}, #{content}, #{images}, #{type}, 0, #{orderNo}, #{appointmentNo}, #{contact})
     </insert>
 
     <update id="update">
@@ -38,31 +39,45 @@
         WHERE id = #{id}
     </update>
 
+    <!-- 开始处理：只存 handler_id -->
     <update id="updateStatus">
-        UPDATE feedback SET status = #{status}, handler_id = #{handlerId}, handler_name = #{handlerName}
+        UPDATE feedback SET status = #{status}, handler_id = #{handlerId}
         WHERE id = #{id}
     </update>
 
+    <!-- 解决：只存 handler_id -->
     <update id="resolve">
-        UPDATE feedback SET status = 2, process_result = #{processResult}, process_time = NOW()
+        UPDATE feedback SET status = 2, process_result = #{processResult}, process_time = NOW(), handler_id = #{handlerId}
         WHERE id = #{id}
     </update>
 
+    <!-- 查询时关联 user 表获取昵称 -->
     <select id="getById" resultMap="BaseResultMap">
-        SELECT f.*, u.avatar as user_avatar
+        SELECT
+            f.*,
+            u.nickname as user_nickname,
+            u.avatar as user_avatar,
+            h.nickname as handler_nickname
         FROM feedback f
                  LEFT JOIN user u ON f.user_id = u.id
+                 LEFT JOIN user h ON f.handler_id = h.id
         WHERE f.id = #{id}
     </select>
 
     <select id="getList" resultMap="BaseResultMap">
-        SELECT f.*, u.avatar as user_avatar
+        SELECT
+        f.*,
+        u.nickname as user_nickname,
+        u.avatar as user_avatar,
+        h.nickname as handler_nickname
         FROM feedback f
         LEFT JOIN user u ON f.user_id = u.id
+        LEFT JOIN user h ON f.handler_id = h.id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (f.title LIKE CONCAT('%', #{keyword}, '%')
                 OR f.content LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR u.username LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="type != null and type != ''">
@@ -77,12 +92,14 @@
     </select>
 
     <select id="countList" resultType="int">
-        SELECT COUNT(*) FROM feedback f
+        SELECT COUNT(*)
+        FROM feedback f
         LEFT JOIN user u ON f.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (f.title LIKE CONCAT('%', #{keyword}, '%')
                 OR f.content LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR u.username LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="type != null and type != ''">
@@ -103,25 +120,33 @@
     </select>
 
     <select id="getUserFeedbacks" resultMap="BaseResultMap">
-        SELECT f.*, u.avatar as user_avatar
+        SELECT
+            f.*,
+            u.nickname as user_nickname,
+            u.avatar as user_avatar,
+            h.nickname as handler_nickname
         FROM feedback f
                  LEFT JOIN user u ON f.user_id = u.id
+                 LEFT JOIN user h ON f.handler_id = h.id
         WHERE f.user_id = #{userId}
         ORDER BY f.create_time DESC
             LIMIT #{offset}, #{limit}
     </select>
 
-    <!-- 员工获取反馈列表（待处理 + 自己处理的） -->
     <select id="getStaffList" resultMap="BaseResultMap">
-        SELECT f.*, u.avatar as user_avatar
+        SELECT
+        f.*,
+        u.nickname as user_nickname,
+        u.avatar as user_avatar,
+        h.nickname as handler_nickname
         FROM feedback f
         LEFT JOIN user u ON f.user_id = u.id
-        WHERE
-        (f.status = 0)  <!-- 所有待处理的 -->
-        OR (f.handler_id = #{handlerId})  <!-- 自己处理过的（处理中或已解决） -->
+        LEFT JOIN user h ON f.handler_id = h.id
+        WHERE (f.status = 0) OR (f.handler_id = #{handlerId})
         <if test="keyword != null and keyword != ''">
             AND (f.title LIKE CONCAT('%', #{keyword}, '%')
             OR f.content LIKE CONCAT('%', #{keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
             OR u.username LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         <if test="type != null and type != ''">
@@ -130,9 +155,7 @@
         <if test="status != null">
             AND f.status = #{status}
         </if>
-        ORDER BY
-        CASE WHEN f.status = 0 THEN 0 ELSE 1 END,  <!-- 待处理优先 -->
-        f.create_time DESC
+        ORDER BY CASE WHEN f.status = 0 THEN 0 ELSE 1 END, f.create_time DESC
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -140,12 +163,11 @@
         SELECT COUNT(*)
         FROM feedback f
         LEFT JOIN user u ON f.user_id = u.id
-        WHERE
-        (f.status = 0)
-        OR (f.handler_id = #{handlerId})
+        WHERE (f.status = 0) OR (f.handler_id = #{handlerId})
         <if test="keyword != null and keyword != ''">
             AND (f.title LIKE CONCAT('%', #{keyword}, '%')
             OR f.content LIKE CONCAT('%', #{keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
             OR u.username LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         <if test="type != null and type != ''">
@@ -156,12 +178,10 @@
         </if>
     </select>
 
-    <!-- 根据状态和处理人统计 -->
     <select id="countByStatusAndHandler" resultType="int">
         SELECT COUNT(*)
         FROM feedback
-        WHERE status = #{status}
-          AND handler_id = #{handlerId}
+        WHERE status = #{status} AND handler_id = #{handlerId}
     </select>
 
 </mapper>

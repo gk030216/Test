@@ -8,7 +8,7 @@
         <result column="service_id" property="serviceId"/>
         <result column="user_id" property="userId"/>
         <result column="user_name" property="userName"/>
-        <result column="user_nickname" property="userNickname"/>  <!-- ✅ 添加昵称 -->
+        <result column="user_nickname" property="userNickname"/>
         <result column="rating" property="rating"/>
         <result column="content" property="content"/>
         <result column="images" property="images"/>
@@ -21,6 +21,7 @@
         <result column="service_price" property="servicePrice"/>
         <result column="service_image" property="serviceImage"/>
         <result column="user_avatar" property="userAvatar"/>
+        <result column="staff_name" property="staffName"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -76,20 +77,36 @@
         WHERE service_id = #{serviceId} AND status = 1
     </select>
 
+    <!-- 获取评价列表（后台） -->
     <select id="getAdminList" resultMap="BaseResultMap">
         SELECT
-        c.*,
+        c.id,
+        c.appointment_id,
+        c.service_id,
+        c.user_id,
+        c.rating,
+        c.content,
+        c.images,
+        c.reply,
+        c.reply_time,
+        c.status,
+        c.create_time,
+        c.update_time,
         u.avatar as user_avatar,
-        u.nickname as user_nickname,  <!-- ✅ 添加昵称 -->
-        s.name as service_name
+        u.nickname as user_nickname,
+        s.name as service_name,
+        st.nickname as staff_name   <!-- ✅ 添加服务人员昵称 -->
         FROM service_comment c
         LEFT JOIN user u ON c.user_id = u.id
         LEFT JOIN service_item s ON c.service_id = s.id
+        LEFT JOIN appointment a ON c.appointment_id = a.id
+        LEFT JOIN user st ON a.staff_id = st.id
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (c.user_name LIKE CONCAT('%', #{keyword}, '%')
-                OR c.content LIKE CONCAT('%', #{keyword}, '%')
-                OR s.name LIKE CONCAT('%', #{keyword}, '%'))
+                AND (c.content LIKE CONCAT('%', #{keyword}, '%')
+                OR s.name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="rating != null">
                 AND c.rating = #{rating}

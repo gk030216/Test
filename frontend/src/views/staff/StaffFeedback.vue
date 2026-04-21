@@ -115,9 +115,9 @@
             </el-tag>
             <div class="feedback-user">
               <el-avatar :size="28" :src="item.userAvatar" class="user-avatar">
-                {{ item.userName ? item.userName.charAt(0).toUpperCase() : 'U' }}
+                {{ (item.userNickname || item.userName || 'U').charAt(0).toUpperCase() }}
               </el-avatar>
-              <span>{{ item.userName || '匿名用户' }}</span>
+              <span>{{ item.userNickname || item.userName || '匿名用户' }}</span>
             </div>
             <div class="feedback-time">
               <i class="el-icon-time"></i> {{ formatRelativeTime(item.createTime) }}
@@ -171,6 +171,7 @@
         </div>
 
         <!-- 处理记录 -->
+        <!-- 处理记录 -->
         <div class="process-section" v-if="item.processRecords && item.processRecords.length > 0">
           <div class="process-title">
             <i class="el-icon-document-copy"></i> 处理记录
@@ -180,7 +181,7 @@
             <div class="process-item" v-for="record in item.processRecords" :key="record.id">
               <div class="process-header">
                 <div class="process-user">
-                  <i class="el-icon-user"></i> {{ record.handlerName || '员工' }}
+                  <i class="el-icon-user"></i> {{ record.handlerNickname || record.handlerName || '员工' }}
                 </div>
                 <div class="process-time">
                   <i class="el-icon-time"></i> {{ formatDate(record.createTime) }}
@@ -190,7 +191,6 @@
             </div>
           </div>
         </div>
-
         <!-- 卡片底部按钮 -->
         <div class="card-footer">
           <!-- 查看详情按钮（所有状态都有） -->
@@ -258,20 +258,14 @@
           <el-row :gutter="16">
             <el-col :span="12">
               <div class="detail-item">
-                <span class="detail-label">标题：</span>
-                <span class="detail-value">{{ currentFeedback.title }}</span>
+                <span class="detail-label">用户：</span>
+                <span class="detail-value">{{ currentFeedback.userNickname || currentFeedback.userName || '匿名用户' }}</span>
               </div>
             </el-col>
             <el-col :span="12">
               <div class="detail-item">
                 <span class="detail-label">类型：</span>
                 <span class="detail-value">{{ getTypeName(currentFeedback.type) }}</span>
-              </div>
-            </el-col>
-            <el-col :span="12">
-              <div class="detail-item">
-                <span class="detail-label">用户：</span>
-                <span class="detail-value">{{ currentFeedback.userName || '匿名用户' }}</span>
               </div>
             </el-col>
             <el-col :span="12">
@@ -348,6 +342,7 @@
         </div>
 
         <!-- 处理信息 -->
+        <!-- 处理信息 -->
         <div class="detail-section">
           <div class="section-title">
             <i class="el-icon-document-copy"></i>
@@ -361,18 +356,18 @@
             </div>
             <div class="process-result-content">{{ currentFeedback.processResult }}</div>
             <div class="process-result-handler">
-              <i class="el-icon-user"></i> 处理人：{{ currentFeedback.handlerName || '员工' }}
+              <i class="el-icon-user"></i> 处理人：{{ currentFeedback.handlerNickname || currentFeedback.handlerName || '员工' }}
             </div>
           </div>
           <div class="process-list-detail" v-if="currentFeedback.processRecords && currentFeedback.processRecords.length > 0">
             <div class="process-item-detail" v-for="record in currentFeedback.processRecords" :key="record.id">
               <div class="process-header-detail">
-                <span class="process-user-detail">
-                  <i class="el-icon-user"></i> {{ record.handlerName || '员工' }}
-                </span>
+        <span class="process-user-detail">
+          <i class="el-icon-user"></i> {{ record.handlerNickname || record.handlerName || '员工' }}
+        </span>
                 <span class="process-time-detail">
-                  <i class="el-icon-time"></i> {{ formatDate(record.createTime) }}
-                </span>
+          <i class="el-icon-time"></i> {{ formatDate(record.createTime) }}
+        </span>
               </div>
               <div class="process-content-detail">{{ record.content }}</div>
             </div>
@@ -483,7 +478,15 @@ export default {
         };
         const res = await getAdminFeedbackList(params);
         if (res.code === 200) {
-          this.feedbackList = res.data.list || [];
+          this.feedbackList = (res.data.list || []).map(item => ({
+            ...item,
+            userNickname: item.userNickname || null,
+            // 处理 processRecords 中的昵称
+            processRecords: (item.processRecords || []).map(record => ({
+              ...record,
+              handlerNickname: record.handlerNickname || record.handlerName || null
+            }))
+          }));
           this.total = res.data.total || 0;
         }
       } catch (error) {
@@ -621,9 +624,16 @@ export default {
     },
 
     viewDetail(row) {
-      this.currentFeedback = row;
+      // 确保处理记录中的昵称字段存在
+      this.currentFeedback = {
+        ...row,
+        processRecords: (row.processRecords || []).map(record => ({
+          ...record,
+          handlerNickname: record.handlerNickname || record.handlerName || null
+        }))
+      };
       this.detailVisible = true;
-    }
+    },
   }
 };
 </script>

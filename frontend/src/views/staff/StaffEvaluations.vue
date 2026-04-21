@@ -121,9 +121,9 @@
         <template slot-scope="scope">
           <div class="user-info">
             <el-avatar :size="32" :src="scope.row.userAvatar" class="user-avatar">
-              {{ scope.row.userName ? scope.row.userName.charAt(0).toUpperCase() : 'U' }}
+              {{ scope.row.userNickname ? scope.row.userNickname.charAt(0).toUpperCase() : (scope.row.userName ? scope.row.userName.charAt(0).toUpperCase() : 'U') }}
             </el-avatar>
-            <span class="user-name">{{ scope.row.userName }}</span>
+            <span class="user-name">{{ scope.row.userNickname || scope.row.userName }}</span>
           </div>
         </template>
       </el-table-column>
@@ -211,10 +211,10 @@
           <div class="comment-header">
             <div class="user-info">
               <el-avatar :size="36" :src="currentComment.userAvatar">
-                {{ currentComment.userName ? currentComment.userName.charAt(0).toUpperCase() : 'U' }}
+                {{ currentComment.userNickname ? currentComment.userNickname.charAt(0).toUpperCase() : (currentComment.userName ? currentComment.userName.charAt(0).toUpperCase() : 'U') }}
               </el-avatar>
               <div class="user-detail">
-                <span class="user-name">{{ currentComment.userName }}</span>
+                <span class="user-name">{{ currentComment.userNickname || currentComment.userName }}</span>
                 <el-rate v-model="currentComment.rating" disabled text-color="#ff9900"></el-rate>
               </div>
             </div>
@@ -288,10 +288,10 @@
           </div>
           <div class="detail-user">
             <el-avatar :size="50" :src="currentDetailComment.userAvatar" class="detail-avatar">
-              {{ currentDetailComment.userName ? currentDetailComment.userName.charAt(0).toUpperCase() : 'U' }}
+              {{ currentDetailComment.userNickname ? currentDetailComment.userNickname.charAt(0).toUpperCase() : (currentDetailComment.userName ? currentDetailComment.userName.charAt(0).toUpperCase() : 'U') }}
             </el-avatar>
             <div class="user-detail">
-              <span class="user-name">{{ currentDetailComment.userName }}</span>
+              <span class="user-name">{{ currentDetailComment.userNickname || currentDetailComment.userName }}</span>
               <span class="user-id">用户ID: {{ currentDetailComment.userId }}</span>
             </div>
           </div>
@@ -310,6 +310,24 @@
           <div class="detail-item">
             <span class="detail-label">评价内容：</span>
             <span class="detail-value comment-text">{{ currentDetailComment.content }}</span>
+          </div>
+          <!-- ✅ 添加评价图片展示 -->
+          <div class="detail-item" v-if="currentDetailComment.images">
+            <span class="detail-label">评价图片：</span>
+            <div class="detail-images">
+              <el-image
+                  v-for="(img, idx) in currentDetailComment.images.split(',')"
+                  :key="idx"
+                  :src="img"
+                  :preview-src-list="currentDetailComment.images.split(',')"
+                  fit="cover"
+                  class="detail-img"
+              >
+                <div slot="error" class="image-slot">
+                  <i class="el-icon-picture-outline"></i>
+                </div>
+              </el-image>
+            </div>
           </div>
           <div class="detail-item">
             <span class="detail-label">评价时间：</span>
@@ -414,7 +432,10 @@ export default {
         };
         const res = await getServiceCommentList(params);
         if (res.code === 200) {
-          this.commentList = res.data.list || [];
+          this.commentList = (res.data.list || []).map(item => ({
+            ...item,
+            userNickname: item.userNickname || null
+          }));
           this.total = res.data.total || 0;
           this.updateStatistics();
         }
@@ -951,5 +972,38 @@ export default {
   .action-right {
     justify-content: center;
   }
+}
+
+/* 评价图片样式 */
+.detail-images {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+
+.detail-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid #eef2f6;
+  transition: transform 0.2s;
+}
+
+.detail-img:hover {
+  transform: scale(1.05);
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 24px;
 }
 </style>

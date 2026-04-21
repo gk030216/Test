@@ -150,7 +150,7 @@
             <div class="user-detail">
               <span class="user-name">{{ getDisplayName(scope.row) }}</span>
               <span class="user-username" v-if="scope.row.userNickname && scope.row.userName">
-                @{{ scope.row.userName }}
+                {{ scope.row.userName }}
               </span>
             </div>
           </div>
@@ -294,7 +294,7 @@
             <div class="detail-user-info">
               <div class="detail-user-name">{{ getDetailDisplayName() }}</div>
               <div class="detail-user-username" v-if="currentPost.userNickname && currentPost.userName">
-                @{{ currentPost.userName }}
+                {{ currentPost.userName }}
               </div>
               <div class="detail-time">{{ formatDate(currentPost.createTime) }}</div>
             </div>

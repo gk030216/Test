@@ -4,8 +4,7 @@ import java.util.Date;
 
 public class Feedback {
     private Integer id;
-    private Integer userId;
-    private String userName;
+    private Integer userId;        // 只存ID
     private String title;
     private String content;
     private String images;
@@ -14,22 +13,22 @@ public class Feedback {
     private String orderNo;
     private String appointmentNo;
     private String contact;
-    private Integer handlerId;
-    private String handlerName;
+    private Integer handlerId;      // 只存ID
     private String processResult;
     private Date processTime;
     private Date createTime;
     private Date updateTime;
 
+    // 查询时关联填充的字段（不存数据库）
+    private String userNickname;
     private String userAvatar;
+    private String handlerNickname;  // 处理人昵称
 
     // getter/setter
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public Integer getUserId() { return userId; }
     public void setUserId(Integer userId) { this.userId = userId; }
-    public String getUserName() { return userName; }
-    public void setUserName(String userName) { this.userName = userName; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getContent() { return content; }
@@ -48,8 +47,6 @@ public class Feedback {
     public void setContact(String contact) { this.contact = contact; }
     public Integer getHandlerId() { return handlerId; }
     public void setHandlerId(Integer handlerId) { this.handlerId = handlerId; }
-    public String getHandlerName() { return handlerName; }
-    public void setHandlerName(String handlerName) { this.handlerName = handlerName; }
     public String getProcessResult() { return processResult; }
     public void setProcessResult(String processResult) { this.processResult = processResult; }
     public Date getProcessTime() { return processTime; }
@@ -58,8 +55,10 @@ public class Feedback {
     public void setCreateTime(Date createTime) { this.createTime = createTime; }
     public Date getUpdateTime() { return updateTime; }
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
-
-
+    public String getUserNickname() { return userNickname; }
+    public void setUserNickname(String userNickname) { this.userNickname = userNickname; }
     public String getUserAvatar() { return userAvatar; }
     public void setUserAvatar(String userAvatar) { this.userAvatar = userAvatar; }
+    public String getHandlerNickname() { return handlerNickname; }
+    public void setHandlerNickname(String handlerNickname) { this.handlerNickname = handlerNickname; }
 }

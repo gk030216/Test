@@ -67,7 +67,7 @@
         </template>
       </el-table-column>
 
-      <!-- ✅ 修改：评论用户列，显示昵称 -->
+      <!-- 修改：评论用户列，显示昵称 -->
       <el-table-column label="评论用户" width="160">
         <template slot-scope="scope">
           <div class="user-info">

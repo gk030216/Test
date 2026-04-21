@@ -79,7 +79,7 @@
         <template slot-scope="scope">
           <div class="pet-info-cell">
             <div class="pet-name">{{ scope.row.petName || '--' }}</div>
-            <div class="owner-name">主人：{{ scope.row.ownerName || '未知' }}</div>
+            <div class="owner-name">主人：{{ scope.row.ownerNickname || scope.row.ownerName || '未知' }}</div>
           </div>
         </template>
       </el-table-column>
@@ -163,11 +163,11 @@
     <el-dialog :title="dialogTitle" :visible.sync="showAddDialog" width="500px" center class="record-dialog" :close-on-click-modal="false">
       <el-form :model="recordForm" :rules="recordRules" ref="recordForm" label-width="90px">
         <el-form-item label="选择宠物" prop="petId">
-          <el-select v-model="recordForm.petId" placeholder="请选择宠物" filterable style="width: 100%"  :disabled="isEdit">
+          <el-select v-model="recordForm.petId" placeholder="请选择宠物" filterable style="width: 100%" :disabled="isEdit">
             <el-option
                 v-for="pet in petOptions"
                 :key="pet.id"
-                :label="`${pet.name} (主人：${pet.userName})`"
+                :label="`${pet.name} (主人：${pet.userNickname || pet.userName})`"
                 :value="pet.id">
             </el-option>
           </el-select>
@@ -255,7 +255,7 @@
     <el-dialog title="体检记录详情" :visible.sync="detailVisible" width="500px" center class="detail-dialog">
       <el-descriptions :column="1" border v-if="currentRecord">
         <el-descriptions-item label="宠物名称">{{ currentRecord.petName || '--' }}</el-descriptions-item>
-        <el-descriptions-item label="主人">{{ currentRecord.ownerName || '--' }}</el-descriptions-item>
+        <el-descriptions-item label="主人">{{ currentRecord.ownerNickname || currentRecord.ownerName || '--' }}</el-descriptions-item>
         <el-descriptions-item label="体检日期">{{ currentRecord.recordDate || '--' }}</el-descriptions-item>
         <el-descriptions-item label="身高">{{ currentRecord.height || '--' }} cm</el-descriptions-item>
         <el-descriptions-item label="体重">{{ currentRecord.weight || '--' }} kg</el-descriptions-item>
@@ -335,9 +335,12 @@ export default {
           keyword: this.searchKeyword || undefined
         });
         if (res.code === 200) {
-          this.healthList = res.data.list || [];
+          // ✅ 确保 ownerNickname 字段存在
+          this.healthList = (res.data.list || []).map(item => ({
+            ...item,
+            ownerNickname: item.ownerNickname || null
+          }));
           this.total = res.data.total || 0;
-          // ✅ 不再调用 calculateAvgWeight
         }
       } catch (error) {
         console.error('加载失败:', error);
@@ -371,7 +374,11 @@ export default {
       try {
         const res = await getAdminPetList({ page: 1, pageSize: 100 });
         if (res.code === 200) {
-          this.petOptions = res.data.list || [];
+          // 确保 userNickname 字段存在
+          this.petOptions = (res.data.list || []).map(pet => ({
+            ...pet,
+            userNickname: pet.userNickname || pet.nickname || null
+          }));
         }
       } catch (error) {
         console.error('加载宠物列表失败', error);

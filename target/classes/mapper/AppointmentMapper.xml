@@ -7,6 +7,7 @@
         <result column="appointment_no" property="appointmentNo"/>
         <result column="user_id" property="userId"/>
         <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>
         <result column="pet_id" property="petId"/>
         <result column="pet_name" property="petName"/>
         <result column="service_id" property="serviceId"/>
@@ -22,7 +23,7 @@
         <result column="cancel_reason" property="cancelReason"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
-        <!-- 新增支付相关字段 -->
+        <!-- 支付相关字段 -->
         <result column="pay_status" property="payStatus"/>
         <result column="trade_no" property="tradeNo"/>
         <result column="pay_time" property="payTime"/>
@@ -49,7 +50,8 @@
         s.price as service_price,
         s.image as service_image,
         u.username as user_name,
-        st.username as staff_name
+        u.nickname as user_nickname,
+        COALESCE(st.nickname, st.username) as staff_name
         FROM appointment a
         LEFT JOIN pet_profile p ON a.pet_id = p.id
         LEFT JOIN service_item s ON a.service_id = s.id
@@ -77,7 +79,8 @@
         SELECT a.*,
                p.name as pet_name,
                s.name as service_name,
-               u.username as user_name
+               u.username as user_name,
+               u.nickname as user_nickname
         FROM appointment a
                  LEFT JOIN pet_profile p ON a.pet_id = p.id
                  LEFT JOIN service_item s ON a.service_id = s.id
@@ -91,7 +94,8 @@
                p.name as pet_name,
                s.name as service_name,
                u.username as user_name,
-               st.username as staff_name
+               u.nickname as user_nickname,
+               COALESCE(st.nickname, st.username) as staff_name
         FROM appointment a
                  LEFT JOIN pet_profile p ON a.pet_id = p.id
                  LEFT JOIN service_item s ON a.service_id = s.id
@@ -116,6 +120,7 @@
         s.name as service_name,
         s.image as service_image,
         u.username as user_name,
+        u.nickname as user_nickname,
         COALESCE(st.nickname, st.username) as staff_name
         FROM appointment a
         LEFT JOIN pet_profile p ON a.pet_id = p.id
@@ -126,6 +131,7 @@
             <if test="keyword != null and keyword != ''">
                 AND (a.appointment_no LIKE CONCAT('%', #{keyword}, '%')
                 OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR p.name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="status != null">
@@ -158,6 +164,7 @@
             <if test="keyword != null and keyword != ''">
                 AND (a.appointment_no LIKE CONCAT('%', #{keyword}, '%')
                 OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR p.name LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="status != null">
@@ -229,14 +236,17 @@
         WHERE staff_id = #{staffId} OR (staff_id IS NULL AND status = 0)
     </select>
 
+    <!-- 统计今日预约数量 -->
     <select id="countToday" resultType="int">
         SELECT COUNT(*) FROM appointment WHERE DATE(create_time) = CURDATE()
     </select>
 
+    <!-- 统计待确认预约数量 -->
     <select id="countPending" resultType="int">
         SELECT COUNT(*) FROM appointment WHERE status = 0
     </select>
 
+    <!-- 近7天预约趋势 -->
     <select id="getWeeklyTrend" resultType="java.util.HashMap">
         SELECT
             DATE(create_time) as date,
@@ -247,6 +257,7 @@
         ORDER BY DATE(create_time) ASC
     </select>
 
+    <!-- 更新支付状态 -->
     <update id="updatePayStatus">
         UPDATE appointment
         SET pay_status = #{payStatus},
@@ -262,7 +273,8 @@
                s.name as service_name,
                s.image as service_image,
                u.username as user_name,
-               st.username as staff_name
+               u.nickname as user_nickname,
+               COALESCE(st.nickname, st.username) as staff_name
         FROM appointment a
                  LEFT JOIN pet_profile p ON a.pet_id = p.id
                  LEFT JOIN service_item s ON a.service_id = s.id
@@ -271,6 +283,7 @@
         WHERE a.appointment_no = #{appointmentNo}
     </select>
 
+    <!-- 更新退款状态 -->
     <update id="updateRefundStatus">
         UPDATE appointment
         SET status = #{status},
@@ -332,4 +345,10 @@
         FROM appointment
         WHERE status = #{status}
     </select>
+
+    <!-- 真实删除预约（物理删除） -->
+    <delete id="realDeleteById">
+        DELETE FROM appointment WHERE id = #{id}
+    </delete>
+
 </mapper>

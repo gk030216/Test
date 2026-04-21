@@ -19,13 +19,15 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>  <!-- ✅ 添加昵称 -->
     </resultMap>
 
     <sql id="Base_Column_List">
         p.id, p.user_id, p.name, p.type, p.breed, p.gender, p.birthday,
         p.weight, p.color, p.avatar, p.description, p.is_default,
         p.status, p.create_time, p.update_time,
-        u.username as user_name
+        u.username as user_name,
+        u.nickname as user_nickname  <!-- ✅ 添加昵称 -->
     </sql>
 
     <!-- 获取用户宠物列表 -->
@@ -115,7 +117,8 @@
             p.status = 1
             <if test="keyword != null and keyword != ''">
                 AND (p.name LIKE CONCAT('%', #{keyword}, '%')
-                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))  <!-- ✅ 添加昵称搜索 -->
             </if>
             <if test="type != null and type != ''">
                 AND p.type = #{type}
@@ -137,7 +140,8 @@
             p.status = 1
             <if test="keyword != null and keyword != ''">
                 AND (p.name LIKE CONCAT('%', #{keyword}, '%')
-                OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))  <!-- ✅ 添加昵称搜索 -->
             </if>
             <if test="type != null and type != ''">
                 AND p.type = #{type}

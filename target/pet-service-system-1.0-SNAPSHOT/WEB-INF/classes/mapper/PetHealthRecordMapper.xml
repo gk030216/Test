@@ -15,13 +15,16 @@
         <result column="remark" property="remark"/>
         <result column="create_time" property="createTime"/>
         <result column="pet_name" property="petName"/>
+        <result column="owner_name" property="ownerName"/>
+        <result column="owner_nickname" property="ownerNickname"/>
     </resultMap>
 
     <!-- 获取宠物体检记录 -->
     <select id="getByPetId" resultMap="BaseResultMap">
-        SELECT h.*, p.name as pet_name
+        SELECT h.*, p.name as pet_name, u.username as owner_name, u.nickname as owner_nickname
         FROM pet_health_record h
                  LEFT JOIN pet_profile p ON h.pet_id = p.id
+                 LEFT JOIN user u ON p.user_id = u.id
         WHERE h.pet_id = #{petId}
         ORDER BY h.record_date DESC
     </select>
@@ -78,14 +81,16 @@
         p.id as petId,
         p.name as petName,
         u.id as ownerId,
-        u.username as ownerName
+        u.username as ownerName,
+        u.nickname as ownerNickname   <!-- ✅ 添加昵称 -->
         FROM pet_health_record h
         INNER JOIN pet_profile p ON h.pet_id = p.id
         LEFT JOIN user u ON p.user_id = u.id
         WHERE p.status = 1
         <if test="keyword != null and keyword != ''">
             AND (p.name LIKE CONCAT('%', #{keyword}, '%')
-            OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))   <!-- ✅ 添加昵称搜索 -->
         </if>
         ORDER BY h.create_time DESC
         LIMIT #{offset}, #{limit}
@@ -100,9 +105,11 @@
         WHERE p.status = 1
         <if test="keyword != null and keyword != ''">
             AND (p.name LIKE CONCAT('%', #{keyword}, '%')
-            OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))   <!-- ✅ 添加昵称搜索 -->
         </if>
     </select>
+
     <!-- 统计有体检记录的正常宠物数量（去重） -->
     <select id="countDistinctPetsWithHealthRecord" resultType="int">
         SELECT COUNT(DISTINCT h.pet_id)

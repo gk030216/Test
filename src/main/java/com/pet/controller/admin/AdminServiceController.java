@@ -1063,4 +1063,40 @@ public class AdminServiceController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 管理员真实删除预约（物理删除）
+     */
+    @DeleteMapping("/real-delete/{id}")
+    public Result<?> realDeleteAppointment(@PathVariable Integer id) {
+        try {
+            int result = appointmentMapper.realDeleteById(id);
+            if (result > 0) {
+                return Result.success("删除成功");
+            } else {
+                return Result.error("删除失败，记录不存在");
+            }
+        } catch (Exception e) {
+            return Result.error("删除失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量真实删除预约
+     */
+    @DeleteMapping("/batch-real-delete")
+    public Result<?> batchRealDeleteAppointments(@RequestParam String ids) {
+        try {
+            String[] idArray = ids.split(",");
+            int successCount = 0;
+            for (String idStr : idArray) {
+                int id = Integer.parseInt(idStr);
+                int result = appointmentMapper.realDeleteById(id);
+                if (result > 0) successCount++;
+            }
+            return Result.success("成功删除 " + successCount + " 条记录");
+        } catch (Exception e) {
+            return Result.error("删除失败：" + e.getMessage());
+        }
+    }
 }

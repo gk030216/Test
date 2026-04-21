@@ -27,6 +27,7 @@ public class Appointment {
     private String tradeNo;
 
     private String serviceImage;
+    private String userNickname;
      // 支付宝交易号
 
 
@@ -81,4 +82,12 @@ public class Appointment {
 
     public String getTradeNo() { return tradeNo; }
     public void setTradeNo(String tradeNo) { this.tradeNo = tradeNo; }
+
+    public String getUserNickname() {
+        return userNickname;
+    }
+
+    public void setUserNickname(String userNickname) {
+        this.userNickname = userNickname;
+    }
 }

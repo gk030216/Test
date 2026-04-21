@@ -125,4 +125,9 @@ public interface AppointmentMapper {
 
     // 根据状态统计数量
     int countByStatus(@Param("status") Integer status);
+
+    /**
+     * 真实删除预约（物理删除）
+     */
+    int realDeleteById(@Param("id") Integer id);
 }

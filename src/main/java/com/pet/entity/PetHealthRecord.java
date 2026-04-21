@@ -18,6 +18,7 @@ public class PetHealthRecord {
 
     // 关联字段
     private String petName;
+    private String ownerNickname;
 
     // getter/setter
     public Integer getId() { return id; }
@@ -48,5 +49,12 @@ public class PetHealthRecord {
 
     public void setOperatorName(String operatorName) {
         this.operatorName = operatorName;
+    }
+    public String getOwnerNickname() {
+        return ownerNickname;
+    }
+
+    public void setOwnerNickname(String ownerNickname) {
+        this.ownerNickname = ownerNickname;
     }
 }

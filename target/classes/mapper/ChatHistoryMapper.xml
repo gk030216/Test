@@ -5,7 +5,7 @@
     <resultMap id="BaseResultMap" type="java.util.HashMap">
         <id column="id" property="id" javaType="java.lang.Integer"/>
         <result column="user_id" property="userId"/>
-        <result column="user_name" property="userName"/>
+        <result column="user_nickname" property="userNickname"/>
         <result column="session_id" property="sessionId"/>
         <result column="user_question" property="userQuestion"/>
         <result column="answer_source" property="answerSource"/>
@@ -18,16 +18,18 @@
     <!-- 获取用户对话历史（用户端） -->
     <select id="getByUserId" resultType="java.util.HashMap">
         SELECT
-            id,
-            user_id as userId,
-            user_question as userQuestion,
-            answer_source as answerSource,
-            ai_answer as aiAnswer,
-            rating,
-            DATE_FORMAT(create_time, '%Y-%m-%d %H:%i:%s') as createTime
-        FROM chat_history
-        WHERE user_id = #{userId}
-        ORDER BY create_time ASC
+            ch.id,
+            ch.user_id as userId,
+            ch.user_question as userQuestion,
+            ch.answer_source as answerSource,
+            ch.ai_answer as aiAnswer,
+            ch.rating,
+            DATE_FORMAT(ch.create_time, '%Y-%m-%d %H:%i:%s') as createTime,
+            COALESCE(u.nickname, u.username) as userNickname
+        FROM chat_history ch
+                 LEFT JOIN user u ON ch.user_id = u.id
+        WHERE ch.user_id = #{userId}
+        ORDER BY ch.create_time ASC
             LIMIT #{offset}, #{limit}
     </select>
 
@@ -63,13 +65,15 @@
         ch.answer_source as answerSource,
         ch.rating,
         ch.create_time as createTime,
-        u.username as userName,
+        COALESCE(u.nickname, u.username) as userName,  <!-- ✅ 直接作为 userName 返回 -->
+        COALESCE(u.nickname, u.username) as userNickname,  <!-- ✅ 同时也作为 userNickname -->
         u.avatar as userAvatar
         FROM chat_history ch
         LEFT JOIN user u ON ch.user_id = u.id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR ch.user_question LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="answerSource != null">
@@ -83,7 +87,7 @@
         LIMIT #{offset}, #{limit}
     </select>
 
-    <!-- 统计总数也需要关联 user 表 -->
+    <!-- 统计总数 -->
     <select id="countAdminList" resultType="int">
         SELECT COUNT(*)
         FROM chat_history ch
@@ -91,6 +95,7 @@
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR ch.user_question LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="answerSource != null">
@@ -108,10 +113,10 @@
     </delete>
 
     <!-- 获取所有有对话记录的用户列表 -->
-    <select id="getUserListWithHistory" resultType="java.util.HashMap">
+    <select id="" resultType="java.util.HashMap">
         SELECT
         u.id as userId,
-        u.username as userName,
+        COALESCE(u.nickname, u.username) as userNickname,
         u.avatar as userAvatar,
         COUNT(ch.id) as dialogCount,
         MAX(ch.create_time) as lastTime,
@@ -129,6 +134,5 @@
         GROUP BY u.id
         ORDER BY lastTime DESC
     </select>
-
 
 </mapper>

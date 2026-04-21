@@ -45,7 +45,7 @@
       </el-table-column>
       <el-table-column label="主人" width="180">
         <template slot-scope="scope">
-          <div class="owner-name">{{ scope.row.userName || '未知' }}</div>
+          <div class="owner-name">{{ scope.row.userNickname || scope.row.userName || '未知' }}</div>
           <div class="owner-id">用户ID: {{ scope.row.userId }}</div>
         </template>
       </el-table-column>
@@ -181,11 +181,11 @@
               <el-option
                   v-for="user in userList"
                   :key="user.id"
-                  :label="`${user.username} (${user.nickname || user.username})`"
+                  :label="`${user.nickname || user.username} (${user.username})`"
                   :value="user.id">
                 <div class="user-option">
-                  <span class="username">{{ user.username }}</span>
-                  <span class="nickname" v-if="user.nickname && user.nickname !== user.username">({{ user.nickname }})</span>
+                  <span class="nickname">{{ user.nickname || user.username }}</span>
+                  <span class="username" v-if="user.nickname && user.nickname !== user.username">({{ user.username }})</span>
                   <span class="user-id">ID: {{ user.id }}</span>
                 </div>
               </el-option>
@@ -223,7 +223,7 @@
         <div class="detail-body">
           <div class="info-row">
             <span class="info-label">主人：</span>
-            <span class="info-value">{{ currentPet.userName || '未知' }} (ID: {{ currentPet.userId }})</span>
+            <span class="info-value">{{ currentPet.userNickname || currentPet.userName || '未知' }} (ID: {{ currentPet.userId }})</span>
           </div>
           <div class="info-row">
             <span class="info-label">生日：</span>
@@ -316,7 +316,10 @@ export default {
       try {
         const res = await getAdminPetList({ page: this.page, pageSize: this.pageSize, ...this.searchForm });
         if (res.code === 200) {
-          this.petList = res.data.list || [];
+          this.petList = (res.data.list || []).map(pet => ({
+            ...pet,
+            userNickname: pet.userNickname || pet.nickname || null
+          }));
           this.total = res.data.total || 0;
         }
       } catch (error) {
@@ -370,11 +373,31 @@ export default {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     },
 
-    handleSearch() { this.page = 1; this.loadList(); },
-    handleReset() { this.searchForm = { keyword: '', type: '' }; this.page = 1; this.loadList(); },
-    handlePageChange(page) { this.page = page; this.loadList(); },
-    handleSizeChange(size) { this.pageSize = size; this.page = 1; this.loadList(); },
-    handleSelectionChange(rows) { this.selectedRows = rows; },
+    handleSearch() {
+      this.page = 1;
+      this.loadList();
+    },
+
+    handleReset() {
+      this.searchForm = { keyword: '', type: '' };
+      this.page = 1;
+      this.loadList();
+    },
+
+    handlePageChange(page) {
+      this.page = page;
+      this.loadList();
+    },
+
+    handleSizeChange(size) {
+      this.pageSize = size;
+      this.page = 1;
+      this.loadList();
+    },
+
+    handleSelectionChange(rows) {
+      this.selectedRows = rows;
+    },
 
     triggerUpload() {
       this.$refs.avatarInput.click();
@@ -452,7 +475,7 @@ export default {
       };
       this.avatarPreview = row.avatar || '';
 
-      // 设置用户显示（用于编辑时显示已选择的用户）
+      // 设置用户显示
       if (row.userId) {
         this.userList = [{
           id: row.userId,
@@ -475,21 +498,25 @@ export default {
     },
 
     async handleDelete(row) {
-      this.$confirm(`确定删除宠物 "${row.name}" 吗？`, '提示', { type: 'warning' }).then(async () => {
-        await deletePet(row.id);
-        this.$message.success('删除成功');
-        this.loadList();
-      }).catch(() => {});
+      this.$confirm(`确定删除宠物 "${row.name}" 吗？`, '提示', { type: 'warning' })
+          .then(async () => {
+            await deletePet(row.id);
+            this.$message.success('删除成功');
+            this.loadList();
+          })
+          .catch(() => {});
     },
 
     async handleBatchDelete() {
       const ids = this.selectedRows.map(r => r.id).join(',');
-      this.$confirm(`确定删除选中的 ${this.selectedRows.length} 个宠物吗？`, '提示', { type: 'warning' }).then(async () => {
-        await batchDeletePets(ids);
-        this.$message.success('删除成功');
-        this.selectedRows = [];
-        this.loadList();
-      }).catch(() => {});
+      this.$confirm(`确定删除选中的 ${this.selectedRows.length} 个宠物吗？`, '提示', { type: 'warning' })
+          .then(async () => {
+            await batchDeletePets(ids);
+            this.$message.success('删除成功');
+            this.selectedRows = [];
+            this.loadList();
+          })
+          .catch(() => {});
     },
 
     async submitForm() {
