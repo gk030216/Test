@@ -124,11 +124,11 @@ export function checkFavorite(productId) {
 }
 
 // 获取协同过滤推荐
-export function getRecommendProducts(productId, limit = 8) {
+export function getRecommendProducts(params) {
     return request({
         url: '/product/recommend',
         method: 'get',
-        params: { productId, limit }
+        params
     });
 }
 

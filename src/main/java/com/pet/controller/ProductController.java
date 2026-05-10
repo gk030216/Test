@@ -166,7 +166,7 @@ public class ProductController {
     @GetMapping("/recommend")
     public Result<List<Map<String, Object>>> getRecommendProducts(
             @RequestParam(required = false) Integer productId,
-            @RequestParam(defaultValue = "8") Integer limit,
+            @RequestParam(defaultValue = "10") Integer limit,
             HttpServletRequest request) {
         try {
             Integer userId = null;

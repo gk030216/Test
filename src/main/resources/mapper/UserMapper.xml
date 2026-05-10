@@ -127,7 +127,7 @@
     </update>
 
     <update id="updatePassword">
-        UPDATE user SET password = #{password} WHERE email = #{email}
+        UPDATE user SET password = #{password} WHERE id = #{id}
     </update>
 
     <update id="updateStatus">

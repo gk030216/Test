@@ -36,6 +36,26 @@ public class AlipayServiceImpl implements AlipayService {
         System.out.println("========== 新版 AlipayServiceImpl ==========");
         System.out.println("创建支付宝支付，订单号: " + orderNo + ", 金额: " + amount);
 
+        // 检查支付功能是否启用
+        if (!alipayConfig.getPayEnabled()) {
+            throw new RuntimeException("支付功能暂未开启，请联系管理员");
+        }
+
+        // 检查支付宝配置是否完整
+        String appId = alipayConfig.getAppId();
+        String privateKey = alipayConfig.getAppPrivateKey();
+        String publicKey = alipayConfig.getAlipayPublicKey();
+        if (appId == null || appId.isEmpty()
+                || privateKey == null || privateKey.isEmpty()
+                || publicKey == null || publicKey.isEmpty()) {
+            throw new RuntimeException("支付宝配置未完成，请联系管理员配置支付宝沙箱信息（appId、appPrivateKey、alipayPublicKey）");
+        }
+
+        // 检查金额有效性
+        if (amount == null || amount.compareTo(BigDecimal.valueOf(0.01)) < 0) {
+            throw new RuntimeException("支付金额无效，最低支付金额为 0.01 元");
+        }
+
         String subject;
         String body;
 
@@ -71,11 +91,7 @@ public class AlipayServiceImpl implements AlipayService {
         AlipayTradePagePayResponse response = alipayClient.pageExecute(request);
         System.out.println("支付宝响应: " + response.getBody());
 
-        if (response.isSuccess()) {
-            return response.getBody();
-        } else {
-            throw new RuntimeException("支付宝支付创建失败：" + response.getMsg() + " " + response.getSubMsg());
-        }
+        return response.getBody();
     }
 
     @Override

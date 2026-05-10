@@ -1,7 +1,7 @@
 <template>
   <nav class="navbar">
     <div class="navbar-container">
-      <!-- Logo区域 - 使用系统设置 -->
+      <!-- Logo区域 -->
       <div class="logo" @click="goToHome">
         <img v-if="siteLogo" :src="siteLogo" class="logo-img" alt="Logo">
         <span class="logo-icon" v-else>🐾</span>
@@ -71,6 +71,9 @@
               <i class="el-icon-bell"></i> 消息通知
               <span v-if="unreadCount > 0" class="dropdown-badge">{{ unreadCount }}</span>
             </el-dropdown-item>
+            <el-dropdown-item command="my-appointments">
+              <i class="el-icon-s-order"></i> 我的预约
+            </el-dropdown-item>
             <el-dropdown-item command="feedback" divided>
               <i class="el-icon-edit-outline"></i> 意见反馈
             </el-dropdown-item>
@@ -93,7 +96,7 @@
       </div>
     </div>
 
-    <!-- 消息通知下拉面板（可选，增强体验） -->
+    <!-- 消息通知下拉面板 -->
     <div class="notification-dropdown" v-click-outside="closeNotificationPanel" v-show="showNotificationPanel">
       <div class="notification-header">
         <span>消息通知</span>
@@ -101,7 +104,7 @@
       </div>
       <div class="notification-list" v-loading="notificationLoading">
         <div v-for="item in notificationList" :key="item.id" class="notification-item" :class="{ unread: !item.isRead }" @click="handleNotificationClick(item)">
-          <div class="notification-icon">
+          <div class="notification-icon-wrap">
             <i :class="getNotificationIcon(item.type)"></i>
           </div>
           <div class="notification-content">
@@ -132,7 +135,6 @@ import { getSettings } from '@/api/settings';
 export default {
   name: 'Navbar',
   directives: {
-    // 点击外部关闭下拉面板的指令
     'click-outside': {
       bind(el, binding, vnode) {
         el.clickOutsideEvent = function(event) {
@@ -150,9 +152,8 @@ export default {
   data() {
     return {
       mobileMenuOpen: false,
-      siteName: '宠物服务系统',
+      siteName: '喵汪星球',
       siteLogo: '',
-      // 消息通知相关
       unreadCount: 0,
       showNotificationPanel: false,
       notificationList: [],
@@ -197,14 +198,13 @@ export default {
     this.loadUnreadCount();
     this.$bus.$on('settings-loaded', (settings) => {
       if (settings && settings.basic) {
-        this.siteName = settings.basic.siteName || '宠物服务系统';
+        this.siteName = settings.basic.siteName || '喵汪星球';
         this.siteLogo = settings.basic.siteLogo || '';
       }
     });
     this.$bus.$on('new-notification', () => {
       this.loadUnreadCount();
     });
-    // 定时轮询未读消息数量（每30秒）
     if (this.isLoggedIn) {
       this.pollingTimer = setInterval(() => {
         this.loadUnreadCount();
@@ -220,38 +220,32 @@ export default {
   },
   methods: {
     loadSettings() {
-      // 先尝试从缓存读取
       const settings = localStorage.getItem('systemSettings');
       if (settings) {
         try {
           const basic = JSON.parse(settings).basic;
-          this.siteName = basic.siteName || '宠物服务系统';
+          this.siteName = basic.siteName || '喵汪星球';
           this.siteLogo = basic.siteLogo || '';
         } catch (e) {
           console.error('解析系统设置失败', e);
         }
       }
-
-      // 从后端获取最新设置
       this.fetchSettings();
     },
 
-// 新增方法
     async fetchSettings() {
       try {
         const res = await getSettings();
         if (res.code === 200) {
           localStorage.setItem('systemSettings', JSON.stringify(res.data));
           const basic = res.data.basic;
-          this.siteName = basic.siteName || '宠物服务系统';
+          this.siteName = basic.siteName || '喵汪星球';
           this.siteLogo = basic.siteLogo || '';
         }
       } catch (error) {
         console.error('获取系统设置失败', error);
       }
     },
-
-    // ========== 消息通知相关方法 ==========
 
     async loadUnreadCount() {
       if (!this.isLoggedIn) return;
@@ -292,7 +286,6 @@ export default {
       try {
         const res = await markAsRead(notificationId);
         if (res.code === 200) {
-          // 更新本地列表状态
           const item = this.notificationList.find(n => n.id === notificationId);
           if (item) {
             item.isRead = 1;
@@ -348,10 +341,9 @@ export default {
       if (!item.isRead) {
         this.markAsRead(item.id);
       }
-      // 根据类型跳转到不同页面
       switch (item.type) {
         case 'appointment':
-          this.$router.push('/personal/appointments');
+          this.$router.push('/my-appointments');
           break;
         case 'order':
           this.$router.push('/personal/orders');
@@ -388,8 +380,6 @@ export default {
       if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
       return `${d.getMonth() + 1}/${d.getDate()}`;
     },
-
-    // ========== 导航方法 ==========
 
     goToHome() {
       this.$router.push('/');
@@ -457,8 +447,11 @@ export default {
         case 'staff':
           this.$router.push('/staff');
           break;
+        case 'my-appointments':
+          this.$router.push('/my-appointments');
+          break;
         case 'feedback':
-          this.$router.push('/personal/feedback');
+          this.$router.push('/feedback');
           break;
         case 'admin':
           this.$router.push('/admin');
@@ -492,8 +485,8 @@ export default {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #f59e4b 0%, #e8785a 40%, #d4665a 100%);
+  box-shadow: 0 2px 12px rgba(180, 100, 60, 0.2);
   height: 70px;
 }
 
@@ -507,6 +500,7 @@ export default {
   justify-content: space-between;
 }
 
+/* Logo */
 .logo {
   display: flex;
   align-items: center;
@@ -537,10 +531,11 @@ export default {
 .logo-text {
   font-size: 20px;
   font-weight: 600;
-  color: white;
-  letter-spacing: 1px;
+  color: #fff;
+  letter-spacing: 2px;
 }
 
+/* 导航菜单 */
 .nav-menu {
   display: flex;
   align-items: center;
@@ -554,7 +549,7 @@ export default {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   text-decoration: none;
   border-radius: 40px;
   transition: all 0.3s;
@@ -567,21 +562,22 @@ export default {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
   transform: translateY(-2px);
 }
 
+/* 用户区域 */
 .user-area {
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
-/* 消息提醒图标样式 */
+/* 消息图标 */
 .notification-icon {
   position: relative;
-  color: white;
+  color: #fff;
   font-size: 22px;
   cursor: pointer;
   padding: 6px;
@@ -593,7 +589,7 @@ export default {
 }
 
 .notification-icon:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
   transform: scale(1.05);
 }
 
@@ -602,7 +598,7 @@ export default {
   top: -2px;
   right: -4px;
   background: #ff6b6b;
-  color: white;
+  color: #fff;
   font-size: 10px;
   font-weight: bold;
   min-width: 18px;
@@ -612,19 +608,19 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 2px rgba(228, 120, 90, 0.4);
 }
 
-/* 消息下拉面板 */
+/* 通知下拉面板 */
 .notification-dropdown {
   position: absolute;
   top: 70px;
   right: 100px;
   width: 360px;
   max-height: 450px;
-  background: white;
+  background: #fff;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   z-index: 1001;
   overflow: hidden;
   display: flex;
@@ -636,13 +632,13 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f5ece6;
   font-weight: 600;
-  color: #333;
+  color: #3d2e2a;
 }
 
 .notification-header .el-button {
-  color: #667eea;
+  color: #f0826a;
 }
 
 .notification-list {
@@ -656,33 +652,33 @@ export default {
   align-items: flex-start;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid #f5f0ed;
   cursor: pointer;
   transition: background 0.3s;
 }
 
 .notification-item:hover {
-  background: #f8f9fc;
+  background: #fefbf9;
 }
 
 .notification-item.unread {
-  background: #f0f7ff;
+  background: #fef6f0;
 }
 
-.notification-icon {
+.notification-icon-wrap {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #f0f2f5;
+  background: #fef0e8;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.notification-icon i {
+.notification-icon-wrap i {
   font-size: 18px;
-  color: #667eea;
+  color: #f0826a;
 }
 
 .notification-content {
@@ -692,14 +688,14 @@ export default {
 
 .notification-title {
   font-weight: 500;
-  color: #333;
+  color: #3d2e2a;
   margin-bottom: 4px;
   font-size: 14px;
 }
 
 .notification-desc {
   font-size: 12px;
-  color: #999;
+  color: #a08c84;
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -708,7 +704,7 @@ export default {
 
 .notification-time {
   font-size: 11px;
-  color: #ccc;
+  color: #c4b0a6;
 }
 
 .notification-close {
@@ -718,20 +714,20 @@ export default {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #999;
+  color: #b8a098;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .notification-close:hover {
-  background: #f0f0f0;
+  background: #fef0e8;
   color: #f56c6c;
 }
 
 .notification-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #999;
+  color: #b8a098;
 }
 
 .notification-empty i {
@@ -743,17 +739,17 @@ export default {
 .notification-footer {
   padding: 10px 16px;
   text-align: center;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #f5ece6;
 }
 
 .notification-footer .el-button {
-  color: #667eea;
+  color: #f0826a;
 }
 
 .dropdown-badge {
   display: inline-block;
   background: #ff6b6b;
-  color: white;
+  color: #fff;
   font-size: 10px;
   border-radius: 10px;
   padding: 0 6px;
@@ -761,7 +757,7 @@ export default {
   line-height: 16px;
 }
 
-/* 其他原有样式保持不变 */
+/* 登录/注册按钮 */
 .auth-buttons {
   display: flex;
   gap: 12px;
@@ -776,26 +772,27 @@ export default {
 }
 
 .login-btn {
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
 }
 
 .login-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-  border-color: white;
+  border-color: #fff;
 }
 
 .register-btn {
-  background: white;
-  color: #667eea;
+  background: #fff;
+  color: #e8785a;
   font-weight: 500;
 }
 
 .register-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
+/* 用户下拉 */
 .user-dropdown {
   cursor: pointer;
 }
@@ -810,17 +807,17 @@ export default {
 }
 
 .user-info:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .user-avatar {
-  background: rgba(255, 255, 255, 0.3);
-  color: white;
+  background: rgba(255, 255, 255, 0.35);
+  color: #fff;
   font-weight: bold;
 }
 
 .username {
-  color: white;
+  color: #fff;
   font-size: 14px;
   max-width: 100px;
   overflow: hidden;
@@ -829,18 +826,20 @@ export default {
 }
 
 .user-info i {
-  color: white;
+  color: #fff;
   font-size: 12px;
 }
 
+/* 移动端菜单按钮 */
 .mobile-menu-btn {
   display: none;
   font-size: 24px;
-  color: white;
+  color: #fff;
   cursor: pointer;
   margin-left: 15px;
 }
 
+/* ========== 响应式 ========== */
 @media (max-width: 1024px) {
   .nav-menu {
     margin-left: 20px;
@@ -879,7 +878,7 @@ export default {
     left: -100%;
     width: 100%;
     height: calc(100vh - 70px);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(160deg, #f59e4b 0%, #e8785a 40%, #d4665a 100%);
     flex-direction: column;
     align-items: stretch;
     padding: 20px;

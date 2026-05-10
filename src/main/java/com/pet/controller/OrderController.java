@@ -30,6 +30,7 @@ public class OrderController {
 
     @Autowired
     private AppointmentService appointmentService;
+    
 
     private Integer getUserId(HttpServletRequest request) {
         Integer userId = (Integer) request.getAttribute("userId");
@@ -173,7 +174,23 @@ public class OrderController {
     public Result<Boolean> queryPayResult(@RequestBody PayRequest request, HttpServletRequest req) {
         try {
             Integer userId = getUserId(req);
-            Order order = orderService.getOrderByNo(request.getOrderNo());
+            String orderNo = request.getOrderNo();
+
+            // 处理服务预约支付（订单号以 AP 开头）
+            if (orderNo.startsWith("AP")) {
+                Appointment appointment = appointmentService.getByAppointmentNo(orderNo);
+                if (appointment == null || !appointment.getUserId().equals(userId)) {
+                    return Result.error("预约单不存在");
+                }
+                if (appointment.getPayStatus() == 1) {
+                    return Result.success(true);
+                }
+                boolean result = alipayService.queryPayResult(orderNo);
+                return Result.success(result);
+            }
+
+            // 处理商品订单支付
+            Order order = orderService.getOrderByNo(orderNo);
             if (order == null || !order.getUserId().equals(userId)) {
                 return Result.error("订单不存在");
             }
@@ -182,7 +199,7 @@ public class OrderController {
                 return Result.success(true);
             }
 
-            boolean result = alipayService.queryPayResult(request.getOrderNo());
+            boolean result = alipayService.queryPayResult(orderNo);
             return Result.success(result);
         } catch (Exception e) {
             return Result.error(e.getMessage());

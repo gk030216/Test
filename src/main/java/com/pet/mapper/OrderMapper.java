@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public interface OrderMapper {
 
@@ -43,4 +44,8 @@ public interface OrderMapper {
     int deleteById(@Param("id") Integer id);
 
     BigDecimal countTodayIncome();
+    int countAll();
+    int countToday();
+    BigDecimal countTotalIncome();
+    List<Map<String, Object>> getIncomeTrend();
 }

@@ -1,198 +1,263 @@
 <template>
-  <div class="register-container">
-    <!-- 背景 -->
-    <div class="bg-pattern"></div>
-
-    <div class="register-card">
-      <!-- 卡片头部 -->
-      <div class="card-header">
-        <div class="logo">
-          <svg class="logo-svg" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M25 5C14.5 5 6 13.5 6 24C6 34.5 14.5 43 25 43C35.5 43 44 34.5 44 24C44 13.5 35.5 5 25 5Z" stroke="#409EFF" stroke-width="2" fill="white"/>
-            <circle cx="18" cy="22" r="2" fill="#409EFF"/>
-            <circle cx="32" cy="22" r="2" fill="#409EFF"/>
-            <path d="M20 32C22 35 28 35 30 32" stroke="#409EFF" stroke-width="2" stroke-linecap="round"/>
-            <path d="M16 16L20 20M34 16L30 20" stroke="#409EFF" stroke-width="2" stroke-linecap="round"/>
+  <div class="register-page">
+    <!-- 左侧品牌区（与登录页统一） -->
+    <div class="register-left">
+      <div class="brand-content">
+        <div class="brand-icon">
+          <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="56" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+            <ellipse cx="60" cy="72" rx="32" ry="26" fill="rgba(255,255,255,0.92)"/>
+            <polygon points="34,50 20,18 48,42" fill="rgba(255,255,255,0.92)"/>
+            <polygon points="86,50 100,18 72,42" fill="rgba(255,255,255,0.92)"/>
+            <polygon points="36,47 27,26 47,43" fill="#f9c5b6"/>
+            <polygon points="84,47 93,26 73,43" fill="#f9c5b6"/>
+            <ellipse cx="47" cy="66" rx="6" ry="6.5" fill="#3d3d3d"/>
+            <ellipse cx="73" cy="66" rx="6" ry="6.5" fill="#3d3d3d"/>
+            <ellipse cx="48" cy="64" rx="2.5" ry="3" fill="white"/>
+            <ellipse cx="74" cy="64" rx="2.5" ry="3" fill="white"/>
+            <ellipse cx="60" cy="75" rx="3.5" ry="2.5" fill="#f4a49b"/>
+            <path d="M56 77 Q54 82 51 80" stroke="#f4a49b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M64 77 Q66 82 69 80" stroke="#f4a49b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <line x1="24" y1="68" x2="42" y2="71" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/>
+            <line x1="24" y1="74" x2="42" y2="74" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/>
+            <line x1="96" y1="68" x2="78" y2="71" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/>
+            <line x1="96" y1="74" x2="78" y2="74" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/>
+            <ellipse cx="38" cy="74" rx="5" ry="3" fill="rgba(244,164,155,0.35)"/>
+            <ellipse cx="82" cy="74" rx="5" ry="3" fill="rgba(244,164,155,0.35)"/>
           </svg>
-          <span class="logo-text">宠物服务系统</span>
         </div>
-        <h2 class="title">注册新账号</h2>
-        <p class="subtitle">加入我们，享受专业宠物服务</p>
+        <h1 class="brand-title">喵汪星球</h1>
+        <h2 class="brand-subtitle">宠物服务管理平台</h2>
+        <p class="brand-desc">加入我们，给爱宠最好的照顾</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">🐱</span>
+            <span>建立宠物档案</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">📅</span>
+            <span>在线预约服务</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">💉</span>
+            <span>疫苗健康提醒</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">🏪</span>
+            <span>宠物用品选购</span>
+          </div>
+        </div>
       </div>
-
-      <!-- 步骤指示器 -->
-      <div class="step-indicator">
-        <div class="step-item" :class="{ active: step >= 1 }">
-          <div class="step-circle">1</div>
-          <span class="step-text">填写信息</span>
-        </div>
-        <div class="step-line" :class="{ active: step >= 2 }"></div>
-        <div class="step-item" :class="{ active: step >= 2 }">
-          <div class="step-circle">2</div>
-          <span class="step-text">验证邮箱</span>
-        </div>
-        <div class="step-line" :class="{ active: step >= 3 }"></div>
-        <div class="step-item" :class="{ active: step >= 3 }">
-          <div class="step-circle">3</div>
-          <span class="step-text">完成注册</span>
-        </div>
+      <div class="paw-deco">
+        <span class="paw p1">🐾</span>
+        <span class="paw p2">🐾</span>
+        <span class="paw p3">🐾</span>
+        <span class="paw p4">🐾</span>
       </div>
+    </div>
 
-      <!-- 注册表单 -->
-      <el-form :model="registerForm" :rules="rules" ref="registerForm" label-width="0" class="register-form">
-        <!-- 头像上传区域（新增） -->
-        <div class="avatar-section">
-          <div class="avatar-upload-wrapper" @click="triggerUpload">
-            <div class="avatar-preview">
-              <el-avatar :size="80" :src="avatarPreview" class="preview-avatar">
-                {{ !avatarPreview ? getInitial() : '' }}
-              </el-avatar>
-              <div class="upload-mask">
-                <i class="el-icon-camera"></i>
-                <span>上传头像</span>
+    <!-- 右侧注册表单 -->
+    <div class="register-right">
+      <div class="form-wrapper">
+        <div class="form-header">
+          <h3 class="form-title">创建账号 🐶</h3>
+          <p class="form-subtitle">注册喵汪星球，开启宠物服务之旅</p>
+        </div>
+
+        <!-- 步骤指示器 -->
+        <div class="step-indicator">
+          <div class="step-item" :class="{ active: step >= 1 }">
+            <div class="step-circle">1</div>
+            <span class="step-text">填写信息</span>
+          </div>
+          <div class="step-line" :class="{ active: step >= 2 }"></div>
+          <div class="step-item" :class="{ active: step >= 2 }">
+            <div class="step-circle">2</div>
+            <span class="step-text">验证邮箱</span>
+          </div>
+          <div class="step-line" :class="{ active: step >= 3 }"></div>
+          <div class="step-item" :class="{ active: step >= 3 }">
+            <div class="step-circle">3</div>
+            <span class="step-text">完成注册</span>
+          </div>
+        </div>
+
+        <el-form :model="registerForm" :rules="rules" ref="registerForm" label-width="0" class="register-form">
+          <!-- 头像上传 -->
+          <div class="avatar-section">
+            <div class="avatar-upload-wrapper" @click="triggerUpload">
+              <div class="avatar-preview">
+                <el-avatar :size="72" :src="avatarPreview" class="preview-avatar">
+                  {{ !avatarPreview ? getInitial() : '' }}
+                </el-avatar>
+                <div class="upload-mask">
+                  <i class="el-icon-camera"></i>
+                  <span>上传头像</span>
+                </div>
               </div>
-            </div>
-            <input
+              <input
                 type="file"
                 ref="avatarInput"
                 accept="image/jpeg,image/png,image/jpg"
                 style="display: none"
                 @change="handleAvatarUpload"
-            />
+              />
+            </div>
+            <p class="avatar-tip">支持 JPG、PNG，≤2MB（选填）</p>
           </div>
-          <p class="avatar-tip">支持 JPG、PNG 格式，≤2MB（选填）</p>
-        </div>
 
-        <!-- 用户名 -->
-        <el-form-item prop="username">
-          <el-input
+          <!-- 用户名 -->
+          <el-form-item prop="username">
+            <el-input
               v-model="registerForm.username"
               placeholder="用户名（3-20个字符）"
               size="large"
-              prefix-icon="el-icon-user"
               clearable
-          ></el-input>
-        </el-form-item>
+            >
+              <template #prefix>
+                <i class="el-icon-user input-icon"></i>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 昵称 -->
-        <el-form-item prop="nickname">
-          <el-input
+          <!-- 昵称 -->
+          <el-form-item prop="nickname">
+            <el-input
               v-model="registerForm.nickname"
               placeholder="昵称"
               size="large"
-              prefix-icon="el-icon-edit"
               clearable
-          ></el-input>
-        </el-form-item>
+            >
+              <template #prefix>
+                <i class="el-icon-edit input-icon"></i>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 邮箱 + 验证码 -->
-        <el-form-item prop="email">
-          <div class="email-group">
-            <el-input
+          <!-- 邮箱 + 验证码 -->
+          <el-form-item prop="email">
+            <div class="email-group">
+              <el-input
                 v-model="registerForm.email"
                 placeholder="邮箱地址"
                 size="large"
-                prefix-icon="el-icon-message"
                 clearable
                 class="email-input"
-            ></el-input>
-            <el-button
+              >
+                <template #prefix>
+                  <i class="el-icon-message input-icon"></i>
+                </template>
+              </el-input>
+              <el-button
                 :disabled="!canSendCode"
                 @click="sendCode"
                 :loading="codeSending"
                 size="large"
                 class="code-btn"
-            >
-              {{ codeBtnText }}
-            </el-button>
-          </div>
-        </el-form-item>
+              >
+                {{ codeBtnText }}
+              </el-button>
+            </div>
+          </el-form-item>
 
-        <!-- 验证码 -->
-        <el-form-item prop="code">
-          <el-input
+          <!-- 验证码 -->
+          <el-form-item prop="code">
+            <el-input
               v-model="registerForm.code"
               placeholder="请输入6位验证码"
               size="large"
-              prefix-icon="el-icon-key"
               maxlength="6"
               clearable
-          ></el-input>
-        </el-form-item>
+            >
+              <template #prefix>
+                <i class="el-icon-key input-icon"></i>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 密码 -->
-        <el-form-item prop="password">
-          <el-input
+          <!-- 密码 -->
+          <el-form-item prop="password">
+            <el-input
               v-model="registerForm.password"
               type="password"
               placeholder="密码（6-20位）"
               size="large"
-              prefix-icon="el-icon-lock"
               show-password
               clearable
-          ></el-input>
-        </el-form-item>
+            >
+              <template #prefix>
+                <i class="el-icon-lock input-icon"></i>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 确认密码 -->
-        <el-form-item prop="confirmPassword">
-          <el-input
+          <!-- 确认密码 -->
+          <el-form-item prop="confirmPassword">
+            <el-input
               v-model="registerForm.confirmPassword"
               type="password"
               placeholder="确认密码"
               size="large"
-              prefix-icon="el-icon-circle-check"
               show-password
               clearable
-          ></el-input>
-        </el-form-item>
+            >
+              <template #prefix>
+                <i class="el-icon-circle-check input-icon"></i>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 手机号（必填） -->
-        <el-form-item prop="phone">
-          <el-input
+          <!-- 手机号 -->
+          <el-form-item prop="phone">
+            <el-input
               v-model="registerForm.phone"
               placeholder="手机号"
               size="large"
-              prefix-icon="el-icon-phone"
               clearable
-          ></el-input>
-        </el-form-item>
+            >
+              <template #prefix>
+                <i class="el-icon-phone input-icon"></i>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 性别 -->
-        <el-form-item prop="gender">
-          <el-select v-model="registerForm.gender" placeholder="请选择性别" size="large" style="width: 100%">
-            <el-option label="男" value="男"></el-option>
-            <el-option label="女" value="女"></el-option>
-            <el-option label="保密" value="保密"></el-option>
-          </el-select>
-        </el-form-item>
+          <!-- 性别 -->
+          <el-form-item prop="gender">
+            <el-select v-model="registerForm.gender" placeholder="请选择性别" size="large" style="width: 100%">
+              <el-option label="男" value="男"></el-option>
+              <el-option label="女" value="女"></el-option>
+              <el-option label="保密" value="保密"></el-option>
+            </el-select>
+          </el-form-item>
 
-        <!-- 用户协议 -->
-        <div class="agreement">
-          <el-checkbox v-model="agreeProtocol">
-            <span>我已阅读并同意</span>
-            <a href="#" class="protocol-link">《用户协议》</a>
-            <span>和</span>
-            <a href="#" class="protocol-link">《隐私政策》</a>
-          </el-checkbox>
-        </div>
+          <!-- 用户协议 -->
+          <div class="agreement">
+            <el-checkbox v-model="agreeProtocol">
+              <span>我已阅读并同意</span>
+              <a href="#" class="protocol-link">《用户协议》</a>
+              <span>和</span>
+              <a href="#" class="protocol-link">《隐私政策》</a>
+            </el-checkbox>
+          </div>
 
-        <!-- 注册按钮 -->
-        <el-button
+          <!-- 注册按钮 -->
+          <el-button
             type="primary"
             @click="handleRegister"
             :loading="loading"
-            class="register-button"
+            class="register-btn"
             :disabled="!agreeProtocol"
-        >
-          {{ loading ? '注册中...' : '注 册' }}
-        </el-button>
+          >
+            {{ loading ? '注册中...' : '注 册' }}
+          </el-button>
 
-        <!-- 登录链接 -->
-        <div class="form-footer">
-          <span>已有账号？</span>
-          <router-link to="/login" class="login-link">立即登录</router-link>
-        </div>
-      </el-form>
+          <!-- 登录链接 -->
+          <div class="form-footer">
+            <span>已有账号？</span>
+            <router-link to="/login" class="login-link">立即登录</router-link>
+          </div>
+        </el-form>
+      </div>
     </div>
   </div>
 </template>
@@ -204,7 +269,6 @@ import { uploadAvatar } from '@/api/upload';
 export default {
   name: 'Register',
   data() {
-    // 自定义验证：用户名唯一性
     const validateUsername = (rule, value, callback) => {
       if (!value) {
         callback(new Error('请输入用户名'));
@@ -221,7 +285,6 @@ export default {
       });
     };
 
-    // 自定义验证：邮箱唯一性
     const validateEmail = (rule, value, callback) => {
       if (!value) {
         callback(new Error('请输入邮箱'));
@@ -238,7 +301,6 @@ export default {
       });
     };
 
-    // 确认密码验证
     const validateConfirmPassword = (rule, value, callback) => {
       if (!value) {
         callback(new Error('请再次输入密码'));
@@ -249,7 +311,6 @@ export default {
       }
     };
 
-    // 手机号验证（必填）
     const validatePhone = (rule, value, callback) => {
       if (!value) {
         callback(new Error('请输入手机号'));
@@ -274,9 +335,9 @@ export default {
         confirmPassword: '',
         phone: '',
         gender: '保密',
-        avatar: ''  // 新增头像字段
+        avatar: ''
       },
-      avatarPreview: '',  // 头像预览
+      avatarPreview: '',
       agreeProtocol: true,
       loading: false,
       codeSending: false,
@@ -323,66 +384,49 @@ export default {
   computed: {
     canSendCode() {
       return this.registerForm.email &&
-          !this.codeSending &&
-          this.countdown === 60 &&
-          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.registerForm.email);
+        !this.codeSending &&
+        this.countdown === 60 &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.registerForm.email);
     },
     codeBtnText() {
       if (this.countdown < 60) {
         return `${this.countdown}秒后重试`;
       }
       return '获取验证码';
-    },
-    isFormValid() {
-      return this.registerForm.username &&
-          this.registerForm.nickname &&
-          this.registerForm.email &&
-          this.registerForm.code &&
-          this.registerForm.password &&
-          this.registerForm.confirmPassword &&
-          this.registerForm.phone &&
-          this.registerForm.gender;
     }
   },
   methods: {
-    // 获取头像初始文字
     getInitial() {
       const name = this.registerForm.nickname || this.registerForm.username;
-      if (!name) return '📷';
+      if (!name) return '🐾';
       return name.charAt(0).toUpperCase();
     },
 
-    // 触发文件选择
     triggerUpload() {
       this.$refs.avatarInput.click();
     },
 
-    // 处理头像上传
     async handleAvatarUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
 
-      // 验证文件类型
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
         this.$message.error('只支持 JPG、PNG 格式的图片');
         return;
       }
 
-      // 验证文件大小（2MB）
       if (file.size > 2 * 1024 * 1024) {
         this.$message.error('图片大小不能超过 2MB');
         return;
       }
 
-      // 显示本地预览
       const reader = new FileReader();
       reader.onload = (e) => {
         this.avatarPreview = e.target.result;
       };
       reader.readAsDataURL(file);
 
-      // 上传到服务器
       const formData = new FormData();
       formData.append('file', file);
 
@@ -393,7 +437,6 @@ export default {
           this.$message.success('头像上传成功');
         } else {
           this.$message.error(res.message || '上传失败');
-          // 上传失败时清除预览
           this.avatarPreview = '';
         }
       } catch (error) {
@@ -415,12 +458,12 @@ export default {
         this.startCountdown();
 
         sendRegisterCode(this.registerForm.email)
-            .then(() => {
-              this.$message.success('验证码已发送，请查收邮件');
-            })
-            .catch(() => {
-              this.stopCountdown();
-            });
+          .then(() => {
+            this.$message.success('验证码已发送，请查收邮件');
+          })
+          .catch(() => {
+            this.stopCountdown();
+          });
       });
     },
 
@@ -460,33 +503,33 @@ export default {
         const { confirmPassword, ...registerData } = this.registerForm;
 
         register(registerData)
-            .then(res => {
-              this.loading = false;
-              if (res.code === 200) {
-                this.step = 3;
+          .then(res => {
+            this.loading = false;
+            if (res.code === 200) {
+              this.step = 3;
 
-                const loginData = {
-                  account: this.registerForm.username,
-                  password: this.registerForm.password
-                };
+              const loginData = {
+                account: this.registerForm.username,
+                password: this.registerForm.password
+              };
 
-                this.$alert('注册成功！欢迎加入', '恭喜', {
-                  confirmButtonText: '去登录',
-                  type: 'success',
-                  center: true,
-                  callback: () => {
-                    sessionStorage.setItem('autoFillLogin', JSON.stringify(loginData));
-                    this.$router.push('/login');
-                  }
-                });
-              } else {
-                this.$message.error(res.message || '注册失败');
-              }
-            })
-            .catch(() => {
-              this.loading = false;
-              this.$message.error('注册失败，请稍后重试');
-            });
+              this.$alert('注册成功！欢迎加入喵汪星球 🎉', '恭喜', {
+                confirmButtonText: '去登录',
+                type: 'success',
+                center: true,
+                callback: () => {
+                  sessionStorage.setItem('autoFillLogin', JSON.stringify(loginData));
+                  this.$router.push('/login');
+                }
+              });
+            } else {
+              this.$message.error(res.message || '注册失败');
+            }
+          })
+          .catch(() => {
+            this.loading = false;
+            this.$message.error('注册失败，请稍后重试');
+          });
       });
     }
   },
@@ -499,92 +542,195 @@ export default {
 </script>
 
 <style scoped>
-.register-container {
+.register-page {
   min-height: 100vh;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 100%);
-  padding: 40px 20px;
+  font-family: 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ========== 左侧品牌区 ========== */
+.register-left {
+  flex: 0 0 40%;
   position: relative;
-}
-
-.bg-pattern {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-image: radial-gradient(#c0c4cc 1px, transparent 1px);
-  background-size: 30px 30px;
-  opacity: 0.3;
-}
-
-.register-card {
-  width: 520px;
-  max-width: 95%;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-  position: relative;
-  z-index: 10;
-  overflow: hidden;
-  animation: slideUp 0.4s ease;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.card-header {
-  padding: 32px 32px 20px;
-  text-align: center;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.logo {
+  background: linear-gradient(160deg, #f59e4b 0%, #f0826a 30%, #e8647c 65%, #d4527e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.register-left::before {
+  content: '';
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  top: -60px;
+  right: -80px;
+}
+
+.register-left::after {
+  content: '';
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  bottom: -30px;
+  left: -40px;
+}
+
+.brand-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #fff;
+  padding: 40px;
+  max-width: 340px;
+}
+
+.brand-icon {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 16px;
+  animation: gentleBounce 3s ease-in-out infinite;
+}
+
+@keyframes gentleBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.brand-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand-title {
+  font-size: 34px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: 6px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+
+.brand-subtitle {
+  font-size: 15px;
+  font-weight: 400;
+  margin: 0 0 14px;
+  opacity: 0.88;
+  letter-spacing: 4px;
+}
+
+.brand-desc {
+  font-size: 13px;
+  opacity: 0.72;
+  margin: 0 0 28px;
+  line-height: 1.6;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 16px;
+  text-align: left;
 }
 
-.logo-svg {
-  width: 36px;
-  height: 36px;
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  opacity: 0.9;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s;
 }
 
-.logo-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
-  letter-spacing: 1px;
+.feature-item:hover {
+  background: rgba(255,255,255,0.22);
+  transform: translateX(3px);
 }
 
-.title {
-  margin: 0 0 8px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
+.feature-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
 }
 
-.subtitle {
-  color: #909399;
+/* 爪印 */
+.paw-deco {
+  position: absolute;
+  bottom: 28px;
+  right: 24px;
+  display: flex;
+  gap: 10px;
+  opacity: 0.25;
+  transform: rotate(22deg);
+}
+
+.paw {
+  font-size: 22px;
+  animation: pawFade 2.5s ease-in-out infinite;
+}
+
+.p2 { animation-delay: 0.5s; }
+.p3 { animation-delay: 1.0s; }
+.p4 { animation-delay: 1.5s; }
+
+@keyframes pawFade {
+  0%, 100% { opacity: 0.2; transform: scale(0.85); }
+  50% { opacity: 0.55; transform: scale(1.1); }
+}
+
+/* ========== 右侧表单区 ========== */
+.register-right {
+  flex: 0 0 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fdf8f5;
+  padding: 40px 20px;
+}
+
+.form-wrapper {
+  width: 500px;
+  max-width: 95%;
+  animation: formSlideUp 0.5s ease;
+}
+
+@keyframes formSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #3d2e2a;
+  margin: 0 0 6px;
+}
+
+.form-subtitle {
   font-size: 14px;
+  color: #a08c84;
   margin: 0;
 }
 
+/* 步骤指示器 */
 .step-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 32px 20px;
+  padding: 0 20px 22px;
 }
 
 .step-item {
@@ -595,89 +741,92 @@ export default {
 }
 
 .step-circle {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: #f0f0f0;
-  color: #999;
+  background: #f0e8e2;
+  color: #b8a098;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.3s;
 }
 
 .step-item.active .step-circle {
-  background: #409EFF;
+  background: #f59e4b;
   color: white;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(245,158,75,0.35);
 }
 
 .step-text {
   font-size: 12px;
-  color: #999;
+  color: #b8a098;
   transition: color 0.3s;
 }
 
 .step-item.active .step-text {
-  color: #409EFF;
+  color: #f0826a;
   font-weight: 500;
 }
 
 .step-line {
-  width: 50px;
+  width: 44px;
   height: 2px;
-  background: #f0f0f0;
+  background: #f0e8e2;
   margin: 0 8px;
   transition: background 0.3s;
 }
 
 .step-line.active {
-  background: #409EFF;
+  background: #f59e4b;
 }
 
+/* 注册表单 */
 .register-form {
-  padding: 0 32px 32px;
+  background: #fff;
+  padding: 32px 30px;
+  border-radius: 16px;
+  box-shadow: 0 2px 18px rgba(180,130,100,0.06), 0 8px 36px rgba(180,120,90,0.04);
 }
 
-/* ========== 头像上传区域样式 ========== */
+/* 头像上传 */
 .avatar-section {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
 }
 
 .avatar-upload-wrapper {
   display: inline-block;
   cursor: pointer;
-  position: relative;
 }
 
 .avatar-preview {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(180,120,90,0.15);
   transition: all 0.3s;
   margin: 0 auto;
 }
 
 .avatar-preview:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 6px 16px rgba(245,158,75,0.3);
 }
 
 .preview-avatar {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: #667eea;
+  background: linear-gradient(135deg, #fef0e8 0%, #fde0d4 100%);
+  color: #f0826a;
   font-weight: 600;
-  font-size: 32px;
+  font-size: 28px;
 }
 
 .upload-mask {
@@ -686,7 +835,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0,0,0,0.55);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -702,8 +851,8 @@ export default {
 }
 
 .upload-mask i {
-  font-size: 20px;
-  margin-bottom: 4px;
+  font-size: 18px;
+  margin-bottom: 3px;
 }
 
 .upload-mask span {
@@ -712,36 +861,61 @@ export default {
 
 .avatar-tip {
   font-size: 12px;
-  color: #909399;
+  color: #b8a098;
   margin-top: 8px;
   margin-bottom: 0;
 }
 
-/* ========== 原有样式保持不变 ========== */
-::v-deep .el-input__inner {
+/* 输入框 */
+::v-deep .register-form .el-input__inner {
   height: 44px;
   line-height: 44px;
-  border-radius: 8px;
-  border-color: #e4e7ed;
-  transition: all 0.3s;
+  border-radius: 10px;
+  border: 1.5px solid #f0e0d6;
+  background: #fefbf9;
+  font-size: 14px;
+  padding-left: 40px;
+  transition: all 0.25s;
 }
 
-::v-deep .el-input__inner:hover {
-  border-color: #c0c4cc;
+::v-deep .register-form .el-input__inner:hover {
+  border-color: #e8c8b0;
+  background: #fff;
 }
 
-::v-deep .el-input__inner:focus {
-  border-color: #409EFF;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+::v-deep .register-form .el-input__inner:focus {
+  border-color: #f59e4b;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(245,158,75,0.1);
 }
 
-::v-deep .el-form-item {
-  margin-bottom: 20px;
+::v-deep .register-form .el-input__prefix {
+  left: 12px;
 }
 
+.input-icon {
+  font-size: 17px;
+  color: #d0b8a8;
+  transition: color 0.25s;
+}
+
+::v-deep .register-form .el-input.is-focus .input-icon {
+  color: #f59e4b;
+}
+
+::v-deep .register-form .el-form-item {
+  margin-bottom: 18px;
+}
+
+::v-deep .register-form .el-form-item__error {
+  padding-left: 4px;
+  font-size: 12px;
+}
+
+/* 邮箱 + 验证码 */
 .email-group {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .email-input {
@@ -749,60 +923,57 @@ export default {
 }
 
 .code-btn {
-  min-width: 110px;
+  min-width: 108px;
   height: 44px;
-  background: #409EFF;
+  background: #f59e4b;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
+  color: #fff;
   transition: all 0.3s;
-  color: #ffffff;
 }
 
 .code-btn:hover {
-  background: #66b1ff;
+  background: #f7b06a;
   transform: translateY(-1px);
-  color: #ffffff;
 }
 
 .code-btn:disabled {
-  background: #a0cfff;
-  color: #ffffff;
+  background: #f5d5b8;
+  color: #fff;
   cursor: not-allowed;
   transform: none;
-  opacity: 0.7;
-}
-
-.code-btn:focus {
-  outline: none;
+  opacity: 0.8;
 }
 
 .code-btn span {
-  color: #ffffff;
+  color: #fff;
 }
 
 .code-btn.is-disabled span,
 .code-btn:disabled span {
-  color: #ffffff;
+  color: #fff;
 }
 
-::v-deep .el-select .el-input__inner {
+/* 下拉框 */
+::v-deep .register-form .el-select .el-input__inner {
   height: 44px;
 }
 
+/* 协议 */
 .agreement {
-  margin: 20px 0 24px;
+  margin: 18px 0 22px;
   text-align: center;
 }
 
 ::v-deep .el-checkbox__label {
-  color: #606266;
+  color: #8c7068;
   font-size: 13px;
 }
 
 .protocol-link {
-  color: #409EFF;
+  color: #f0826a;
   text-decoration: none;
   margin: 0 3px;
 }
@@ -811,42 +982,49 @@ export default {
   text-decoration: underline;
 }
 
-.register-button {
+/* 注册按钮 */
+.register-btn {
   width: 100%;
-  height: 44px;
+  height: 46px;
   font-size: 16px;
-  font-weight: 500;
-  background: #409EFF;
+  font-weight: 600;
+  letter-spacing: 6px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   transition: all 0.3s;
 }
 
-.register-button:hover {
-  background: #66b1ff;
+.register-btn:hover {
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(245,158,75,0.35);
 }
 
-.register-button:disabled {
-  background: #a0cfff;
+.register-btn:disabled {
+  background: #f5d5b8;
   transform: none;
   box-shadow: none;
 }
 
+.register-btn.is-loading {
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
+}
+
+/* 底部 */
 .form-footer {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 22px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #f5ece6;
   font-size: 14px;
-  color: #606266;
+  color: #8c7068;
 }
 
 .login-link {
-  color: #409EFF;
+  color: #f0826a;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   margin-left: 4px;
 }
 
@@ -854,39 +1032,38 @@ export default {
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .register-card {
-    width: 95%;
+/* ========== 响应式 ========== */
+@media (max-width: 900px) {
+  .register-left {
+    display: none;
   }
 
-  .card-header {
-    padding: 24px 20px 16px;
+  .register-right {
+    flex: 1;
+    background: linear-gradient(170deg, #fef6f0 0%, #fdf8f5 50%, #fdf9f6 100%);
   }
 
-  .title {
-    font-size: 20px;
-  }
-
-  .step-indicator {
-    padding: 16px 20px;
-  }
-
-  .step-line {
-    width: 30px;
-  }
-
-  .step-circle {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-  }
-
-  .step-text {
-    font-size: 10px;
+  .form-wrapper {
+    width: 460px;
   }
 
   .register-form {
-    padding: 0 20px 24px;
+    padding: 28px 24px;
+  }
+
+  .form-title {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-wrapper {
+    width: 94%;
+  }
+
+  .register-form {
+    padding: 24px 18px;
+    border-radius: 12px;
   }
 
   .email-group {
@@ -898,12 +1075,12 @@ export default {
   }
 
   .avatar-preview {
-    width: 70px;
-    height: 70px;
+    width: 64px;
+    height: 64px;
   }
 
   .preview-avatar {
-    font-size: 28px;
+    font-size: 24px;
   }
 }
 </style>

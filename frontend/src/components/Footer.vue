@@ -42,7 +42,7 @@
           </div>
         </div>
 
-        <!-- 右侧：联系方式 - 两行两列 -->
+        <!-- 右侧：联系方式 -->
         <div class="footer-contact">
           <h4>联系我们</h4>
           <div class="contact-grid">
@@ -86,12 +86,12 @@ export default {
   name: 'Footer',
   data() {
     return {
-      siteName: '宠物服务系统',
-      siteDesc: '用心服务每一个宠物家庭',
-      copyright: 'Copyright © 2026 宠物服务系统 版权所有',
+      siteName: '喵汪星球',
+      siteDesc: '一站式宠物服务平台 · 让陪伴更长久',
+      copyright: 'Copyright © 2026 喵汪星球 版权所有',
       icp: '',
       servicePhone: '400-888-6666',
-      serviceEmail: 'service@petservice.com'
+      serviceEmail: 'service@petcare.com'
     };
   },
   created() {
@@ -99,51 +99,45 @@ export default {
   },
   methods: {
     loadSettings() {
-      // 先尝试从缓存读取
       const settings = localStorage.getItem('systemSettings');
       if (settings) {
         try {
           const basic = JSON.parse(settings).basic;
-          this.siteName = basic.siteName || '宠物服务系统';
-          this.siteDesc = basic.siteDesc || '用心服务每一个宠物家庭';
-          this.copyright = basic.copyright || 'Copyright © 2026 宠物服务系统 版权所有';
+          this.siteName = basic.siteName || '喵汪星球';
+          this.siteDesc = basic.siteDesc || '一站式宠物服务平台 · 让陪伴更长久';
+          this.copyright = basic.copyright || 'Copyright © 2026 喵汪星球 版权所有';
           this.icp = basic.icp || '';
           this.servicePhone = basic.servicePhone || '400-888-6666';
-          this.serviceEmail = basic.serviceEmail || 'service@petservice.com';
+          this.serviceEmail = basic.serviceEmail || 'service@petcare.com';
         } catch (e) {
           console.error('解析系统设置失败', e);
         }
       }
-
-      // 从后端获取最新设置
       this.fetchSettings();
-
-      // 监听设置更新事件
       this.$bus && this.$bus.$on('settings-loaded', (settings) => {
         if (settings && settings.basic) {
-          this.siteName = settings.basic.siteName || '宠物服务系统';
-          this.siteDesc = settings.basic.siteDesc || '用心服务每一个宠物家庭';
-          this.copyright = settings.basic.copyright || 'Copyright © 2026 宠物服务系统 版权所有';
+          this.siteName = settings.basic.siteName || '喵汪星球';
+          this.siteDesc = settings.basic.siteDesc || '一站式宠物服务平台 · 让陪伴更长久';
+          this.copyright = settings.basic.copyright || 'Copyright © 2026 喵汪星球 版权所有';
           this.icp = settings.basic.icp || '';
           this.servicePhone = settings.basic.servicePhone || '400-888-6666';
-          this.serviceEmail = settings.basic.serviceEmail || 'service@petservice.com';
+          this.serviceEmail = settings.basic.serviceEmail || 'service@petcare.com';
         }
       });
     },
 
-// 新增方法
     async fetchSettings() {
       try {
         const res = await getSettings();
         if (res.code === 200) {
           localStorage.setItem('systemSettings', JSON.stringify(res.data));
           const basic = res.data.basic;
-          this.siteName = basic.siteName || '宠物服务系统';
-          this.siteDesc = basic.siteDesc || '用心服务每一个宠物家庭';
-          this.copyright = basic.copyright || 'Copyright © 2026 宠物服务系统 版权所有';
+          this.siteName = basic.siteName || '喵汪星球';
+          this.siteDesc = basic.siteDesc || '一站式宠物服务平台 · 让陪伴更长久';
+          this.copyright = basic.copyright || 'Copyright © 2026 喵汪星球 版权所有';
           this.icp = basic.icp || '';
           this.servicePhone = basic.servicePhone || '400-888-6666';
-          this.serviceEmail = basic.serviceEmail || 'service@petservice.com';
+          this.serviceEmail = basic.serviceEmail || 'service@petcare.com';
         }
       } catch (error) {
         console.error('获取系统设置失败', error);
@@ -158,7 +152,7 @@ export default {
 
 <style scoped>
 .footer {
-  background: #1a2632;
+  background: #2d2420;
   color: #fff;
   position: relative;
   margin-top: auto;
@@ -194,38 +188,14 @@ export default {
 .logo-text {
   font-size: 20px;
   font-weight: 600;
-  color: white;
+  color: #fff;
 }
 
 .brand-desc {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
   line-height: 1.5;
   margin-bottom: 20px;
   font-size: 13px;
-}
-
-.social-links {
-  display: flex;
-  gap: 12px;
-}
-
-.social-link {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  transition: all 0.3s;
-  font-size: 16px;
-}
-
-.social-link:hover {
-  background: #409EFF;
-  color: white;
 }
 
 /* 链接区域 */
@@ -244,7 +214,7 @@ export default {
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 16px;
-  color: white;
+  color: #fff;
   position: relative;
   padding-bottom: 8px;
 }
@@ -256,7 +226,7 @@ export default {
   left: 0;
   width: 28px;
   height: 2px;
-  background: #409EFF;
+  background: #f59e4b;
 }
 
 .link-list {
@@ -266,7 +236,7 @@ export default {
 }
 
 .link-list a {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
   text-decoration: none;
   font-size: 13px;
   transition: all 0.3s;
@@ -274,15 +244,15 @@ export default {
 }
 
 .link-list a:hover {
-  color: #409EFF;
+  color: #f59e4b;
 }
 
-/* 联系方式区域 - 两行两列布局 */
+/* 联系方式 */
 .footer-contact h4 {
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 16px;
-  color: white;
+  color: #fff;
   position: relative;
   padding-bottom: 8px;
 }
@@ -294,7 +264,7 @@ export default {
   left: 0;
   width: 28px;
   height: 2px;
-  background: #409EFF;
+  background: #f59e4b;
 }
 
 .contact-grid {
@@ -314,58 +284,20 @@ export default {
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 12px;
 }
 
 .contact-item i {
   font-size: 16px;
-  color: #409EFF;
+  color: #f59e4b;
   width: 20px;
   flex-shrink: 0;
 }
 
-.contact-item span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 二维码 */
-.qrcode {
-  margin-top: 4px;
-}
-
-.qrcode-placeholder {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.qrcode-placeholder i {
-  font-size: 24px;
-  color: #409EFF;
-}
-
-.qrcode-placeholder span {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.qrcode-placeholder:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: #409EFF;
-}
-
 /* 底部版权 */
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 20px;
   text-align: center;
   display: flex;
@@ -375,20 +307,16 @@ export default {
 }
 
 .footer-bottom p {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   font-size: 12px;
   margin: 0;
 }
 
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 900px) {
   .footer-content {
     grid-template-columns: 1fr 1.5fr;
     gap: 30px;
-  }
-
-  .footer-links {
-    grid-column: span 1;
   }
 }
 
@@ -434,11 +362,6 @@ export default {
 
   .link-list {
     gap: 12px;
-  }
-
-  .qrcode-placeholder {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>

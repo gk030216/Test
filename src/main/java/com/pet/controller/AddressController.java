@@ -75,8 +75,11 @@ public class AddressController {
      * 更新地址
      */
     @PutMapping("/update")
-    public Result<?> updateAddress(@RequestBody Address address) {
+    public Result<?> updateAddress(@RequestBody Address address, HttpServletRequest request) {
         try {
+            // 注入 userId，确保 Service 层清除旧默认地址时能定位到用户
+            Integer userId = getUserId(request);
+            address.setUserId(userId);
             boolean success = addressService.updateAddress(address);
             if (success) {
                 return Result.success("更新成功");

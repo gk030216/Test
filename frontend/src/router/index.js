@@ -65,10 +65,10 @@ import Admin_PetHealthRecord from '@/views/admin/Admin_PetHealthRecord.vue';
 
 
 // 先导入员工布局组件
-import StaffLayout from '@/views/staff/StaffLayout.vue';
-import StaffDashboard from '@/views/staff/StaffDashboard.vue';
-import StaffAppointmentList from "@/views/staff/StaffAppointmentList.vue";
-import StaffPetList from "@/views/staff/StaffPetList.vue";
+import Staff_Layout from '@/views/staff/Staff_Layout.vue';
+import Staff_Dashboard from '@/views/staff/Staff_Dashboard.vue';
+import Staff_AppointmentList from "@/views/staff/Staff_AppointmentList.vue";
+import Staff_PetList from "@/views/staff/Staff_PetList.vue";
 
 // 后台服务列表
 import Admin_ServiceList from '@/views/admin/Admin_ServiceList.vue';
@@ -82,16 +82,16 @@ import Admin_PostCommentManage from '@/views/admin/Admin_PostCommentManage.vue';
 import Admin_AI_KnowledgeManage from '@/views/admin/Admin_AI_KnowledgeManage.vue';
 import Admin_AI_FaqManage from '@/views/admin/Admin_AI_FaqManage.vue';
 import Admin_AI_ChatHistory from '@/views/admin/Admin_AI_ChatHistory.vue';
-import StaffEvaluations from "@/views/staff/StaffEvaluations.vue";
-import StaffFeedback from "@/views/staff/StaffFeedback.vue";
+import StaffEvaluations from "@/views/staff/Staff_Evaluations.vue";
+import StaffFeedback from "@/views/staff/Staff_Feedback.vue";
 import Admin_VaccineStock from "@/views/admin/Admin_VaccineStock.vue";
 import Admin_ProductStock from "@/views/admin/Admin_ProductStock.vue";
 import Admin_ProductCommentAnalysis from "@/views/admin/Admin_ProductCommentAnalysis.vue";
 import Admin_ServiceCommentAnalysis from "@/views/admin/Admin_ServiceCommentAnalysis.vue";
 import Admin_AI_UserChatHistory from "@/views/admin/Admin_AI_UserChatHistory.vue";
 import Admin_Feedback from "@/views/admin/Admin_Feedback.vue";
-import StaffVaccineRecord from "@/views/staff/StaffVaccineRecord.vue";
-import StaffHealthRecord from "@/views/staff/StaffHealthRecord.vue";
+import StaffVaccineRecord from "@/views/staff/Staff_VaccineRecord.vue";
+import StaffHealthRecord from "@/views/staff/Staff_HealthRecord.vue";
 
 Vue.use(Router);
 
@@ -158,13 +158,13 @@ const router = new Router({
     // ========== 员工路由 ==========
     {
       path: '/staff',
-      component: StaffLayout,
+      component: Staff_Layout,
       meta: { requiresAuth: true, role: [2] },
       children: [
         { path: '', redirect: 'dashboard' },
-        { path: 'dashboard', component: StaffDashboard, meta: { title: '工作台' } },
-        { path: 'appointments', component: StaffAppointmentList, meta: { title: '预约管理' } },
-        { path: 'pet-list', component: StaffPetList, meta: { title: '宠物列表' } },
+        { path: 'dashboard', component: Staff_Dashboard, meta: { title: '工作台' } },
+        { path: 'appointments', component: Staff_AppointmentList, meta: { title: '预约管理' } },
+        { path: 'pet-list', component: Staff_PetList, meta: { title: '宠物列表' } },
         { path: 'evaluations', component: StaffEvaluations, meta: { title: '服务评价' } },
         { path: 'feedback-manage', component: StaffFeedback, meta: { title: '异常反馈' } },
         {

@@ -271,6 +271,7 @@ export default {
     this.loadData();
   },
   methods: {
+    // 优先从 localStorage 读取结算商品（由购物车跳转时存入），若无则从购物车选中项获取
     async loadData() {
       this.loading = true;
       try {
@@ -278,6 +279,7 @@ export default {
         if (items) {
           this.checkoutItems = JSON.parse(items);
         } else {
+          // 回退：直接从购物车获取选中商品
           const cartRes = await getCartList();
           if (cartRes.code === 200) {
             this.checkoutItems = cartRes.data.filter(item => item.selected === 1);
@@ -399,6 +401,7 @@ export default {
       });
     },
 
+    // 根据省/市/区名称反向查找 cascader 所需的 value 路径（三级嵌套遍历）
     findAreaCodes(province, city, district) {
       if (!province) return [];
       for (const p of this.areaOptions) {
@@ -425,6 +428,7 @@ export default {
       return [];
     },
 
+    // cascader 选中后，通过 code 反查省/市/区文本存入表单
     handleAreaChange(value) {
       if (value && value.length > 0) {
         const provinceItem = this.findItemByCode(this.areaOptions, value[0]);
@@ -547,12 +551,11 @@ export default {
 </script>
 
 <style scoped>
-/* 样式与之前相同，略作调整 */
 .checkout-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .checkout-content {
@@ -579,9 +582,9 @@ export default {
 
 .back-btn {
   border-radius: 8px;
-  color: #606266;
+  color: #7a6a62;
   background: white;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   padding: 8px 16px;
   font-size: 13px;
   transition: all 0.3s;
@@ -590,9 +593,9 @@ export default {
 }
 
 .back-btn:hover {
-  color: #409EFF;
-  border-color: #409EFF;
-  background: #ecf5ff;
+  color: #f0826a;
+  border-color: #f0826a;
+  background: #fef6f0;
 }
 
 .address-section {
@@ -600,7 +603,7 @@ export default {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .section-header {
@@ -610,24 +613,24 @@ export default {
   margin-bottom: 16px;
   font-weight: 600;
   font-size: 16px;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .section-header i {
   margin-right: 6px;
-  color: #409EFF;
+  color: #f0826a;
 }
 
 .section-header .el-button--text {
-  color: #409EFF;
+  color: #f0826a;
   font-weight: normal;
 }
 
 .selected-address {
-  background: #ecf5ff;
+  background: #fef6f0;
   border-radius: 12px;
   padding: 16px;
-  border: 1px solid #d9ecff;
+  border: 1px solid #f5ece6;
 }
 
 .address-card {
@@ -642,7 +645,7 @@ export default {
 
 .address-name {
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -652,7 +655,7 @@ export default {
 
 .address-phone {
   font-weight: normal;
-  color: #606266;
+  color: #7a6a62;
   font-size: 13px;
 }
 
@@ -663,42 +666,42 @@ export default {
 }
 
 .temp-tag {
-  background: #909399;
+  background: #a08c84;
   border: none;
   color: white;
 }
 
 .address-detail {
   font-size: 13px;
-  color: #606266;
+  color: #7a6a62;
   line-height: 1.5;
 }
 
 .address-tip {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #d9ecff;
+  border-top: 1px solid #f5ece6;
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .address-tip i {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 .no-address {
   text-align: center;
   padding: 40px 20px;
-  color: #909399;
+  color: #a08c84;
 }
 
 .no-address i {
   font-size: 48px;
   margin-bottom: 16px;
-  color: #c0c4cc;
+  color: #d0b8a8;
 }
 
 .no-address p {
@@ -711,12 +714,12 @@ export default {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .item-count {
   font-size: 13px;
-  color: #909399;
+  color: #a08c84;
   font-weight: normal;
 }
 
@@ -728,7 +731,7 @@ export default {
   display: flex;
   align-items: center;
   padding: 16px 0;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
 }
 
 .product-item:last-child {
@@ -741,7 +744,7 @@ export default {
   border-radius: 8px;
   object-fit: cover;
   margin-right: 16px;
-  background: #f5f7fa;
+  background: #fefbf9;
 }
 
 .product-info {
@@ -752,18 +755,18 @@ export default {
   margin-bottom: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .product-price {
-  color: #909399;
+  color: #a08c84;
   font-size: 13px;
 }
 
 .product-quantity {
   width: 80px;
   text-align: center;
-  color: #606266;
+  color: #7a6a62;
   font-size: 14px;
 }
 
@@ -780,14 +783,14 @@ export default {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
-  color: #606266;
+  color: #7a6a62;
   font-size: 14px;
 }
 
@@ -798,10 +801,10 @@ export default {
 .total-row {
   padding-top: 16px;
   margin-top: 12px;
-  border-top: 1px solid #eef2f6;
+  border-top: 1px solid #f5ece6;
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .total-price {
@@ -815,25 +818,28 @@ export default {
 }
 
 .submit-btn {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   border: none;
   padding: 14px 60px;
   font-size: 16px;
   font-weight: 500;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(240, 130, 106, 0.25);
 }
 
 .submit-btn:hover {
-  background: #66b1ff;
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(240, 130, 106, 0.35);
 }
 
 .submit-btn:disabled {
-  background: #a0cfff;
+  background: linear-gradient(135deg, #f7c99e, #f0b8a8);
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 /* 地址对话框样式 */
@@ -842,7 +848,7 @@ export default {
 }
 
 .address-dialog ::v-deep .el-dialog__header {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b 0%, #f0826a 100%);
   padding: 16px 20px;
   margin: 0;
   border-radius: 16px 16px 0 0;
@@ -854,7 +860,13 @@ export default {
 }
 
 .address-dialog ::v-deep .el-dialog__close {
-  color: white;
+  color: white !important;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.address-dialog ::v-deep .el-dialog__close:hover {
+  color: #f0f0f0 !important;
 }
 
 .address-dialog-content {
@@ -874,21 +886,21 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .address-item:hover {
-  border-color: #409EFF;
-  background: #ecf5ff;
+  border-color: #f0826a;
+  background: #fef6f0;
 }
 
 .address-item.active {
-  border-color: #409EFF;
-  background: #ecf5ff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  border-color: #f0826a;
+  background: #fef6f0;
+  box-shadow: 0 2px 8px rgba(240, 130, 106, 0.1);
 }
 
 .address-info {
@@ -897,7 +909,7 @@ export default {
 
 .address-name {
   font-weight: 500;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 6px;
   display: flex;
   align-items: center;
@@ -907,13 +919,13 @@ export default {
 
 .address-phone {
   font-weight: normal;
-  color: #909399;
+  color: #a08c84;
   font-size: 12px;
 }
 
 .address-detail {
   font-size: 12px;
-  color: #606266;
+  color: #7a6a62;
   line-height: 1.4;
 }
 
@@ -923,12 +935,12 @@ export default {
 }
 
 .address-actions .el-button--text {
-  color: #909399;
+  color: #a08c84;
   padding: 4px 8px;
 }
 
 .address-actions .el-button--text:hover {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 .address-actions .delete-btn:hover {
@@ -941,23 +953,23 @@ export default {
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  border: 1px dashed #dcdfe6;
+  border: 1px dashed #d0b8a8;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
-  color: #909399;
+  color: #a08c84;
 }
 
 .add-address-btn:hover {
-  border-color: #409EFF;
-  color: #409EFF;
-  background: #ecf5ff;
+  border-color: #f0826a;
+  color: #f0826a;
+  background: #fef6f0;
 }
 
 .address-form {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #eef2f6;
+  border-top: 1px solid #f5ece6;
 }
 
 .form-header {
@@ -966,12 +978,12 @@ export default {
   align-items: center;
   margin-bottom: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .form-header i {
   cursor: pointer;
-  color: #909399;
+  color: #a08c84;
   font-size: 18px;
 }
 
@@ -981,7 +993,7 @@ export default {
 
 .form-tip {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   margin-left: 12px;
 }
 
@@ -995,7 +1007,7 @@ export default {
 .dialog-footer {
   text-align: right;
   padding-top: 16px;
-  border-top: 1px solid #eef2f6;
+  border-top: 1px solid #f5ece6;
 }
 
 /* 响应式 */

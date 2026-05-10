@@ -72,7 +72,7 @@ public interface UserMapper {
     /**
      * 更新密码
      */
-    int updatePassword(@Param("email") String email, @Param("password") String password);
+    int updatePassword(@Param("id") Integer id, @Param("password") String password);
 
     /**
      * 更新用户状态

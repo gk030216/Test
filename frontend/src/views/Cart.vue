@@ -129,7 +129,7 @@ export default {
     totalAmount() {
       return this.cartList.filter(item => item.selected === true).reduce((sum, item) => sum + item.price * item.quantity, 0);
     },
-    // ✅ 检查是否有商品超出库存或库存不足
+    // 检查选中商品中是否有超出库存的
     hasOutOfStock() {
       return this.cartList.some(item => {
         if (!item.selected) return false;
@@ -142,6 +142,7 @@ export default {
     this.loadCart();
   },
   methods: {
+    // 加载购物车列表，并逐个查询商品的实时库存
     async loadCart() {
       this.loading = true;
       try {
@@ -152,7 +153,7 @@ export default {
             selected: item.selected === 1
           }));
 
-          // ✅ 获取每个商品的实时库存
+          // 逐个查询商品实时库存，超出库存时自动修正数量
           for (let item of cartData) {
             try {
               const productRes = await getProductById(item.productId);
@@ -181,7 +182,7 @@ export default {
     },
 
     async updateQuantity(item) {
-      // ✅ 库存检查
+      // 库存检查：超出库存时自动修正为最大可购数
       if (item.stock !== undefined && item.quantity > item.stock) {
         this.$message.warning(`商品"${item.productName}"库存不足，最多可购 ${item.stock} 件`);
         item.quantity = item.stock;
@@ -196,7 +197,6 @@ export default {
       try {
         await updateCartQuantity(item.id, item.quantity);
         this.$bus.$emit('cart-updated');
-        // this.$message.success('数量已更新');
       } catch (error) {
         this.$message.error('更新失败');
         this.loadCart();
@@ -264,7 +264,7 @@ export default {
     },
 
     goToCheckout() {
-      // ✅ 结算前再次检查库存
+      // 结算前再次检查库存，确保选中商品均未超量
       const outOfStockItems = this.cartList.filter(item => {
         return item.selected && item.stock !== undefined && item.quantity > item.stock;
       });
@@ -293,7 +293,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .cart-content {
@@ -321,9 +321,9 @@ export default {
 
 .back-btn {
   border-radius: 8px;
-  color: #606266;
+  color: #7a6a62;
   background: white;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   padding: 8px 16px;
   font-size: 13px;
   transition: all 0.3s;
@@ -332,15 +332,15 @@ export default {
 }
 
 .back-btn:hover {
-  color: #409EFF;
-  border-color: #409EFF;
-  background: #ecf5ff;
+  color: #f0826a;
+  border-color: #f0826a;
+  background: #fef6f0;
 }
 
 .page-title {
   font-size: 24px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 24px;
 }
 
@@ -350,43 +350,43 @@ export default {
   padding: 80px;
   background: white;
   border-radius: 12px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .empty-cart i {
   font-size: 80px;
-  color: #c0c4cc;
+  color: #d0b8a8;
   margin-bottom: 20px;
 }
 
 .empty-cart p {
   font-size: 16px;
-  color: #909399;
+  color: #a08c84;
   margin-bottom: 20px;
 }
 
 .empty-cart .el-button {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   border: none;
   border-radius: 8px;
 }
 
 .empty-cart .el-button:hover {
-  background: #66b1ff;
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
 }
 
 /* 购物车表头 */
 .cart-header {
   display: grid;
   grid-template-columns: 50px 1fr 100px 120px 100px 80px;
-  background: #f8f9fc;
+  background: #fefbf9;
   padding: 14px 20px;
   border-radius: 8px;
   margin-bottom: 12px;
-  color: #606266;
+  color: #7a6a62;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 /* 购物车商品项 */
@@ -398,14 +398,14 @@ export default {
   border-radius: 8px;
   margin-bottom: 12px;
   align-items: center;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   transition: all 0.3s;
   position: relative;
 }
 
 .cart-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border-color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(180, 120, 90, 0.08);
+  border-color: #e8c8b0;
 }
 
 /* 商品信息 */
@@ -420,14 +420,14 @@ export default {
   height: 70px;
   border-radius: 8px;
   object-fit: cover;
-  background: #f5f7fa;
+  background: #fefbf9;
 }
 
 .item-detail h4 {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 6px;
-  color: #2c3e50;
+  color: #3d2e2a;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -452,8 +452,8 @@ export default {
 
 .item-quantity ::v-deep .el-input-number__decrease,
 .item-quantity ::v-deep .el-input-number__increase {
-  background: #f5f7fa;
-  border-color: #eef2f6;
+  background: #fefbf9;
+  border-color: #f5ece6;
 }
 
 /* 库存不足警告 */
@@ -476,7 +476,7 @@ export default {
 
 /* 删除按钮 */
 .item-actions .el-button {
-  color: #909399;
+  color: #a08c84;
   font-size: 13px;
 }
 
@@ -494,11 +494,11 @@ export default {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .footer-left .el-button {
-  color: #909399;
+  color: #a08c84;
 }
 
 .footer-left .el-button:hover {
@@ -517,7 +517,7 @@ export default {
 
 .total-info span {
   font-size: 14px;
-  color: #606266;
+  color: #7a6a62;
 }
 
 .total-info strong {
@@ -553,39 +553,42 @@ export default {
 
 /* 结算按钮 */
 .checkout-btn {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   border: none;
   padding: 10px 32px;
   font-size: 15px;
   font-weight: 500;
   border-radius: 8px;
   transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(240, 130, 106, 0.2);
 }
 
 .checkout-btn:hover {
-  background: #66b1ff;
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(240, 130, 106, 0.3);
 }
 
 .checkout-btn:disabled {
-  background: #a0cfff;
+  background: linear-gradient(135deg, #f7c99e, #f0b8a8);
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
-/* 复选框样式优化 */
+/* 复选框样式 */
 ::v-deep .el-checkbox__inner {
   border-radius: 3px;
-  border-color: #dcdfe6;
+  border-color: #d0b8a8;
 }
 
 ::v-deep .el-checkbox__inner:hover {
-  border-color: #409EFF;
+  border-color: #f0826a;
 }
 
 ::v-deep .el-checkbox__input.is-checked .el-checkbox__inner {
-  background-color: #409EFF;
-  border-color: #409EFF;
+  background-color: #f0826a;
+  border-color: #f0826a;
 }
 
 /* 响应式 */

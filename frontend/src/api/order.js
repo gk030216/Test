@@ -46,6 +46,15 @@ export function payOrder(data) {
     });
 }
 
+// 主动查询支付结果（向支付宝查询并更新数据库）
+export function queryPayResult(data) {
+    return request({
+        url: '/order/query-pay-result',
+        method: 'post',
+        data
+    });
+}
+
 // ============= 管理员接口 =============
 
 // 获取订单列表（后台）

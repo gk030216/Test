@@ -52,6 +52,10 @@ public class JwtInterceptor implements HandlerInterceptor {
         if (requestUri.equals("/api/service/hot") || requestUri.equals("/api/service/hot/list")) {
             return true;
         }
+        // 服务推荐（未登录用户使用物品协同过滤）
+        if (requestUri.startsWith("/api/service/recommend")) {
+            return true;
+        }
 
         // 服务评价列表
         if (requestUri.matches("/api/service/comment/service/\\d+")) {
@@ -77,6 +81,10 @@ public class JwtInterceptor implements HandlerInterceptor {
         }
         // 热门商品
         if (requestUri.equals("/api/product/hot")) {
+            return true;
+        }
+        // 商品推荐（未登录用户使用物品协同过滤）
+        if (requestUri.startsWith("/api/product/recommend")) {
             return true;
         }
         // 新品商品

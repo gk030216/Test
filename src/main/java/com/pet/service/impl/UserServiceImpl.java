@@ -107,10 +107,10 @@ public class UserServiceImpl implements UserService {
         }
 
         String encryptedPassword = MD5Util.encrypt(request.getNewPassword());
-        int result = userMapper.updatePassword(request.getEmail(), encryptedPassword);
+        int result = userMapper.updatePassword(user.getId(), encryptedPassword);
 
         if (result > 0) {
-            // ✅ 不需要再标记验证码已使用
+            // 不需要再标记验证码已使用
             return true;
         }
 
@@ -223,7 +223,7 @@ public class UserServiceImpl implements UserService {
 
         // 加密新密码并更新
         String encryptedPassword = MD5Util.encrypt(newPassword);
-        return userMapper.updatePassword(user.getEmail(), encryptedPassword) > 0;
+        return userMapper.updatePassword(userId, encryptedPassword) > 0;
     }
 
     @Override

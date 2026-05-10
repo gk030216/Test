@@ -141,14 +141,14 @@
                 <i class="el-icon-check" /> 确认
               </el-button>
               <el-button
-                v-if="scope.row.status === 1"
+                v-if="scope.row.status === 1 && isToday(scope.row.appointmentDate)"
                 type="text" size="small"
                 @click="handleStart(scope.row)" class="act-start"
               >
                 <i class="el-icon-caret-right" /> 开始
               </el-button>
               <el-button
-                v-if="scope.row.status === 2"
+                v-if="scope.row.status === 2 && isToday(scope.row.appointmentDate)"
                 type="text" size="small"
                 @click="handleComplete(scope.row)" class="act-complete"
               >
@@ -294,12 +294,12 @@
                     <el-tag :type="staff.hasConflict ? 'danger' : 'success'" size="mini" v-if="staff.hasConflict">
                       时间冲突
                     </el-tag>
-                    <el-tag v-else-if="staff.matchScore >= 80" size="mini" type="success">推荐</el-tag>
+                    <el-tag v-else-if="staff.matchScore >= 0.8" size="mini" type="success">推荐</el-tag>
                   </div>
                   <div class="match-score-row" :class="{ 'no-match': staff.matchScore === 0 }">
                     <span class="match-label">匹配度：</span>
-                    <el-progress :percentage="staff.matchScore" :color="getMatchColor(staff.matchScore)" :stroke-width="8" :show-text="false" style="flex: 1; margin: 0 10px;" />
-                    <span class="match-value">{{ staff.matchScore || 0 }}%</span>
+                    <el-progress :percentage="staff.matchScore * 100" :color="getMatchColor(staff.matchScore)" :stroke-width="8" :show-text="false" style="flex: 1; margin: 0 10px;" />
+                    <span class="match-value">{{ (staff.matchScore * 100).toFixed(0) || 0 }}%</span>
                   </div>
                   <div class="staff-stats">
                     <el-tag size="mini" type="primary"><i class="el-icon-s-order" /> 服务{{ staff.serviceCount || 0 }}次</el-tag>
@@ -357,8 +357,8 @@
                   </div>
                   <div class="match-score-row" v-if="staff.matchScore > 0">
                     <span class="match-label">匹配度：</span>
-                    <el-progress :percentage="staff.matchScore" :color="getMatchColor(staff.matchScore)" :stroke-width="8" :show-text="false" style="flex: 1; margin: 0 10px;" />
-                    <span class="match-value">{{ staff.matchScore }}%</span>
+                    <el-progress :percentage="staff.matchScore * 100" :color="getMatchColor(staff.matchScore)" :stroke-width="8" :show-text="false" style="flex: 1; margin: 0 10px;" />
+                    <span class="match-value">{{ (staff.matchScore * 100).toFixed(0) }}%</span>
                   </div>
                   <div class="staff-stats">
                     <el-tag size="mini" type="primary">服务{{ staff.serviceCount || 0 }}次</el-tag>
@@ -493,9 +493,9 @@ export default {
     },
 
     getMatchColor(score) {
-      if (score >= 80) return '#67c23a';
-      if (score >= 60) return '#409EFF';
-      if (score >= 40) return '#e6a23c';
+      if (score >= 0.8) return '#67c23a';
+      if (score >= 0.6) return '#409EFF';
+      if (score >= 0.4) return '#e6a23c';
       return '#f56c6c';
     },
 
@@ -601,6 +601,14 @@ export default {
       if (!date) return '';
       const d = new Date(date);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    },
+    isToday(date) {
+      if (!date) return false;
+      const d = new Date(date);
+      const today = new Date();
+      return d.getFullYear() === today.getFullYear() &&
+             d.getMonth() === today.getMonth() &&
+             d.getDate() === today.getDate();
     },
 
     handleSearch() { this.page = 1; this.loadList(); this.loadStatistics(); },

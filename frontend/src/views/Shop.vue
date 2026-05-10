@@ -18,28 +18,28 @@
         <div class="category-nav">
           <div class="category-list">
             <span
-                :class="['category-item', { active: currentCategory === null }]"
-                @click="handleCategoryChange(null)"
+              :class="['category-item', { active: currentCategory === null }]"
+              @click="handleCategoryChange(null)"
             >
               全部
             </span>
             <span
-                v-for="cat in topCategories"
-                :key="cat.id"
-                :class="['category-item', { active: currentCategory === cat.id }]"
-                @click="handleCategoryChange(cat.id)"
+              v-for="cat in topCategories"
+              :key="cat.id"
+              :class="['category-item', { active: currentCategory === cat.id }]"
+              @click="handleCategoryChange(cat.id)"
             >
               {{ cat.name }}
             </span>
           </div>
           <div class="search-box">
             <el-input
-                v-model="keyword"
-                placeholder="搜索商品"
-                size="medium"
-                @keyup.enter="handleSearch"
-                clearable
-                prefix-icon="el-icon-search"
+              v-model="keyword"
+              placeholder="搜索商品"
+              size="medium"
+              @keyup.enter="handleSearch"
+              clearable
+              prefix-icon="el-icon-search"
             >
               <el-button slot="append" @click="handleSearch">搜索</el-button>
             </el-input>
@@ -51,16 +51,16 @@
           <div class="sub-category-title">子分类：</div>
           <div class="sub-category-list">
             <span
-                :class="['sub-category-item', { active: currentSubCategory === null }]"
-                @click="handleSubCategoryChange(null)"
+              :class="['sub-category-item', { active: currentSubCategory === null }]"
+              @click="handleSubCategoryChange(null)"
             >
               全部
             </span>
             <span
-                v-for="cat in subCategories"
-                :key="cat.id"
-                :class="['sub-category-item', { active: currentSubCategory === cat.id }]"
-                @click="handleSubCategoryChange(cat.id)"
+              v-for="cat in subCategories"
+              :key="cat.id"
+              :class="['sub-category-item', { active: currentSubCategory === cat.id }]"
+              @click="handleSubCategoryChange(cat.id)"
             >
               {{ cat.name }}
             </span>
@@ -78,10 +78,10 @@
         <!-- 商品网格 -->
         <div class="products-grid" v-loading="loading">
           <div
-              v-for="product in productList"
-              :key="product.id"
-              class="product-card"
-              @click="goToDetail(product.id)"
+            v-for="product in productList"
+            :key="product.id"
+            class="product-card"
+            @click="goToDetail(product.id)"
           >
             <div class="product-image">
               <img :src="product.image" :alt="product.name">
@@ -104,18 +104,18 @@
                   </span>
                 </div>
                 <el-tooltip
-                    :content="getCartButtonTooltip(product)"
-                    placement="top"
+                  :content="getCartButtonTooltip(product)"
+                  placement="top"
                 >
                   <el-button
-                      size="small"
-                      :type="getCartButtonType(product)"
-                      :plain="!isInCart(product.id) && product.stock > 0"
-                      circle
-                      @click.stop="handleCartAction($event, product)"
-                      :disabled="(addingProductId === product.id) || (!isInCart(product.id) && product.stock <= 0)"
-                      :loading="addingProductId === product.id"
-                      class="add-cart-icon"
+                    size="small"
+                    :type="getCartButtonType(product)"
+                    :plain="!isInCart(product.id) && product.stock > 0"
+                    circle
+                    @click.stop="handleCartAction($event, product)"
+                    :disabled="(addingProductId === product.id) || (!isInCart(product.id) && product.stock <= 0)"
+                    :loading="addingProductId === product.id"
+                    class="add-cart-icon"
                   >
                     <i :class="getCartButtonIcon(product)"></i>
                   </el-button>
@@ -134,12 +134,12 @@
         <!-- 分页 -->
         <div class="pagination" v-if="total > pageSize">
           <el-pagination
-              @current-change="handlePageChange"
-              :current-page="page"
-              :page-size="pageSize"
-              layout="prev, pager, next"
-              :total="total"
-              background
+            @current-change="handlePageChange"
+            :current-page="page"
+            :page-size="pageSize"
+            layout="prev, pager, next"
+            :total="total"
+            background
           />
         </div>
       </div>
@@ -158,15 +158,15 @@
 
     <!-- 飞行动画元素 -->
     <div
-        v-for="flyItem in flyingItems"
-        :key="flyItem.id"
-        class="flying-item"
-        :style="{
-          left: flyItem.startX + 'px',
-          top: flyItem.startY + 'px',
-          '--end-x': (flyItem.endX - flyItem.startX) + 'px',
-          '--end-y': (flyItem.endY - flyItem.startY) + 'px'
-        }"
+      v-for="flyItem in flyingItems"
+      :key="flyItem.id"
+      class="flying-item"
+      :style="{
+        left: flyItem.startX + 'px',
+        top: flyItem.startY + 'px',
+        '--end-x': (flyItem.endX - flyItem.startX) + 'px',
+        '--end-y': (flyItem.endY - flyItem.startY) + 'px'
+      }"
     >
       <img :src="flyItem.image" :alt="flyItem.name">
     </div>
@@ -208,14 +208,12 @@ export default {
     };
   },
   computed: {
-    // 判断是否登录
     isLoggedIn() {
       return !!localStorage.getItem('token');
     }
   },
   created() {
     this.loadCategories();
-    // ✅ 只有登录后才加载购物车相关数据
     if (this.isLoggedIn) {
       this.loadCartSummary();
       this.loadCartList();
@@ -241,7 +239,6 @@ export default {
     },
 
     getCartButtonTooltip(product) {
-      // ✅ 未登录时显示请先登录
       if (!this.isLoggedIn) return '请先登录';
       if (product.stock <= 0) return '库存不足';
       if (this.isInCart(product.id)) return '移出购物车';
@@ -249,7 +246,6 @@ export default {
     },
 
     getCartButtonType(product) {
-      // ✅ 未登录时按钮为灰色
       if (!this.isLoggedIn) return 'info';
       if (this.isInCart(product.id)) return 'danger';
       if (product.stock <= 0) return 'info';
@@ -257,7 +253,6 @@ export default {
     },
 
     getCartButtonIcon(product) {
-      // ✅ 未登录时显示用户图标
       if (!this.isLoggedIn) return 'el-icon-user';
       if (this.isInCart(product.id)) return 'el-icon-delete';
       if (product.stock <= 0) return 'el-icon-close';
@@ -265,7 +260,6 @@ export default {
     },
 
     async loadCartList() {
-      // ✅ 未登录不调用
       if (!this.isLoggedIn) return;
       try {
         const res = await getCartList();
@@ -281,7 +275,6 @@ export default {
     },
 
     async refreshCartData() {
-      // ✅ 未登录不调用
       if (!this.isLoggedIn) return;
       await this.loadCartSummary();
       await this.loadCartList();
@@ -302,7 +295,6 @@ export default {
     },
 
     async loadCartSummary() {
-      // ✅ 未登录时不调用接口，使用本地存储
       if (!this.isLoggedIn) {
         const cart = JSON.parse(localStorage.getItem('cart') || '[]');
         this.cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -343,8 +335,6 @@ export default {
           keyword: this.keyword || undefined,
         };
 
-        console.log('请求商品列表参数:', params);  // ✅ 移到对象外面
-
         if (categoryId !== null && categoryId !== undefined) {
           params.categoryId = categoryId;
         }
@@ -354,7 +344,6 @@ export default {
         if (this.sortType === 'sales') params.sort = 'sales';
 
         const res = await getProductList(params);
-        console.log('商品列表返回:', res);  // ✅ 移到正确位置
 
         if (res.code === 200) {
           this.productList = res.data.list || [];
@@ -407,7 +396,6 @@ export default {
     },
 
     goToCart() {
-      // ✅ 未登录时提示登录
       if (!this.isLoggedIn) {
         this.$confirm('请先登录，查看购物车', '提示', {
           confirmButtonText: '去登录',
@@ -422,7 +410,6 @@ export default {
     },
 
     async handleCartAction(event, product) {
-      // ✅ 未登录时提示登录
       if (!this.isLoggedIn) {
         this.$confirm('请先登录，加入购物车', '提示', {
           confirmButtonText: '去登录',
@@ -567,12 +554,11 @@ export default {
 </script>
 
 <style scoped>
-/* 样式与之前相同，添加移出动画 */
 .shop-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .shop-content {
@@ -602,13 +588,13 @@ export default {
 .page-title {
   font-size: 24px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin: 0 0 4px 0;
 }
 
 .page-desc {
   font-size: 13px;
-  color: #909399;
+  color: #a08c84;
   margin: 0;
 }
 
@@ -623,8 +609,8 @@ export default {
   background: white;
   padding: 12px 20px;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #eef2f6;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
+  border: 1px solid #f5ece6;
 }
 
 .category-list {
@@ -639,19 +625,19 @@ export default {
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s;
-  background: #f5f7fa;
-  color: #606266;
+  background: #fefbf9;
+  color: #7a6a62;
   font-weight: 500;
   font-size: 13px;
 }
 
 .category-item:hover {
-  background: #ecf5ff;
-  color: #409EFF;
+  background: #fef6f0;
+  color: #f0826a;
 }
 
 .category-item.active {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   color: white;
 }
 
@@ -660,18 +646,18 @@ export default {
 }
 
 .search-box ::v-deep .el-input-group__append {
-  background: #409EFF;
-  border-color: #409EFF;
+  background: #f59e4b;
+  border-color: #f59e4b;
 }
 
 .search-box ::v-deep .el-input-group__append .el-button {
-  background: #409EFF;
+  background: #f59e4b;
   border: none;
   color: white;
 }
 
 .search-box ::v-deep .el-input-group__append .el-button:hover {
-  background: #66b1ff;
+  background: #f7b06a;
 }
 
 /* 二级分类 */
@@ -683,13 +669,13 @@ export default {
   padding: 10px 16px;
   background: white;
   border-radius: 8px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   flex-wrap: wrap;
 }
 
 .sub-category-title {
   font-size: 13px;
-  color: #909399;
+  color: #b8a098;
   font-weight: 500;
 }
 
@@ -704,20 +690,20 @@ export default {
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s;
-  background: #f5f7fa;
-  color: #606266;
+  background: #fefbf9;
+  color: #7a6a62;
   font-size: 12px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .sub-category-item:hover {
-  border-color: #409EFF;
-  color: #409EFF;
-  background: #ecf5ff;
+  border-color: #f59e4b;
+  color: #f0826a;
+  background: #fef6f0;
 }
 
 .sub-category-item.active {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   color: white;
   border: none;
 }
@@ -728,19 +714,19 @@ export default {
   gap: 24px;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
 }
 
 .sort-item {
   cursor: pointer;
-  color: #909399;
+  color: #b8a098;
   font-size: 13px;
   transition: color 0.3s;
 }
 
 .sort-item:hover,
 .sort-item.active {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 /* 商品网格 */
@@ -754,23 +740,23 @@ export default {
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
   transition: all 0.3s;
   cursor: pointer;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .product-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #e0e0e0;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(180, 120, 90, 0.12);
+  border-color: #e8c8b0;
 }
 
 .product-image {
   position: relative;
   height: 200px;
   overflow: hidden;
-  background: #f5f7fa;
+  background: #fefbf9;
 }
 
 .product-image img {
@@ -818,7 +804,7 @@ export default {
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #2c3e50;
+  color: #3d2e2a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -826,7 +812,7 @@ export default {
 
 .product-desc {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   margin-bottom: 10px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -849,7 +835,7 @@ export default {
 }
 
 .original-price {
-  color: #c0c4cc;
+  color: #c4b0a6;
   text-decoration: line-through;
   font-size: 12px;
 }
@@ -869,12 +855,12 @@ export default {
 
 .sales {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #c4b0a6;
 }
 
 .stock {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #c4b0a6;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -888,7 +874,6 @@ export default {
   color: #f56c6c;
 }
 
-/* 图标按钮样式 */
 .add-cart-icon {
   width: 32px;
   height: 32px;
@@ -910,7 +895,7 @@ export default {
   50% { transform: scale(0.9); }
 }
 
-/* 圆形悬浮购物车 */
+/* 悬浮购物车 */
 .floating-cart {
   position: fixed;
   bottom: 100px;
@@ -918,8 +903,8 @@ export default {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: #409EFF;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
+  box-shadow: 0 4px 14px rgba(245, 158, 75, 0.4);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -931,7 +916,7 @@ export default {
 
 .floating-cart:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
+  box-shadow: 0 6px 18px rgba(245, 158, 75, 0.5);
 }
 
 .floating-cart.cart-bounce {
@@ -975,7 +960,7 @@ export default {
   margin-top: 2px;
 }
 
-/* 飞行动画元素 */
+/* 飞行动画 */
 .flying-item {
   position: fixed;
   width: 40px;
@@ -1015,14 +1000,14 @@ export default {
   padding: 60px;
   background: white;
   border-radius: 12px;
-  color: #909399;
-  border: 1px solid #eef2f6;
+  color: #b8a098;
+  border: 1px solid #f5ece6;
 }
 
 .empty-state i {
   font-size: 64px;
   margin-bottom: 16px;
-  color: #c0c4cc;
+  color: #d0b8a8;
 }
 
 .pagination {

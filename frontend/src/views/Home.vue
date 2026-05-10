@@ -23,7 +23,7 @@
                 <div class="item-image" :style="{ backgroundImage: `url(${item.image})` }">
                   <div class="item-overlay"></div>
                   <div class="item-content">
-                    <h3>{{ item.title || '宠物服务系统' }}</h3>
+                    <h3>{{ item.title || '喵汪星球' }}</h3>
                     <p v-if="item.linkUrl">点击查看详情</p>
                   </div>
                 </div>
@@ -50,7 +50,7 @@
           <div class="quick-entry-grid">
             <div class="quick-entry-item" @click="goToServices">
               <div class="quick-icon">
-                <i class="el-icon-s-order"></i>
+                <span class="icon-emoji">📅</span>
               </div>
               <div class="quick-text">
                 <h4>在线预约</h4>
@@ -59,7 +59,7 @@
             </div>
             <div class="quick-entry-item" @click="goToShop">
               <div class="quick-icon">
-                <i class="el-icon-shopping-cart-2"></i>
+                <span class="icon-emoji">🛒</span>
               </div>
               <div class="quick-text">
                 <h4>宠物商城</h4>
@@ -68,7 +68,7 @@
             </div>
             <div class="quick-entry-item" @click="goToCommunity">
               <div class="quick-icon">
-                <i class="el-icon-chat-dot-round"></i>
+                <span class="icon-emoji">💬</span>
               </div>
               <div class="quick-text">
                 <h4>宠物社区</h4>
@@ -77,7 +77,7 @@
             </div>
             <div class="quick-entry-item" @click="goToAIChat">
               <div class="quick-icon">
-                <i class="el-icon-cpu"></i>
+                <span class="icon-emoji">🤖</span>
               </div>
               <div class="quick-text">
                 <h4>AI智能顾问</h4>
@@ -96,7 +96,7 @@
             <div class="announcement-box" v-if="notices.length > 0">
               <div class="box-header">
                 <div class="header-icon">
-                  <i class="el-icon-megaphone"></i>
+                  <span class="header-emoji">📢</span>
                   <h3>最新公告</h3>
                 </div>
                 <router-link to="/notices" class="more-btn">
@@ -131,7 +131,7 @@
             <div class="services-box">
               <div class="box-header">
                 <div class="header-icon">
-                  <i class="el-icon-star-on"></i>
+                  <span class="header-emoji">🔥</span>
                   <h3>热门推荐</h3>
                 </div>
                 <router-link to="/services" class="more-btn">
@@ -144,7 +144,7 @@
                     <img :src="service.image" :alt="service.name">
                   </div>
                   <div class="service-avatar service-default-icon" v-else>
-                    <i class="el-icon-service"></i>
+                    <span class="default-paw">🐾</span>
                   </div>
                   <div class="service-info">
                     <h4 class="service-name">{{ service.name }}</h4>
@@ -296,9 +296,9 @@ export default {
     displayItems() {
       if (this.banners.length === 0) {
         return [
-          { image: '', title: '宠物服务系统', linkUrl: '' },
-          { image: '', title: '宠物服务系统', linkUrl: '' },
-          { image: '', title: '宠物服务系统', linkUrl: '' }
+          { image: '', title: '喵汪星球', linkUrl: '' },
+          { image: '', title: '喵汪星球', linkUrl: '' },
+          { image: '', title: '喵汪星球', linkUrl: '' }
         ];
       }
 
@@ -375,7 +375,6 @@ export default {
     },
 
     async loadPosts() {
-      // 移除登录判断，未登录也能查看社区帖子
       this.postsLoading = true;
       try {
         const res = await getPostList({ page: 1, pageSize: 3, sort: 'hot' });
@@ -384,7 +383,6 @@ export default {
         }
       } catch (error) {
         console.error('加载帖子失败', error);
-        // 未登录时可能返回401，设置为空数组
         this.communityPosts = [];
       } finally {
         this.postsLoading = false;
@@ -407,7 +405,6 @@ export default {
       this.dialogVisible = true;
     },
 
-    // 公告类型样式类（用于详情弹窗）
     getNoticeTypeClass(type) {
       const typeMap = {
         1: 'type-service',
@@ -419,7 +416,6 @@ export default {
       return typeMap[type] || 'type-system';
     },
 
-    // 公告标签样式类（用于列表中的badge）
     getNoticeBadgeClass(type) {
       const typeMap = {
         1: 'badge-service',
@@ -431,7 +427,6 @@ export default {
       return typeMap[type] || 'badge-system';
     },
 
-    // 公告类型文本
     getNoticeTypeText(type) {
       const typeMap = {
         1: '服务公告',
@@ -512,6 +507,17 @@ export default {
     },
 
     goToAIChat() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录，才能使用AI智能咨询', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        }).catch(() => {});
+        return;
+      }
       this.$router.push('/ai-chat');
     },
 
@@ -524,6 +530,17 @@ export default {
     },
 
     goToCommunity() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.$confirm('请先登录，才能访问宠物社区', '提示', {
+          confirmButtonText: '去登录',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.$router.push('/login');
+        }).catch(() => {});
+        return;
+      }
       this.$router.push('/community');
     },
 
@@ -545,7 +562,7 @@ export default {
     startAutoplay() {
       this.autoplayTimer = setInterval(() => {
         this.nextSlide();
-      }, 5000);
+      }, 3000);
     },
 
     stopAutoplay() {
@@ -568,7 +585,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .main-content {
@@ -581,10 +598,10 @@ export default {
   padding: 0 20px;
 }
 
-/* ========== 轮播图样式 ========== */
+/* ========== 轮播图区域 ========== */
 .hero-section {
   margin-bottom: 30px;
-  background: linear-gradient(135deg, #f0f2f5 0%, #e8eaef 100%);
+  background: linear-gradient(160deg, #fef6f0 0%, #fdf0e8 100%);
   padding: 20px 0;
 }
 
@@ -613,12 +630,12 @@ export default {
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 10;
-  color: #2c3e50;
+  color: #3d2e2a;
   font-size: 18px;
 }
 
 .carousel-arrow:hover {
-  background: #409EFF;
+  background: #f59e4b;
   color: white;
   transform: scale(1.05);
 }
@@ -743,20 +760,20 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #c0c4cc;
+  background: #d0b8a8;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .dot:hover {
-  background: #909399;
+  background: #b8a098;
   transform: scale(1.2);
 }
 
 .dot.active {
   width: 24px;
   border-radius: 4px;
-  background: #409EFF;
+  background: #f59e4b;
 }
 
 /* ========== 快速入口区域 ========== */
@@ -779,40 +796,40 @@ export default {
   gap: 15px;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(180, 120, 90, 0.06);
+  border: 1px solid #f5ece6;
 }
 
 .quick-entry-item:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(64, 158, 255, 0.15);
-  border-color: #409EFF;
+  box-shadow: 0 8px 20px rgba(245, 158, 75, 0.15);
+  border-color: #f59e4b;
 }
 
 .quick-icon {
   width: 50px;
   height: 50px;
-  background: linear-gradient(135deg, #409EFF, #66b1ff);
+  background: linear-gradient(135deg, #fef0e8, #fde0d4);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.quick-icon i {
+.icon-emoji {
   font-size: 24px;
-  color: white;
 }
 
 .quick-text h4 {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 4px;
 }
 
 .quick-text p {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
 }
 
 /* ========== 公告+服务并行区域 ========== */
@@ -825,34 +842,23 @@ export default {
   gap: 24px;
 }
 
-/* 左侧公告区域 */
-.announcement-box {
-  flex: 1;
-  background: white;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eef2f6;
-}
-
-/* 右侧服务区域 */
+.announcement-box,
 .services-box {
   flex: 1;
   background: white;
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eef2f6;
+  box-shadow: 0 2px 12px rgba(180, 120, 90, 0.06);
+  border: 1px solid #f5ece6;
 }
 
-/* 盒子头部 */
 .box-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #409EFF;
+  border-bottom: 2px solid #f59e4b;
 }
 
 .header-icon {
@@ -861,27 +867,26 @@ export default {
   gap: 8px;
 }
 
-.header-icon i {
-  font-size: 22px;
-  color: #409EFF;
+.header-emoji {
+  font-size: 20px;
 }
 
 .header-icon h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin: 0;
 }
 
 .more-btn {
-  color: #909399;
+  color: #b8a098;
   text-decoration: none;
   font-size: 12px;
   transition: all 0.3s;
 }
 
 .more-btn:hover {
-  color: #409EFF;
+  color: #f59e4b;
 }
 
 .more-btn i {
@@ -905,67 +910,31 @@ export default {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #f8f9fa;
+  background: #fefbf9;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .announcement-item:hover {
-  background: #e8f4ff;
+  background: #fef6f0;
   transform: translateX(3px);
 }
 
-/* 公告标签样式 - 5种类型 */
-.badge-service {
-  background: #67C23A;
-  color: white;
+.announcement-badge {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
+  color: white;
 }
 
-.badge-shop {
-  background: #E6A23C;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.badge-community {
-  background: #409EFF;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.badge-system {
-  background: #909399;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.badge-other {
-  background: #F56C6C;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
+.badge-service  { background: #67C23A; }
+.badge-shop     { background: #E6A23C; }
+.badge-community { background: #f59e4b; }
+.badge-system   { background: #909399; }
+.badge-other    { background: #F56C6C; }
 
 .announcement-info {
   flex: 1;
@@ -975,7 +944,7 @@ export default {
 .announcement-title {
   font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -984,7 +953,7 @@ export default {
 
 .announcement-summary {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -992,7 +961,7 @@ export default {
 
 .announcement-time {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #c4b0a6;
   white-space: nowrap;
 }
 
@@ -1000,11 +969,11 @@ export default {
   margin-top: 16px;
   padding-top: 12px;
   text-align: center;
-  border-top: 1px solid #eef2f6;
+  border-top: 1px solid #f5ece6;
 }
 
 .footer-link {
-  color: #409EFF;
+  color: #f0826a;
   text-decoration: none;
   font-size: 13px;
 }
@@ -1025,7 +994,7 @@ export default {
   align-items: center;
   gap: 15px;
   padding: 15px;
-  background: #f8f9fa;
+  background: #fefbf9;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1034,7 +1003,7 @@ export default {
 
 .service-item:hover {
   background: white;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(245, 158, 75, 0.15);
   transform: translateY(-2px);
 }
 
@@ -1043,7 +1012,7 @@ export default {
   height: 60px;
   border-radius: 12px;
   overflow: hidden;
-  background: #e8f4ff;
+  background: #fef0e8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1056,9 +1025,8 @@ export default {
   object-fit: cover;
 }
 
-.service-default-icon i {
-  font-size: 32px;
-  color: #409EFF;
+.default-paw {
+  font-size: 28px;
 }
 
 .service-info {
@@ -1069,13 +1037,13 @@ export default {
 .service-name {
   font-size: 15px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 4px;
 }
 
 .service-desc {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -1083,7 +1051,7 @@ export default {
   overflow: hidden;
 }
 
-/* 其他区域样式 */
+/* ========== 通用 section 标题 ========== */
 .section-header {
   text-align: center;
   margin-bottom: 40px;
@@ -1093,12 +1061,12 @@ export default {
 .section-header h2 {
   font-size: 28px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 8px;
 }
 
 .section-header p {
-  color: #909399;
+  color: #a08c84;
   font-size: 14px;
 }
 
@@ -1106,14 +1074,14 @@ export default {
   position: absolute;
   right: 0;
   top: 8px;
-  color: #409EFF;
+  color: #f0826a;
   text-decoration: none;
   font-size: 13px;
   transition: all 0.3s;
 }
 
 .view-more:hover {
-  color: #66b1ff;
+  color: #f59e4b;
 }
 
 .view-more i {
@@ -1125,9 +1093,10 @@ export default {
   transform: translateX(4px);
 }
 
+/* ========== 热门商品 ========== */
 .products-section {
   padding: 50px 0;
-  background: #f5f7fa;
+  background: #fef6f0;
 }
 
 .products-grid {
@@ -1140,22 +1109,22 @@ export default {
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
   transition: all 0.3s;
   cursor: pointer;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
 }
 
 .product-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(180, 120, 90, 0.1);
 }
 
 .product-image {
   position: relative;
   height: 180px;
   overflow: hidden;
-  background: #f5f7fa;
+  background: #fefbf9;
 }
 
 .product-image img {
@@ -1192,7 +1161,7 @@ export default {
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #2c3e50;
+  color: #3d2e2a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1200,7 +1169,7 @@ export default {
 
 .product-desc {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   margin-bottom: 10px;
 }
 
@@ -1218,16 +1187,17 @@ export default {
 }
 
 .original-price {
-  color: #c0c4cc;
+  color: #c4b0a6;
   text-decoration: line-through;
   font-size: 12px;
 }
 
 .product-sales {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #c4b0a6;
 }
 
+/* ========== 社区动态 ========== */
 .community-section {
   padding: 50px 0;
   background: white;
@@ -1243,14 +1213,14 @@ export default {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
   transition: all 0.3s;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   cursor: pointer;
 }
 
 .community-card:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(180, 120, 90, 0.1);
 }
 
 .post-header {
@@ -1261,31 +1231,31 @@ export default {
 }
 
 .user-avatar {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   color: white;
 }
 
 .author-name {
   font-weight: 500;
-  color: #2c3e50;
+  color: #3d2e2a;
   font-size: 14px;
   display: block;
 }
 
 .post-time {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #c4b0a6;
 }
 
 .post-content .post-title {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin-bottom: 8px;
 }
 
 .post-content p {
-  color: #606266;
+  color: #7a6a62;
   line-height: 1.5;
   margin-bottom: 12px;
   font-size: 13px;
@@ -1322,8 +1292,8 @@ export default {
   gap: 20px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eef2f6;
-  color: #c0c4cc;
+  border-top: 1px solid #f5ece6;
+  color: #c4b0a6;
   font-size: 12px;
 }
 
@@ -1336,12 +1306,12 @@ export default {
 }
 
 .post-footer span:hover {
-  color: #409EFF;
+  color: #f0826a;
 }
 
-/* 公告详情弹窗样式 */
+/* ========== 公告详情弹窗 ========== */
 .notice-dialog >>> .el-dialog__header {
-  background: linear-gradient(135deg, #409EFF 0%, #66b1ff 100%);
+  background: linear-gradient(135deg, #f59e4b 0%, #f0826a 100%);
   border-radius: 8px 8px 0 0;
   padding: 20px;
 }
@@ -1366,7 +1336,7 @@ export default {
   gap: 15px;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
 }
 
 .notice-detail .notice-type {
@@ -1376,7 +1346,6 @@ export default {
   font-weight: 600;
 }
 
-/* 详情弹窗中的类型标签颜色 */
 .notice-detail .notice-type.type-service {
   background: #f0f9eb;
   color: #67C23A;
@@ -1388,8 +1357,8 @@ export default {
 }
 
 .notice-detail .notice-type.type-community {
-  background: #ecf5ff;
-  color: #409EFF;
+  background: #fef6f0;
+  color: #f0826a;
 }
 
 .notice-detail .notice-type.type-system {
@@ -1404,16 +1373,16 @@ export default {
 
 .notice-date {
   font-size: 13px;
-  color: #909399;
+  color: #a08c84;
 }
 
 .notice-content-detail {
   font-size: 14px;
   line-height: 1.8;
-  color: #606266;
+  color: #7a6a62;
 }
 
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 992px) {
   .quick-entry-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1479,7 +1448,7 @@ export default {
     height: 40px;
   }
 
-  .quick-icon i {
+  .icon-emoji {
     font-size: 20px;
   }
 

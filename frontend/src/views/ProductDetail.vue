@@ -4,7 +4,7 @@
 
     <div class="detail-content">
       <div class="container">
-        <!-- 顶部导航栏：面包屑 + 返回按钮同一行 -->
+        <!-- 顶部导航栏 -->
         <div class="top-nav">
           <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
@@ -14,23 +14,46 @@
           <el-button icon="el-icon-arrow-left" size="small" @click="$router.back()" class="back-btn">返回</el-button>
         </div>
 
+        <!-- 商品信息 -->
         <div class="product-info" v-loading="loading">
           <div class="product-gallery">
-            <div class="main-image">
-              <el-image :src="product.image" fit="cover" :preview-src-list="previewImages">
-                <div slot="error" class="image-slot">
-                  <i class="el-icon-picture-outline"></i>
-                </div>
-              </el-image>
+            <div class="main-image-wrapper" @mouseenter="pauseAutoPlay" @mouseleave="startAutoPlay">
+              <el-carousel
+                  ref="carousel"
+                  :interval="4000"
+                  arrow="always"
+                  height="400px"
+                  indicator-position="outside"
+                  @change="handleCarouselChange"
+              >
+                <el-carousel-item v-for="(img, idx) in previewImages" :key="idx">
+                  <el-image
+                      :src="img"
+                      fit="cover"
+                      class="carousel-image"
+                      :preview-src-list="previewImages"
+                      :initial-index="idx"
+                  >
+                    <div slot="error" class="image-slot">
+                      <i class="el-icon-picture-outline"></i>
+                    </div>
+                  </el-image>
+                </el-carousel-item>
+              </el-carousel>
             </div>
+
             <div class="thumb-images" v-if="thumbImages.length">
               <div
                   v-for="(img, idx) in thumbImages"
                   :key="idx"
-                  :class="['thumb-item', { active: currentImage === img }]"
-                  @click="currentImage = img"
+                  :class="['thumb-item', { active: currentCarouselIndex === idx }]"
+                  @click="goToSlide(idx)"
               >
-                <el-image :src="img" fit="cover"></el-image>
+                <el-image :src="img" fit="cover">
+                  <div slot="error" class="image-slot">
+                    <i class="el-icon-picture-outline"></i>
+                  </div>
+                </el-image>
               </div>
             </div>
           </div>
@@ -43,27 +66,31 @@
                 <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
               </div>
             </div>
+
             <div class="product-price">
               <span class="price-label">价格：</span>
               <span class="current-price">¥{{ product.price }}</span>
               <span class="original-price" v-if="product.originalPrice">¥{{ product.originalPrice }}</span>
             </div>
+
             <div class="product-sales">
-              <span>销量：{{ product.sales || 0 }}件</span>
-              <span>库存：{{ product.stock || 0 }}件</span>
+              <span><i class="el-icon-s-order"></i> 销量：{{ product.sales || 0 }}件</span>
+              <span><i class="el-icon-box"></i> 库存：{{ product.stock || 0 }}件</span>
               <span class="rating-info" v-if="product.avgRating">
-                评分：<el-rate v-model="product.avgRating" disabled show-score text-color="#ff9900"></el-rate>
+                <i class="el-icon-star-on"></i> 评分：{{ product.avgRating }}
               </span>
               <span class="favorite-count" v-if="product.favoriteCount">
                 <i class="el-icon-star-on"></i> {{ product.favoriteCount }}人收藏
               </span>
             </div>
+
             <div class="product-description">
-              <div class="desc-label">商品描述：</div>
+              <div class="desc-label">商品描述</div>
               <div class="desc-content">{{ product.description }}</div>
             </div>
+
             <div class="product-quantity">
-              <span>数量：</span>
+              <span class="quantity-label">数量：</span>
               <el-input-number
                   v-model="quantity"
                   :min="1"
@@ -72,6 +99,7 @@
               ></el-input-number>
               <span class="stock-info">（库存 {{ product.stock || 0 }} 件）</span>
             </div>
+
             <div class="product-actions">
               <el-button type="primary" size="large" @click="handleBuyNow" class="buy-btn">
                 立即购买
@@ -94,14 +122,12 @@
         <!-- 商品详情Tab -->
         <div class="product-tabs">
           <el-tabs v-model="activeTab">
-            <!-- 用户评价Tab -->
             <el-tab-pane label="用户评价" name="comment">
               <div class="comment-content">
-                <!-- 评分统计 -->
                 <div class="comment-summary" v-if="ratingStats">
                   <div class="rating-score">
                     <span class="score">{{ ratingStats.avg_rating || 0 }}</span>
-                    <el-rate v-model="ratingStats.avg_rating" disabled show-score text-color="#ff9900"></el-rate>
+                    <el-rate v-model="ratingStats.avg_rating" disabled text-color="#ff9900"></el-rate>
                     <span class="total">{{ ratingStats.total_count || 0 }}条评价</span>
                   </div>
                   <div class="rating-bars">
@@ -115,7 +141,6 @@
                   </div>
                 </div>
 
-                <!-- 评价列表 -->
                 <div class="comment-list" v-loading="commentLoading">
                   <div class="comment-item" v-for="comment in commentList" :key="comment.id">
                     <div class="comment-header">
@@ -125,12 +150,12 @@
                       <div class="comment-info">
                         <div class="user-info">
                           <span class="user-name">{{ comment.displayName }}</span>
-                          <el-rate v-model="comment.rating" disabled show-score text-color="#ff9900"></el-rate>
+                          <el-rate v-model="comment.rating" disabled text-color="#ff9900"></el-rate>
                         </div>
                         <div class="comment-time">{{ formatDate(comment.createTime) }}</div>
                       </div>
                     </div>
-                    <div class="comment-content">{{ comment.content }}</div>
+                    <div class="comment-text">{{ comment.content }}</div>
                     <div class="comment-images" v-if="comment.imageList && comment.imageList.length">
                       <el-image
                           v-for="(img, idx) in comment.imageList"
@@ -172,7 +197,34 @@
           </el-tabs>
         </div>
 
-        <!-- 猜你喜欢（协同过滤推荐） -->
+        <!-- 算法说明（可展开/折叠） -->
+        <div class="algorithm-info-section">
+          <div class="algorithm-header" @click="algoExpanded = !algoExpanded">
+            <i :class="algoExpanded ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
+            <span>推荐算法说明</span>
+            <span class="algo-tip">了解"猜你喜欢"如何为你推荐商品</span>
+          </div>
+          <div class="algorithm-body" v-show="algoExpanded">
+            <div class="algorithm-content">
+              <h4>什么是协同过滤？</h4>
+              <p>协同过滤（Collaborative Filtering）是推荐系统中最经典的算法之一，其核心思想是"物以类聚，人以群分"——利用用户群体行为数据来发现物品之间的相似性或用户之间的相似性，从而为目标用户推荐其可能感兴趣的物品。登录用户的推荐采用<b>混合推荐策略</b>，同时结合基于用户的协同过滤和基于物品的协同过滤，以平衡推荐多样性与准确性。未登录用户则使用基于物品的协同过滤或热门推荐策略。</p>
+              <h4>基于用户 vs 基于物品</h4>
+              <p><b>基于用户的协同过滤</b>通过找到与当前用户兴趣相似的其他用户，将这些相似用户喜欢而当前用户未接触的商品推荐给当前用户。系统使用Jaccard相似度计算用户之间的兴趣相似程度。<b>基于物品的协同过滤</b>通过分析商品被同一用户收藏的共现关系来计算商品之间的相似度，采用余弦相似度度量两个商品之间的相似程度。两种算法各有优势，混合推荐综合两者以提升覆盖率和准确率。</p>
+              <h4>步骤一：构建评分矩阵</h4>
+              <p>系统将用户的收藏和购买行为转化为评分数据，收藏行为赋予权重1，购买行为赋予权重2。设用户集合 U = {u₁, u₂, ..., uₘ}，商品集合 I = {i₁, i₂, ..., iₙ}，构建 m×n 维评分矩阵 R，其中 R(u,i) 表示用户 u 对商品 i 的综合评分。</p>
+              <h4>步骤二：计算相似度矩阵</h4>
+              <p><b>用户相似度（加权Jaccard）：</b>加权交集 = Σ min(R(a,i), R(b,i))，加权并集 = Σ max(R(a,i), R(b,i))，J(a,b) = 加权交集 / 加权并集。值越接近1表示两个用户兴趣越相似。相比于传统二值Jaccard，加权版本能更好地区分"轻度交互用户"和"深度交互用户"之间的相似性差异。</p>
+              <p><b>商品相似度（加权共现乘积）：</b>对于商品 p 和商品 q，相似度 sim(p,q) = Σ R(u,p) × R(u,q)，即所有共同用户评分乘积之和。购买行为的权重2使得购买过的商品之间的相似度贡献是收藏行为的4倍（2×2 vs 1×1），更符合"购买意愿 > 收藏意愿"的业务场景。对商品集合中每一对商品计算相似度后，得到 n×n 维的商品相似度矩阵 S。</p>
+              <h4>步骤三：生成 Top-N 推荐列表</h4>
+              <p>用户对候选商品的预测评分，由该用户已交互过的商品加权求和得到（权重为商品间相似度），或由相似用户的评分加权得到（权重为用户间相似度）。最后，对所有候选商品按预测评分降序排列，取前 N 个商品作为推荐结果。</p>
+              <h4>技术参数与冷启动处理</h4>
+              <p><b>参数设置：</b>本系统设置近邻数 K = 50（用户相似度计算）、K = 20（商品相似度计算），推荐列表长度 N = 10。为提高实时性能，商品相似度矩阵采用离线预计算方式，每日定时更新一次，在线推荐阶段仅需查询相似度矩阵并进行加权计算，单次推荐响应时间控制在 100 ms 以内。</p>
+              <p><b>冷启动处理：</b>当用户未登录或协同过滤数据不足（如新用户缺少足够的收藏/购买记录、新上架商品缺少足够的收藏记录）时，系统自动降级为<b>热门推荐</b>策略，基于商品的销量和热度排序提供非个性化推荐，确保用户始终能获得有效的推荐内容。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 猜你喜欢 -->
         <div class="recommend-section" v-if="recommendProducts.length">
           <h3>
             <i class="el-icon-thumb"></i> 猜你喜欢
@@ -214,8 +266,7 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getProductById, getHotProducts, addFavorite, removeFavorite, checkFavorite } from '@/api/product';
-import { getRecommendProducts } from '@/api/product';
+import { getProductById, getHotProducts, addFavorite, removeFavorite, checkFavorite, getRecommendProducts } from '@/api/product';
 import { getProductComments, getProductRatingStats } from '@/api/comment';
 import { addToCart, getCartList, deleteCartItem } from '@/api/cart';
 
@@ -229,8 +280,7 @@ export default {
       cartActionLoading: false,
       product: {},
       quantity: 1,
-      activeTab: 'detail',
-      currentImage: '',
+      activeTab: 'comment',
       recommendProducts: [],
       isFavorited: false,
       commentList: [],
@@ -238,7 +288,9 @@ export default {
       commentTotal: 0,
       ratingStats: null,
       isInCart: false,
-      cartItemId: null
+      cartItemId: null,
+      currentCarouselIndex: 0,
+      algoExpanded: false
     };
   },
   computed: {
@@ -246,9 +298,12 @@ export default {
       return this.$route.params.id;
     },
     previewImages() {
-      const images = [this.product.image];
+      const images = [this.product.image].filter(Boolean);
       if (this.product.images) {
-        images.push(...this.product.images.split(','));
+        const list = typeof this.product.images === 'string'
+          ? this.product.images.split(',').filter(Boolean)
+          : this.product.images;
+        images.push(...list);
       }
       return images;
     },
@@ -256,15 +311,16 @@ export default {
       const images = [];
       if (this.product.image) images.push(this.product.image);
       if (this.product.images) {
-        images.push(...this.product.images.split(',').slice(0, 4));
+        const list = typeof this.product.images === 'string'
+          ? this.product.images.split(',').filter(Boolean)
+          : this.product.images;
+        images.push(...list.slice(0, 4));
       }
       return images;
     }
   },
   created() {
     this.loadProduct();
-    this.checkFavoriteStatus();
-    this.checkCartStatus();
   },
   methods: {
     async loadProduct() {
@@ -273,10 +329,12 @@ export default {
         const res = await getProductById(this.productId);
         if (res.code === 200) {
           this.product = res.data;
-          this.currentImage = this.product.image;
-          this.loadRecommend();
+          this.currentCarouselIndex = 0;
+          this.checkFavoriteStatus();
+          this.checkCartStatus();
           this.loadComments();
           this.loadRatingStats();
+          this.loadRecommend();
         } else {
           this.$message.error('商品不存在');
           this.$router.push('/shop');
@@ -288,7 +346,29 @@ export default {
       }
     },
 
-    // 检查商品是否已在购物车中
+    handleCarouselChange(index) {
+      this.currentCarouselIndex = index;
+    },
+
+    goToSlide(index) {
+      this.currentCarouselIndex = index;
+      if (this.$refs.carousel) {
+        this.$refs.carousel.setActiveItem(index);
+      }
+    },
+
+    pauseAutoPlay() {
+      if (this.$refs.carousel) {
+        this.$refs.carousel.stopAutoplay();
+      }
+    },
+
+    startAutoPlay() {
+      if (this.$refs.carousel && this.previewImages.length > 1) {
+        this.$refs.carousel.startAutoplay();
+      }
+    },
+
     async checkCartStatus() {
       try {
         const token = localStorage.getItem('token');
@@ -297,25 +377,15 @@ export default {
           this.cartItemId = null;
           return;
         }
-
         const res = await getCartList();
-        console.log('========== 检查购物车状态 ==========');
-        console.log('购物车列表:', res);
-
         if (res.code === 200 && res.data) {
-          // ✅ 使用 == 进行宽松比较，或者手动转换类型
           const cartItem = res.data.find(item => Number(item.productId) === Number(this.productId));
-          console.log('当前商品ID:', this.productId);
-          console.log('找到的购物车项:', cartItem);
-
           if (cartItem) {
             this.isInCart = true;
             this.cartItemId = Number(cartItem.id);
-            console.log('商品已在购物车, cartItemId:', this.cartItemId);
           } else {
             this.isInCart = false;
             this.cartItemId = null;
-            console.log('商品不在购物车');
           }
         }
       } catch (error) {
@@ -328,7 +398,6 @@ export default {
     async checkFavoriteStatus() {
       const token = localStorage.getItem('token');
       if (!token) return;
-
       try {
         const res = await checkFavorite(this.productId);
         if (res.code === 200) {
@@ -348,17 +417,14 @@ export default {
           type: 'warning'
         }).then(() => {
           this.$router.push('/login');
-        });
+        }).catch(() => {});
         return;
       }
 
       try {
-        let res;
-        if (this.isFavorited) {
-          res = await removeFavorite(this.productId);
-        } else {
-          res = await addFavorite(this.productId);
-        }
+        const res = this.isFavorited
+          ? await removeFavorite(this.productId)
+          : await addFavorite(this.productId);
 
         if (res.code === 200) {
           this.isFavorited = !this.isFavorited;
@@ -379,21 +445,18 @@ export default {
       try {
         const res = await getProductComments(this.productId, this.commentPage);
         if (res.code === 200) {
-          // ✅ 处理评论数据，优先使用昵称
           this.commentList = (res.data.list || []).map(comment => ({
             ...comment,
-            // 显示名称：优先昵称，其次用户名，最后默认
             displayName: comment.userNickname || comment.userName || '匿名用户',
-            // 确保 rating 是数字
             rating: Number(comment.rating) || 0,
-            // 处理图片
-            imageList: comment.images ? (typeof comment.images === 'string' ? comment.images.split(',') : comment.images) : []
+            imageList: comment.images
+              ? (typeof comment.images === 'string' ? comment.images.split(',') : comment.images)
+              : []
           }));
           this.commentTotal = res.data.total || 0;
         }
       } catch (error) {
         console.error('加载评价失败', error);
-        this.$message.error('加载评价失败');
       } finally {
         this.commentLoading = false;
       }
@@ -422,36 +485,21 @@ export default {
 
     async loadRecommend() {
       try {
-        const token = localStorage.getItem('token');
-        let res;
-
-        if (token) {
-          res = await getRecommendProducts({ productId: this.productId, limit: 8 });
-        } else {
-          res = await getHotProducts();
-        }
-
+        const res = await getRecommendProducts({ productId: this.productId, limit: 10 });
         if (res.code === 200) {
-          if (token) {
-            this.recommendProducts = res.data.filter(p => p.id !== parseInt(this.productId)).slice(0, 4);
-          } else {
-            this.recommendProducts = res.data.filter(p => p.id !== parseInt(this.productId)).slice(0, 4).map(p => ({
-              ...p,
-              score: 0,
-              reason: '热门推荐'
-            }));
-          }
+          this.recommendProducts = res.data
+            .filter(p => Number(p.id) !== Number(this.productId))
+            .slice(0, 4);
         }
       } catch (error) {
         console.error('加载推荐失败', error);
         try {
           const res = await getHotProducts();
           if (res.code === 200) {
-            this.recommendProducts = res.data.filter(p => p.id !== parseInt(this.productId)).slice(0, 4).map(p => ({
-              ...p,
-              score: 0,
-              reason: '热门推荐'
-            }));
+            this.recommendProducts = res.data
+              .filter(p => Number(p.id) !== Number(this.productId))
+              .slice(0, 4)
+              .map(p => ({ ...p, score: 0, reason: '热门推荐' }));
           }
         } catch (e) {
           console.error('加载热门商品失败', e);
@@ -459,7 +507,6 @@ export default {
       }
     },
 
-    // 购物车操作：如果已在购物车则删除，否则添加
     async handleCartAction() {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -469,78 +516,41 @@ export default {
           type: 'warning'
         }).then(() => {
           this.$router.push('/login');
-        });
+        }).catch(() => {});
         return;
       }
 
-      // 检查库存（添加时）
       if (!this.isInCart && this.product.stock <= 0) {
         this.$message.warning('商品库存不足，无法加入购物车');
         return;
       }
 
       this.cartActionLoading = true;
-
       try {
         if (this.isInCart) {
-          // ✅ 打印调试信息
-          console.log('========== 删除购物车商品 ==========');
-          console.log('isInCart:', this.isInCart);
-          console.log('cartItemId:', this.cartItemId);
-          console.log('cartItemId 类型:', typeof this.cartItemId);
-          console.log('productId:', this.productId);
-
-          // 已在购物车，执行删除操作
-          if (!this.cartItemId) {
-            // 如果 cartItemId 为空，重新获取
-            const cartRes = await getCartList();
-            console.log('重新获取购物车列表:', cartRes);
-
-            if (cartRes.code === 200 && cartRes.data) {
-              const cartItem = cartRes.data.find(item => item.productId === this.productId);
-              console.log('找到的购物车项:', cartItem);
-
-              if (cartItem) {
-                this.cartItemId = Number(cartItem.id);
-              } else {
-                this.$message.error('购物车信息异常，请刷新页面重试');
-                this.cartActionLoading = false;
-                return;
-              }
-            } else {
-              this.$message.error('获取购物车信息失败');
-              this.cartActionLoading = false;
+          const cartRes = await getCartList();
+          if (cartRes.code === 200 && cartRes.data) {
+            const cartItem = cartRes.data.find(item => Number(item.productId) === Number(this.productId));
+            if (!cartItem) {
+              this.$message.error('购物车信息异常，请刷新页面重试');
               return;
             }
+            this.cartItemId = Number(cartItem.id);
           }
 
-          // ✅ 确保传递数字类型
-          console.log('最终删除的 cartItemId:', this.cartItemId);
-          const res = await deleteCartItem(Number(this.cartItemId));
-          console.log('删除结果:', res);
-
+          const res = await deleteCartItem(this.cartItemId);
           if (res.code === 200) {
             this.isInCart = false;
             this.cartItemId = null;
             this.$message.success('已从购物车移出');
             this.$bus.$emit('cart-updated');
-          } else {
-            this.$message.error(res.message || '移出失败');
           }
         } else {
-          // 不在购物车，执行添加操作
-          console.log('========== 添加商品到购物车 ==========');
-          console.log('productId:', this.product.id);
-          console.log('quantity:', this.quantity);
-
           const res = await addToCart(this.product.id, this.quantity);
-          console.log('添加结果:', res);
-
           if (res.code === 200) {
-            // 添加成功后需要重新获取购物车列表以获取 cartItemId
             const cartRes = await getCartList();
             if (cartRes.code === 200 && cartRes.data) {
-              const cartItem = cartRes.data.find(item => item.productId === this.productId);
+              const cartItem = cartRes.data.find(item => Number(item.productId) === Number(this.productId));
               if (cartItem) {
                 this.cartItemId = Number(cartItem.id);
               }
@@ -548,13 +558,11 @@ export default {
             this.isInCart = true;
             this.$message.success('已加入购物车');
             this.$bus.$emit('cart-updated');
-          } else {
-            this.$message.error(res.message || '添加失败');
           }
         }
       } catch (error) {
         console.error('购物车操作失败:', error);
-        this.$message.error(error.message || '操作失败');
+        this.$message.error('操作失败');
       } finally {
         this.cartActionLoading = false;
       }
@@ -569,7 +577,7 @@ export default {
           type: 'warning'
         }).then(() => {
           this.$router.push('/login');
-        });
+        }).catch(() => {});
         return;
       }
 
@@ -592,13 +600,11 @@ export default {
     },
 
     goToDetail(id) {
-      if (id) {
-        if (id == this.productId) {
-          this.loadProduct();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          this.$router.push(`/product/${id}`);
-        }
+      if (Number(id) === Number(this.productId)) {
+        this.loadProduct();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        this.$router.push(`/product/${id}`);
       }
     },
 
@@ -616,7 +622,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .detail-content {
@@ -630,7 +636,7 @@ export default {
   padding: 0 20px;
 }
 
-/* 顶部导航栏：面包屑和返回按钮同一行 */
+/* ========== 顶部导航 ========== */
 .top-nav {
   display: flex;
   justify-content: space-between;
@@ -638,15 +644,11 @@ export default {
   margin-bottom: 20px;
 }
 
-.breadcrumb {
-  flex: 1;
-}
-
 .back-btn {
   border-radius: 8px;
-  color: #606266;
+  color: #7a6a62;
   background: white;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   padding: 8px 16px;
   font-size: 13px;
   transition: all 0.3s;
@@ -655,20 +657,21 @@ export default {
 }
 
 .back-btn:hover {
-  color: #409EFF;
-  border-color: #409EFF;
-  background: #ecf5ff;
+  color: #f0826a;
+  border-color: #f0826a;
+  background: #fef6f0;
 }
 
+/* ========== 商品信息 ========== */
 .product-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
   background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #eef2f6;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.06);
+  border: 1px solid #f5ece6;
 }
 
 .product-gallery {
@@ -676,37 +679,78 @@ export default {
   top: 100px;
 }
 
-.main-image {
+.main-image-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fefbf9;
+}
+
+.el-carousel ::v-deep .el-carousel__container {
+  height: 400px;
+}
+
+.carousel-image {
   width: 100%;
   height: 400px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f5f7fa;
+  object-fit: cover;
+  cursor: pointer;
 }
 
-.main-image .el-image {
-  width: 100%;
-  height: 100%;
+.el-carousel ::v-deep .el-carousel__arrow {
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
 }
 
+.el-carousel ::v-deep .el-carousel__arrow:hover {
+  background-color: rgba(240, 130, 106, 0.8);
+}
+
+.el-carousel ::v-deep .el-carousel__indicators {
+  bottom: -30px;
+}
+
+.el-carousel ::v-deep .el-carousel__indicator .el-carousel__button {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #d0b8a8;
+}
+
+.el-carousel ::v-deep .el-carousel__indicator.is-active .el-carousel__button {
+  background-color: #f0826a;
+  width: 20px;
+  border-radius: 4px;
+}
+
+/* 缩略图 */
 .thumb-images {
   display: flex;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 16px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 
 .thumb-item {
   width: 70px;
   height: 70px;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.3s;
+  background: #fefbf9;
+}
+
+.thumb-item:hover {
+  transform: translateY(-2px);
 }
 
 .thumb-item.active {
-  border-color: #409EFF;
+  border-color: #f0826a;
+  box-shadow: 0 2px 8px rgba(240, 130, 106, 0.3);
 }
 
 .thumb-item .el-image {
@@ -714,6 +758,13 @@ export default {
   height: 100%;
 }
 
+.thumb-item .el-image__inner {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ========== 商品详情右侧 ========== */
 .product-details {
   padding: 0;
 }
@@ -728,9 +779,10 @@ export default {
 .product-name {
   font-size: 24px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #3d2e2a;
   margin: 0;
   flex: 1;
+  line-height: 1.3;
 }
 
 .favorite-btn {
@@ -738,19 +790,21 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
-  color: #909399;
-  background: #f5f7fa;
+  color: #b8a098;
+  background: #fefbf9;
   margin-left: 16px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
+  flex-shrink: 0;
 }
 
 .favorite-btn:hover {
   background: #fef0f0;
   color: #f56c6c;
+  border-color: #fcd0d0;
 }
 
 .favorite-btn i {
@@ -766,14 +820,15 @@ export default {
 }
 
 .product-price {
-  background: #f5f7fa;
-  padding: 16px;
-  border-radius: 8px;
+  background: #fefbf9;
+  padding: 16px 20px;
+  border-radius: 10px;
   margin-bottom: 16px;
+  border: 1px solid #f5ece6;
 }
 
 .price-label {
-  color: #909399;
+  color: #a08c84;
   font-size: 13px;
 }
 
@@ -785,25 +840,31 @@ export default {
 }
 
 .original-price {
-  color: #c0c4cc;
+  color: #c4b0a6;
   text-decoration: line-through;
   font-size: 14px;
 }
 
 .product-sales {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   padding: 12px 0;
-  border-bottom: 1px solid #eef2f6;
-  color: #606266;
+  border-bottom: 1px solid #f5ece6;
+  color: #7a6a62;
   font-size: 13px;
   flex-wrap: wrap;
+}
+
+.product-sales i {
+  margin-right: 4px;
+  color: #d0b8a8;
 }
 
 .rating-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  color: #f59e4b;
 }
 
 .favorite-count {
@@ -813,25 +874,21 @@ export default {
   color: #f56c6c;
 }
 
-.favorite-count i {
-  font-size: 14px;
-}
-
 .product-description {
   padding: 16px 0;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
 }
 
 .desc-label {
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 8px;
-  color: #2c3e50;
+  color: #3d2e2a;
   font-size: 14px;
 }
 
 .desc-content {
-  color: #606266;
-  line-height: 1.6;
+  color: #7a6a62;
+  line-height: 1.7;
   font-size: 14px;
 }
 
@@ -840,11 +897,16 @@ export default {
   align-items: center;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
+}
+
+.quantity-label {
+  color: #3d2e2a;
+  font-size: 14px;
 }
 
 .stock-info {
-  color: #909399;
+  color: #a08c84;
   font-size: 13px;
 }
 
@@ -854,82 +916,84 @@ export default {
   margin-top: 24px;
 }
 
-.buy-btn, .cart-btn {
+.buy-btn,
+.cart-btn {
   flex: 1;
-  height: 44px;
+  height: 46px;
   font-size: 15px;
-  border-radius: 8px;
+  border-radius: 10px;
+  font-weight: 500;
 }
 
 .buy-btn {
-  background: #f56c6c;
+  background: linear-gradient(135deg, #f56c6c, #e85d5d);
   border: none;
+  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.25);
 }
 
 .buy-btn:hover {
-  background: #f78989;
+  background: linear-gradient(135deg, #f78989, #f07070);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(245, 108, 108, 0.35);
 }
 
 .cart-btn {
   background: white;
-  border-color: #409EFF;
-  color: #409EFF;
+  border: 1px solid #f0826a;
+  color: #f0826a;
   transition: all 0.3s;
-  cursor: pointer;
 }
 
 .cart-btn:hover {
-  background: #ecf5ff;
+  background: #fef6f0;
 }
 
 .cart-btn.in-cart {
-  background: #67c23a;
-  border-color: #67c23a;
+  background: linear-gradient(135deg, #67c23a, #85ce61);
+  border-color: transparent;
   color: white;
 }
 
 .cart-btn.in-cart:hover {
-  background: #85ce61;
+  background: linear-gradient(135deg, #7dd44a, #95d87a);
 }
 
-.cart-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* 评价区域样式 */
+/* ========== 评价区域 ========== */
 .product-tabs {
-  margin-top: 30px;
+  margin-top: 20px;
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid #eef2f6;
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid #f5ece6;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
 }
 
 .product-tabs ::v-deep .el-tabs__header {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .product-tabs ::v-deep .el-tabs__item {
   font-size: 14px;
+  color: #7a6a62;
 }
 
 .product-tabs ::v-deep .el-tabs__item.is-active {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 .product-tabs ::v-deep .el-tabs__active-bar {
-  background-color: #409EFF;
+  background-color: #f0826a;
 }
 
 .comment-summary {
   display: flex;
   gap: 30px;
-  padding: 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  padding: 16px 20px;
+  background: #fefbf9;
+  border-radius: 10px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  border: 1px solid #f5ece6;
 }
 
 .rating-score {
@@ -940,7 +1004,9 @@ export default {
 .score {
   font-size: 40px;
   font-weight: bold;
-  color: #ff9900;
+  color: #f59e4b;
+  display: block;
+  line-height: 1;
 }
 
 .rating-bars {
@@ -957,27 +1023,27 @@ export default {
 .star-label {
   width: 35px;
   font-size: 12px;
-  color: #606266;
+  color: #7a6a62;
 }
 
 .bar {
   flex: 1;
   height: 6px;
-  background: #e8eaef;
+  background: #f5ece6;
   border-radius: 3px;
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
-  background: #ff9900;
+  background: #f59e4b;
   border-radius: 3px;
 }
 
 .count {
   width: 35px;
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
 }
 
 .comment-list {
@@ -987,7 +1053,7 @@ export default {
 
 .comment-item {
   padding: 16px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid #f5ece6;
 }
 
 .comment-item:last-child {
@@ -1001,7 +1067,7 @@ export default {
 }
 
 .comment-avatar {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   color: white;
   flex-shrink: 0;
 }
@@ -1020,18 +1086,18 @@ export default {
 
 .user-name {
   font-weight: 500;
-  color: #2c3e50;
+  color: #3d2e2a;
   font-size: 13px;
 }
 
 .comment-time {
   font-size: 11px;
-  color: #909399;
+  color: #b8a098;
 }
 
-.comment-content {
-  color: #606266;
-  line-height: 1.5;
+.comment-text {
+  color: #7a6a62;
+  line-height: 1.6;
   margin-bottom: 10px;
   font-size: 13px;
 }
@@ -1044,19 +1110,20 @@ export default {
 }
 
 .comment-img {
-  width: 60px;
-  height: 60px;
-  border-radius: 6px;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
   object-fit: cover;
   cursor: pointer;
+  border: 1px solid #f5ece6;
 }
 
 .comment-reply {
-  background: #f5f7fa;
-  padding: 10px 12px;
-  border-radius: 8px;
+  background: #fefbf9;
+  padding: 10px 14px;
+  border-radius: 10px;
   margin-top: 10px;
-  border-left: 2px solid #67c23a;
+  border-left: 3px solid #67c23a;
 }
 
 .reply-header {
@@ -1070,27 +1137,27 @@ export default {
 }
 
 .reply-content {
-  color: #606266;
+  color: #7a6a62;
   line-height: 1.5;
   font-size: 12px;
 }
 
 .reply-time {
   font-size: 10px;
-  color: #c0c4cc;
+  color: #c4b0a6;
   margin-top: 4px;
 }
 
 .empty-comment {
   text-align: center;
   padding: 40px;
-  color: #909399;
+  color: #b8a098;
 }
 
 .empty-comment i {
   font-size: 48px;
   margin-bottom: 12px;
-  color: #c0c4cc;
+  color: #d0b8a8;
 }
 
 .comment-pagination {
@@ -1099,7 +1166,75 @@ export default {
   justify-content: center;
 }
 
-/* 猜你喜欢 */
+/* ========== 猜你喜欢 ========== */
+/* ========== 算法说明折叠面板 ========== */
+.algorithm-info-section {
+  margin-top: 30px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #f5ece6;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
+}
+
+.algorithm-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  cursor: pointer;
+  transition: background 0.3s;
+  user-select: none;
+}
+
+.algorithm-header:hover {
+  background: #fefbf9;
+}
+
+.algorithm-header i {
+  color: #f59e4b;
+  font-size: 14px;
+}
+
+.algorithm-header span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #3d2e2a;
+}
+
+.algo-tip {
+  font-size: 12px !important;
+  color: #a08c84 !important;
+  font-weight: 400 !important;
+  margin-left: 6px;
+}
+
+.algorithm-body {
+  border-top: 1px solid #f5ece6;
+}
+
+.algorithm-content {
+  padding: 20px 24px;
+  color: #7a6a62;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.algorithm-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3d2e2a;
+  margin: 16px 0 8px 0;
+}
+
+.algorithm-content h4:first-child {
+  margin-top: 0;
+}
+
+.algorithm-content p {
+  margin: 0 0 10px 0;
+}
+
 .recommend-section {
   margin-top: 30px;
 }
@@ -1108,20 +1243,20 @@ export default {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 16px;
-  color: #2c3e50;
+  color: #3d2e2a;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .recommend-section h3 i {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 .recommend-tip {
   font-size: 12px;
-  color: #909399;
-  font-weight: normal;
+  color: #a08c84;
+  font-weight: 400;
   margin-left: 8px;
 }
 
@@ -1133,11 +1268,12 @@ export default {
 
 .recommend-card {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.05);
 }
 
 .recommend-card * {
@@ -1145,16 +1281,16 @@ export default {
 }
 
 .recommend-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #e0e0e0;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(180, 120, 90, 0.12);
+  border-color: #e8c8b0;
 }
 
 .recommend-image {
   position: relative;
   height: 160px;
   overflow: hidden;
-  background: #f5f7fa;
+  background: #fefbf9;
 }
 
 .recommend-image img {
@@ -1172,7 +1308,7 @@ export default {
   position: absolute;
   bottom: 6px;
   right: 6px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(240, 130, 106, 0.85);
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
@@ -1180,17 +1316,17 @@ export default {
 }
 
 .recommend-info {
-  padding: 10px;
+  padding: 12px;
 }
 
 .recommend-info h4 {
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin: 0 0 6px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .recommend-footer {
@@ -1207,22 +1343,17 @@ export default {
 
 .recommend-footer .sales {
   font-size: 11px;
-  color: #c0c4cc;
+  color: #c4b0a6;
 }
 
 .recommend-reason {
   margin-top: 6px;
   font-size: 10px;
-  color: #ff9900;
-  background: #fff8e6;
-  padding: 2px 6px;
+  color: #e8785a;
+  background: #fef6f0;
+  padding: 2px 8px;
   border-radius: 12px;
   display: inline-block;
-}
-
-.recommend-reason i {
-  margin-right: 2px;
-  font-size: 10px;
 }
 
 .image-slot {
@@ -1231,12 +1362,12 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f7fa;
-  color: #c0c4cc;
+  background: #fef0e8;
+  color: #d0b8a8;
   font-size: 28px;
 }
 
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 768px) {
   .detail-content {
     padding: 20px 0 40px;
@@ -1263,15 +1394,6 @@ export default {
 
   .comment-summary {
     flex-direction: column;
-    text-align: center;
-  }
-
-  .rating-score {
-    text-align: center;
-  }
-
-  .rating-bar-item {
-    justify-content: center;
   }
 
   .product-header {
@@ -1292,7 +1414,6 @@ export default {
   }
 
   .top-nav {
-    flex-direction: row;
     flex-wrap: wrap;
   }
 

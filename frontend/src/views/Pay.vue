@@ -8,7 +8,9 @@
         <div class="top-nav">
           <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item :to="{ path: '/cart' }">购物车</el-breadcrumb-item>
+            <el-breadcrumb-item :to="{ path: orderType === 'service' ? '/services' : '/cart' }">
+              {{ orderType === 'service' ? '宠物服务' : '购物车' }}
+            </el-breadcrumb-item>
             <el-breadcrumb-item>订单支付</el-breadcrumb-item>
           </el-breadcrumb>
           <el-button icon="el-icon-arrow-left" size="small" @click="$router.back()" class="back-btn">返回</el-button>
@@ -162,6 +164,7 @@ export default {
     }
   },
   methods: {
+    // 通过订单号前缀判断类型：AP开头 = 服务预约，否则 = 商品订单
     detectOrderType() {
       if (this.orderNo && this.orderNo.startsWith('AP')) {
         this.orderType = 'service';
@@ -189,26 +192,23 @@ export default {
       }
     },
 
+    // 加载商品订单详情，根据支付状态和订单状态设置页面展示
     async loadProductOrder() {
-      try {
-        const res = await getOrderDetail(this.orderNo);
-        if (res.code === 200) {
-          this.order = res.data;
-          if (this.order.payStatus === 1) {
-            this.payStatus = 'success';
-            this.payTitle = '支付成功';
-            this.payMessage = '您的订单已支付成功，我们将尽快为您发货';
-            this.clearPolling();
-          } else if (this.order.orderStatus === 4) {
-            this.payStatus = 'failed';
-            this.payTitle = '订单已取消';
-            this.payMessage = '订单已取消，如需购买请重新下单';
-          }
-        } else {
-          throw new Error('订单不存在');
+      const res = await getOrderDetail(this.orderNo);
+      if (res.code === 200) {
+        this.order = res.data;
+        if (this.order.payStatus === 1) {
+          this.payStatus = 'success';
+          this.payTitle = '支付成功';
+          this.payMessage = '您的订单已支付成功，我们将尽快为您发货';
+          this.clearPolling();
+        } else if (this.order.orderStatus === 4) {
+          this.payStatus = 'failed';
+          this.payTitle = '订单已取消';
+          this.payMessage = '订单已取消，如需购买请重新下单';
         }
-      } catch (error) {
-        throw error;
+      } else {
+        throw new Error('订单不存在');
       }
     },
 
@@ -267,8 +267,8 @@ export default {
         });
 
         if (res.code === 200) {
+          // 后端返回支付表单HTML，通过隐藏div模拟提交实现跳转支付页面
           const payForm = res.data;
-
           const div = document.createElement('div');
           div.style.cssText = 'display:none;';
           div.innerHTML = payForm;
@@ -278,13 +278,14 @@ export default {
             const form = div.querySelector('form');
             if (form) {
               form.submit();
-              console.log('表单已提交');
             }
+            // 5秒后清理DOM
             setTimeout(() => {
               document.body.removeChild(div);
             }, 5000);
           }, 100);
 
+          // 启动轮询等待支付结果
           this.startPolling();
         } else {
           this.$message.error(res.message);
@@ -297,6 +298,7 @@ export default {
       }
     },
 
+    // 每3秒轮询支付状态，最多20次（1分钟），成功后自动跳转
     startPolling() {
       let count = 0;
       this.pollingTimer = setInterval(async () => {
@@ -332,7 +334,7 @@ export default {
 
             setTimeout(() => {
               if (this.orderType === 'service') {
-                this.$router.push('/personal/appointments');
+                this.$router.push('/my-appointments');
               } else {
                 this.$router.push('/personal/orders');
               }
@@ -343,7 +345,7 @@ export default {
             this.$message.warning('支付处理中，请稍后查看状态');
             setTimeout(() => {
               if (this.orderType === 'service') {
-                this.$router.push('/personal/appointments');
+                this.$router.push('/my-appointments');
               } else {
                 this.$router.push('/personal/orders');
               }
@@ -355,7 +357,7 @@ export default {
             this.clearPolling();
             setTimeout(() => {
               if (this.orderType === 'service') {
-                this.$router.push('/personal/appointments');
+                this.$router.push('/my-appointments');
               } else {
                 this.$router.push('/personal/orders');
               }
@@ -391,7 +393,7 @@ export default {
 
     goToOrders() {
       if (this.orderType === 'service') {
-        this.$router.push('/personal/appointments');
+        this.$router.push('/my-appointments');
       } else {
         this.$router.push('/personal/orders');
       }
@@ -413,7 +415,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .pay-content {
@@ -441,9 +443,9 @@ export default {
 
 .back-btn {
   border-radius: 8px;
-  color: #606266;
+  color: #7a6a62;
   background: white;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   padding: 8px 16px;
   font-size: 13px;
   transition: all 0.3s;
@@ -452,21 +454,22 @@ export default {
 }
 
 .back-btn:hover {
-  color: #409EFF;
-  border-color: #409EFF;
-  background: #ecf5ff;
+  color: #f0826a;
+  border-color: #f0826a;
+  background: #fef6f0;
 }
 
 /* 支付卡片 */
 .pay-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 30px;
   text-align: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #eef2f6;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.06);
+  border: 1px solid #f5ece6;
 }
 
+/* 支付状态图标：待支付=橙色时钟，成功=绿色勾，失败=黄色警告 */
 .pay-header i {
   font-size: 64px;
   margin-bottom: 16px;
@@ -481,28 +484,29 @@ export default {
 }
 
 .pay-header .el-icon-time {
-  color: #409EFF;
+  color: #f59e4b;
 }
 
 .pay-header h2 {
   font-size: 22px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .pay-header p {
-  color: #909399;
+  color: #a08c84;
   font-size: 13px;
 }
 
 /* 订单信息 */
 .pay-info {
-  background: #f5f7fa;
+  background: #fefbf9;
   border-radius: 8px;
   padding: 16px 20px;
   margin: 24px 0;
   text-align: left;
+  border: 1px solid #f5ece6;
 }
 
 .info-item {
@@ -510,7 +514,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  color: #606266;
+  color: #7a6a62;
   font-size: 14px;
 }
 
@@ -529,7 +533,7 @@ export default {
 .method-title {
   margin-bottom: 12px;
   font-weight: 500;
-  color: #2c3e50;
+  color: #3d2e2a;
   font-size: 14px;
 }
 
@@ -541,41 +545,41 @@ export default {
 .method-item {
   width: 110px;
   padding: 12px;
-  border: 1px solid #eef2f6;
+  border: 1px solid #f5ece6;
   border-radius: 8px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
-  background: white;
+  background: #fefbf9;
 }
 
 .method-item i {
   font-size: 28px;
   margin-bottom: 6px;
   display: block;
-  color: #909399;
+  color: #b8a098;
 }
 
 .method-item span {
   font-size: 13px;
-  color: #606266;
+  color: #7a6a62;
 }
 
 .method-item:hover {
-  border-color: #409EFF;
+  border-color: #f0826a;
 }
 
 .method-item.active {
-  border-color: #409EFF;
-  background: #ecf5ff;
+  border-color: #f0826a;
+  background: #fef6f0;
 }
 
 .method-item.active i {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 .method-item.active span {
-  color: #409EFF;
+  color: #f0826a;
 }
 
 /* 按钮区域 */
@@ -594,32 +598,33 @@ export default {
 }
 
 .pay-btn {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   border: none;
 }
 
 .pay-btn:hover {
-  background: #66b1ff;
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
   transform: translateY(-1px);
 }
 
 .pay-actions .el-button--primary {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   border: none;
 }
 
 .pay-actions .el-button--primary:hover {
-  background: #66b1ff;
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
+  transform: translateY(-1px);
 }
 
 .pay-actions .el-button--plain {
-  border-color: #eef2f6;
-  color: #606266;
+  border-color: #f5ece6;
+  color: #7a6a62;
 }
 
 .pay-actions .el-button--plain:hover {
-  border-color: #409EFF;
-  color: #409EFF;
+  border-color: #f0826a;
+  color: #f0826a;
 }
 
 /* 响应式 */

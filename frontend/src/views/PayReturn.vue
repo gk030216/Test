@@ -86,7 +86,7 @@
 <script>
 import Navbar from '@/components/Navbar.vue';
 import Footer from '@/components/Footer.vue';
-import { getOrderDetail } from '@/api/order';
+import { getOrderDetail, queryPayResult } from '@/api/order';
 import { getAppointmentDetailByNo } from '@/api/service';
 
 export default {
@@ -152,11 +152,32 @@ export default {
       }
     },
 
+    // 指数退避延迟：1.5^n 秒，上限 5 秒
+    getRetryDelay() {
+      return Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
+    },
+
+    // 重试调度：增加计数后判断是否继续重试
+    scheduleRetry(retryFn, errorMsg) {
+      this.retryCount++;
+      if (this.retryCount < this.maxRetry) {
+        const delay = this.getRetryDelay();
+        console.log(`支付状态未更新，${delay}ms后重试...`);
+        this.retryTimer = setTimeout(retryFn, delay);
+      } else {
+        this.loading = false;
+        this.success = false;
+        this.errorMessage = errorMsg;
+        console.log('重试次数用尽');
+      }
+    },
+
     async checkAppointmentResultWithRetry() {
       this.retryCount = 0;
       await this.doCheckAppointmentResult();
     },
 
+    // 带重试的服务预约支付结果查询
     async doCheckAppointmentResult() {
       try {
         console.log(`查询服务预约 (第${this.retryCount + 1}次):`, this.orderNo);
@@ -170,7 +191,6 @@ export default {
             this.success = true;
             this.loading = false;
             localStorage.removeItem('lastOrderNo');
-            console.log('✅ 预约支付成功！');
             return;
           }
 
@@ -178,37 +198,42 @@ export default {
             this.loading = false;
             this.success = false;
             this.errorMessage = res.data.status === 4 ? '预约已取消' : '预约已被拒绝';
-            console.log('❌ 预约状态异常:', res.data.status);
             return;
           }
         }
 
-        this.retryCount++;
-        if (this.retryCount < this.maxRetry) {
-          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
-          console.log(`支付状态未更新，${delay}ms后重试...`);
-          this.retryTimer = setTimeout(() => {
-            this.doCheckAppointmentResult();
-          }, delay);
-        } else {
-          this.loading = false;
-          this.success = false;
-          this.errorMessage = '支付处理中，请稍后查看订单状态';
-          console.log('重试次数用尽，请稍后查看');
+        // 支付状态未更新，主动向支付宝查询
+        if (this.retryCount > 0) {
+          try {
+            console.log('主动查询支付宝支付结果...');
+            await queryPayResult({ orderNo: this.orderNo });
+            // 重新获取最新状态
+            const retryRes = await getAppointmentDetailByNo(this.orderNo);
+            if (retryRes.code === 200 && retryRes.data) {
+              this.orderInfo = retryRes.data;
+              if (retryRes.data.payStatus === 1) {
+                this.success = true;
+                this.loading = false;
+                localStorage.removeItem('lastOrderNo');
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('主动查询支付宝失败:', e);
+          }
         }
+
+        // 指数退避后重试
+        this.scheduleRetry(
+          () => this.doCheckAppointmentResult(),
+          '支付处理中，请稍后查看订单状态'
+        );
       } catch (error) {
         console.error('查询预约异常:', error);
-        this.retryCount++;
-        if (this.retryCount < this.maxRetry) {
-          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
-          this.retryTimer = setTimeout(() => {
-            this.doCheckAppointmentResult();
-          }, delay);
-        } else {
-          this.loading = false;
-          this.success = false;
-          this.errorMessage = '查询支付状态失败，请稍后查看订单状态';
-        }
+        this.scheduleRetry(
+          () => this.doCheckAppointmentResult(),
+          '查询支付状态失败，请稍后查看订单状态'
+        );
       }
     },
 
@@ -217,6 +242,7 @@ export default {
       await this.doCheckOrderResult();
     },
 
+    // 带重试的商品订单支付结果查询
     async doCheckOrderResult() {
       try {
         console.log(`查询商品订单 (第${this.retryCount + 1}次):`, this.orderNo);
@@ -230,7 +256,6 @@ export default {
             this.success = true;
             this.loading = false;
             localStorage.removeItem('lastOrderNo');
-            console.log('✅ 订单支付成功！');
             return;
           }
 
@@ -242,31 +267,38 @@ export default {
           }
         }
 
-        this.retryCount++;
-        if (this.retryCount < this.maxRetry) {
-          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
-          console.log(`支付状态未更新，${delay}ms后重试...`);
-          this.retryTimer = setTimeout(() => {
-            this.doCheckOrderResult();
-          }, delay);
-        } else {
-          this.loading = false;
-          this.success = false;
-          this.errorMessage = '支付处理中，请稍后查看订单状态';
+        // 支付状态未更新，主动向支付宝查询
+        if (this.retryCount > 0) {
+          try {
+            console.log('主动查询支付宝支付结果...');
+            await queryPayResult({ orderNo: this.orderNo });
+            // 重新获取最新状态
+            const retryRes = await getOrderDetail(this.orderNo);
+            if (retryRes.code === 200 && retryRes.data) {
+              this.orderInfo = retryRes.data;
+              if (retryRes.data.payStatus === 1) {
+                this.success = true;
+                this.loading = false;
+                localStorage.removeItem('lastOrderNo');
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('主动查询支付宝失败:', e);
+          }
         }
+
+        // 指数退避后重试
+        this.scheduleRetry(
+          () => this.doCheckOrderResult(),
+          '支付处理中，请稍后查看订单状态'
+        );
       } catch (error) {
         console.error('查询订单异常:', error);
-        this.retryCount++;
-        if (this.retryCount < this.maxRetry) {
-          const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), 5000);
-          this.retryTimer = setTimeout(() => {
-            this.doCheckOrderResult();
-          }, delay);
-        } else {
-          this.loading = false;
-          this.success = false;
-          this.errorMessage = '查询支付状态失败，请稍后查看订单状态';
-        }
+        this.scheduleRetry(
+          () => this.doCheckOrderResult(),
+          '查询支付状态失败，请稍后查看订单状态'
+        );
       }
     },
 
@@ -281,6 +313,13 @@ export default {
       }
 
       try {
+        // 主动向支付宝查询并更新数据库
+        try {
+          await queryPayResult({ orderNo: this.orderNo });
+        } catch (e) {
+          console.error('主动查询支付宝失败:', e);
+        }
+
         if (this.orderType === 'service') {
           const res = await getAppointmentDetailByNo(this.orderNo);
           if (res.code === 200 && res.data) {
@@ -330,7 +369,7 @@ export default {
 
     goToOrders() {
       if (this.orderType === 'service') {
-        this.$router.push('/personal/appointments');
+        this.$router.push('/my-appointments');
       } else {
         this.$router.push('/personal/orders');
       }
@@ -352,7 +391,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: #fdf8f5;
 }
 
 .return-content {
@@ -378,32 +417,14 @@ export default {
   flex: 1;
 }
 
-.back-btn {
-  border-radius: 8px;
-  color: #606266;
-  background: white;
-  border: 1px solid #eef2f6;
-  padding: 8px 16px;
-  font-size: 13px;
-  transition: all 0.3s;
-  flex-shrink: 0;
-  margin-left: 16px;
-}
-
-.back-btn:hover {
-  color: #409EFF;
-  border-color: #409EFF;
-  background: #ecf5ff;
-}
-
 /* 返回卡片 */
 .return-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 40px;
   text-align: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #eef2f6;
+  box-shadow: 0 1px 4px rgba(180, 120, 90, 0.06);
+  border: 1px solid #f5ece6;
 }
 
 .loading-state i,
@@ -414,7 +435,7 @@ export default {
 }
 
 .loading-state i {
-  color: #409EFF;
+  color: #f59e4b;
   animation: rotate 1s linear infinite;
 }
 
@@ -433,7 +454,7 @@ export default {
 
 .loading-tip {
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
   margin-top: 8px;
 }
 
@@ -441,22 +462,23 @@ export default {
   font-size: 22px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #2c3e50;
+  color: #3d2e2a;
 }
 
 .return-card p {
-  color: #606266;
+  color: #7a6a62;
   font-size: 14px;
   margin-bottom: 24px;
 }
 
 /* 订单信息 */
 .order-info {
-  background: #f5f7fa;
+  background: #fefbf9;
   border-radius: 8px;
   padding: 16px 20px;
   margin: 20px 0;
   text-align: left;
+  border: 1px solid #f5ece6;
 }
 
 .info-item {
@@ -464,7 +486,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  color: #606266;
+  color: #7a6a62;
   font-size: 14px;
 }
 
@@ -490,29 +512,29 @@ export default {
 }
 
 .actions .el-button--primary {
-  background: #409EFF;
+  background: linear-gradient(135deg, #f59e4b, #f0826a);
   border: none;
 }
 
 .actions .el-button--primary:hover {
-  background: #66b1ff;
+  background: linear-gradient(135deg, #f7b06a, #f2967e);
   transform: translateY(-1px);
 }
 
 .actions .el-button--plain {
-  border-color: #eef2f6;
-  color: #606266;
+  border-color: #f5ece6;
+  color: #7a6a62;
 }
 
 .actions .el-button--plain:hover {
-  border-color: #409EFF;
-  color: #409EFF;
+  border-color: #f0826a;
+  color: #f0826a;
 }
 
 .tip-text {
   margin-top: 20px;
   font-size: 12px;
-  color: #909399;
+  color: #a08c84;
 }
 
 .tip-text i {

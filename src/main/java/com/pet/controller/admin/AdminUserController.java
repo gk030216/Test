@@ -420,7 +420,29 @@ public class AdminUserController {
     public Result<List<Map<String, Object>>> getUserActivityDistribution() {
         try {
             List<Map<String, Object>> distribution = userMapper.getActivityDistribution();
-            return Result.success(distribution);
+
+            // 确保所有活跃度等级都有数据，避免图表缺失柱形
+            Map<String, Integer> fullMap = new LinkedHashMap<>();
+            fullMap.put("高活跃（近7天）", 0);
+            fullMap.put("中活跃（近30天）", 0);
+            fullMap.put("低活跃（30天以上）", 0);
+            fullMap.put("从未登录", 0);
+
+            for (Map<String, Object> item : distribution) {
+                String level = (String) item.get("level");
+                Object count = item.get("count");
+                fullMap.put(level, count != null ? Integer.parseInt(count.toString()) : 0);
+            }
+
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Map.Entry<String, Integer> entry : fullMap.entrySet()) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("level", entry.getKey());
+                map.put("count", entry.getValue());
+                result.add(map);
+            }
+
+            return Result.success(result);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
